@@ -1,0 +1,40 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/vector-core",
+    "crates/vector-offset",
+    "crates/vector-algo",
+    "crates/vector-spatial",
+    "crates/vector-io",
+    "crates/vector-ffi",
+    "crates/vector-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Vector Engine Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/vector-engine/vector_engine"
+
+[workspace.dependencies]
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+num-traits = "0.2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+pyo3 = { version = "0.20", features = ["extension-module", "abi3-py38"] }
+numpy = "0.20"
+rayon = "1.8"
+roxmltree = "0.19"
+svgtypes = "0.13"
+image = { version = "0.24", default-features = false, features = ["jpeg"] }
+clap = { version = "4.4", features = ["derive"] }
+
+# Internal crates workspace dependencies
+vector-core = { path = "crates/vector-core" }
+vector-offset = { path = "crates/vector-offset" }
+vector-algo = { path = "crates/vector-algo" }
+vector-spatial = { path = "crates/vector-spatial" }
+vector-io = { path = "crates/vector-io" }

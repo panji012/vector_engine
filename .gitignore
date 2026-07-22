@@ -1,0 +1,17 @@
+# Rust/Cargo
+target/
+Cargo.lock
+
+# Test Outputs & Inputs
+output/
+
+# Python Virtual Environments
+.venv/
+__pycache__/
+
+# Agent and IDE configuration
+.agents/
+
+# OS specific
+.DS_Store
+Thumbs.db

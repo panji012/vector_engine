@@ -1,0 +1,18 @@
+# Default Configuration for Vector Geometry Engine
+
+precision:
+  epsilon: 1e-9
+  numeric_backend: "f64"
+
+execution:
+  parallelism: 0  # 0 auto-detects CPU core count
+  buffer_strategy: "zero_copy"
+
+spatial_index:
+  node_capacity: 16
+  index_type: "rtree"
+
+logging:
+  level: "INFO"
+  format: "console"  # options: console, json
+  bridge_rust_tracing: true
