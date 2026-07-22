@@ -36,6 +36,18 @@ struct CliArgs {
     #[arg(short = 'd', long, default_value_t = 0.5)]
     outset_distance: f64,
 
+    /// Disable outset calculation (forces distance to 0.0, performing Boolean Union only)
+    #[arg(long, default_value_t = false)]
+    no_outset: bool,
+
+    /// Disable RDP node simplification
+    #[arg(long, default_value_t = false)]
+    no_simplify: bool,
+
+    /// Node simplification tolerance (epsilon) in pixels (default 0.2 px)
+    #[arg(short = 's', long, default_value_t = 0.2)]
+    simplify_tolerance: f64,
+
     /// Enable verbose debug log output
     #[arg(short, long, default_value_t = false)]
     verbose: bool,
@@ -78,9 +90,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Processing {} SVG file(s)...", svg_files.len());
 
+    let mut results_table = Vec::new();
+    let start_time = std::time::Instant::now();
+
     for file_path in &svg_files {
-        process_single_svg(file_path, &args.output, args.outset_distance)?;
+        let file_start = std::time::Instant::now();
+        match process_single_svg(file_path, &args.output, !args.no_outset, args.outset_distance, !args.no_simplify, args.simplify_tolerance) {
+            Ok((file_name, orig_paths, combined_paths, _outset_dist)) => {
+                let duration = file_start.elapsed().as_secs_f64();
+                results_table.push((file_name, orig_paths, combined_paths, duration, "Success".to_string()));
+            }
+            Err(e) => {
+                let duration = file_start.elapsed().as_secs_f64();
+                let file_name = file_path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+                results_table.push((file_name, 0, 0, duration, format!("Error: {}", e)));
+                warn!("Failed to process {}: {}", file_path.display(), e);
+            }
+        }
     }
+
+    let total_duration = start_time.elapsed().as_secs_f64();
+
+    // Print the summary table
+    println!("\n=== BATCH PROCESSING SUMMARY ===");
+    println!("| {:<30} | {:<14} | {:<14} | {:<10} | {:<20} |", "File Name", "Original Paths", "Combined Paths", "Time (s)", "Status");
+    println!("|{:-<32}|{:-<16}|{:-<16}|{:-<12}|{:-<22}|", "", "", "", "", "");
+    
+    for (name, orig, comb, time, status) in results_table {
+        // truncate filename if too long
+        let short_name = if name.len() > 30 { format!("{}...", &name[..27]) } else { name };
+        println!("| {:<30} | {:<14} | {:<14} | {:<10.3} | {:<20} |", short_name, orig, comb, time, status);
+    }
+    println!("================================\nTotal Time: {:.3}s\n", total_duration);
 
     info!("Batch processing completed successfully. Outputs saved to {}", args.output.display());
     Ok(())
@@ -114,9 +155,12 @@ fn is_svg_file(path: &Path) -> bool {
 fn process_single_svg(
     input_file: &Path,
     output_dir: &Path,
+    enable_outset: bool,
     outset_dist: f64,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let file_name = input_file.file_name().ok_or("Invalid filename")?;
+    enable_simplify: bool,
+    simplify_tolerance: f64,
+) -> Result<(String, usize, usize, f64), Box<dyn std::error::Error>> {
+    let file_name = input_file.file_name().ok_or("Invalid filename")?.to_string_lossy().into_owned();
     debug!("Reading SVG: {}", input_file.display());
 
     let content = fs::read_to_string(input_file)?;
@@ -130,28 +174,19 @@ fn process_single_svg(
     // 1. Execute ColorCombiner
     let (combined_doc, combine_report) = ColorCombiner::combine_document(&doc)?;
 
-    println!("Processing File: {}", file_name.to_str().unwrap_or(""));
-    println!("Original Paths: {}", combine_report.original_path_count);
-    println!("Color Groups: {}", combine_report.number_of_color_groups);
-    println!("Combined Paths: {}", combine_report.combined_path_count);
-
     // 2. Execute Outset on compound paths
-    let (outset_doc, outset_report) = GeometryOutset::outset_document(&combined_doc, outset_dist)?;
-
-    println!("Outset Distance: {} px", outset_report.outset_distance);
-    println!("Original Bounds: {:?}", outset_report.original_bounds);
-    println!("New Bounds: {:?}", outset_report.new_bounds);
+    let (outset_doc, outset_report) = GeometryOutset::outset_document(&combined_doc, enable_outset, outset_dist, enable_simplify, simplify_tolerance)?;
 
     info!(
-        "Outset Distance: {} px | Original Bounds: {:?} | New Bounds: {:?}",
-        outset_report.outset_distance, outset_report.original_bounds, outset_report.new_bounds
+        "Processed {} | Outset: {} px | Nodes Reduced: -",
+        file_name, outset_report.outset_distance
     );
 
     // Save processed SVG with outset geometry
-    let output_file = output_dir.join(file_name);
+    let output_file = output_dir.join(&file_name);
     let output_svg_content = outset_doc.to_svg_string();
     fs::write(&output_file, output_svg_content)?;
-    info!("Saved processed SVG -> {}", output_file.display());
+    debug!("Saved processed SVG -> {}", output_file.display());
 
-    Ok(())
+    Ok((file_name, combine_report.original_path_count, combine_report.combined_path_count, outset_dist))
 }

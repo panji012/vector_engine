@@ -40,7 +40,10 @@ impl VectorOffsetEngine {
     /// Executes the 11-stage geometry offset pipeline across document-wide topology with color-group compound path re-combination & RDP node reduction.
     pub fn offset_document(
         doc: &VectorDocument,
-        distance: f64,
+        enable_outset: bool,
+        outset_distance: f64,
+        enable_simplify: bool,
+        simplify_tolerance: f64,
     ) -> Result<(VectorDocument, OutsetReport), VectorCoreError> {
         let original_bounds = calculate_document_bounds(doc);
 
@@ -77,9 +80,11 @@ impl VectorOffsetEngine {
             }
         }
 
+        let effective_distance = if enable_outset { outset_distance } else { 0.0 };
+
         if doc_rings.is_empty() {
             let report = OutsetReport {
-                outset_distance: distance,
+                outset_distance: effective_distance,
                 original_bounds,
                 new_bounds: original_bounds,
             };
@@ -92,7 +97,7 @@ impl VectorOffsetEngine {
         let topology_nodes = TopologyBuilder::build_topology(doc_rings);
 
         // Stage 3: Robust Polygon Offset (distance > 0 for outset, < 0 for inset)
-        let raw_offset_rings = PolygonOffsetGenerator::offset_topology(&topology_nodes, distance);
+        let raw_offset_rings = PolygonOffsetGenerator::offset_topology(&topology_nodes, effective_distance);
 
         // Stage 4: Self-Intersection Detection, Boolean Resolution & Cleanup with Safety Fallback to Original Geometry
         let mut color_contour_pairs: Vec<(Option<String>, Vec<(PolygonRing, RingRole)>)> = Vec::new();
@@ -129,8 +134,8 @@ impl VectorOffsetEngine {
             }
         }
 
-        // Stage 5 & 6: SVG Path Reconstruction with Strict Z-Ordering & RDP (epsilon = 0.2)
-        let final_paths = PathReconstructor::combine_contours_by_color(color_contour_pairs);
+        // Stage 5 & 6: SVG Path Reconstruction with Strict Z-Ordering & Dynamic Simplification
+        let final_paths = PathReconstructor::combine_contours_by_color(color_contour_pairs, enable_simplify, simplify_tolerance);
 
         let mut outset_doc = doc.clone();
         outset_doc.paths = final_paths;
@@ -181,7 +186,7 @@ impl VectorOffsetEngine {
         println!("Node reduction: {:.2}%", reduction_pct);
 
         let report = OutsetReport {
-            outset_distance: distance,
+            outset_distance: effective_distance,
             original_bounds,
             new_bounds,
         };
@@ -192,9 +197,12 @@ impl VectorOffsetEngine {
     /// Convenience alias for Inset operation with negative distance.
     pub fn inset_document(
         doc: &VectorDocument,
+        enable_outset: bool,
         distance: f64,
+        enable_simplify: bool,
+        simplify_tolerance: f64,
     ) -> Result<(VectorDocument, OutsetReport), VectorCoreError> {
-        Self::offset_document(doc, -distance.abs())
+        Self::offset_document(doc, enable_outset, -distance.abs(), enable_simplify, simplify_tolerance)
     }
 }
 
@@ -246,7 +254,7 @@ mod tests {
 
         doc.paths.push(path);
 
-        let (outset_doc, report) = VectorOffsetEngine::offset_document(&doc, 0.5).unwrap();
+        let (outset_doc, report) = VectorOffsetEngine::offset_document(&doc, true, 0.5, true, 0.2).unwrap();
 
         assert_eq!(report.outset_distance, 0.5);
         assert_eq!(report.original_bounds, (0.0, 0.0, 100.0, 100.0));
@@ -287,7 +295,7 @@ mod tests {
 
         assert_eq!(doc.paths.len(), 5);
 
-        let (outset_doc, _report) = VectorOffsetEngine::offset_document(&doc, 0.5).unwrap();
+        let (outset_doc, _report) = VectorOffsetEngine::offset_document(&doc, true, 0.5, true, 0.2).unwrap();
 
         // Output MUST contain exactly 2 compound paths (1 per color group)
         assert_eq!(outset_doc.paths.len(), 2, "Output path count must match color group count (2 color groups)");

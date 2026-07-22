@@ -9,6 +9,8 @@ impl PathReconstructor {
     pub fn reconstruct_svg_path(
         contours: &[(PolygonRing, RingRole)],
         original_path: &VectorPath,
+        enable_simplify: bool,
+        simplify_tolerance: f64,
     ) -> VectorPath {
         let mut new_path = VectorPath::new(original_path.id.clone());
         new_path.fill = original_path.fill.clone();
@@ -38,12 +40,16 @@ impl PathReconstructor {
                 }
             }
 
-            // 1. Apply RDP Node Simplification Pass (epsilon = 0.2 px)
-            let simplified_pts = rdp_simplify(&oriented_verts, 0.2);
-            let pts_to_use = if simplified_pts.is_empty() { &oriented_verts } else { &simplified_pts };
+            // 1. Apply RDP Node Simplification Pass if enabled
+            let pts_to_use = if enable_simplify {
+                let simplified_pts = rdp_simplify(&oriented_verts, simplify_tolerance);
+                if simplified_pts.is_empty() { oriented_verts.clone() } else { simplified_pts }
+            } else {
+                oriented_verts.clone()
+            };
 
             // 2. Fit smooth Bézier curves & line commands
-            let commands = fit_bezier_curves(pts_to_use, ring.is_closed, 0.5);
+            let commands = fit_bezier_curves(&pts_to_use, ring.is_closed, 0.5);
             for cmd in commands {
                 new_path.add_command(cmd);
             }
@@ -57,6 +63,8 @@ impl PathReconstructor {
     /// Strictly preserves original SVG DOM Z-ordering (draw order) without area-based sorting.
     pub fn combine_contours_by_color(
         color_contour_pairs: Vec<(Option<String>, Vec<(PolygonRing, RingRole)>)>,
+        enable_simplify: bool,
+        simplify_tolerance: f64,
     ) -> Vec<VectorPath> {
         let mut compound_paths = Vec::new();
         
@@ -72,7 +80,7 @@ impl PathReconstructor {
                 } else {
                     // Finalize current path
                     if !current_contours.is_empty() {
-                        compound_paths.push(Self::build_compound_path(c.clone(), &current_contours));
+                        compound_paths.push(Self::build_compound_path(c.clone(), &current_contours, enable_simplify, simplify_tolerance));
                     }
                     current_contours.clear();
                 }
@@ -83,14 +91,14 @@ impl PathReconstructor {
         
         if let Some(c) = current_color {
             if !current_contours.is_empty() {
-                compound_paths.push(Self::build_compound_path(c, &current_contours));
+                compound_paths.push(Self::build_compound_path(c, &current_contours, enable_simplify, simplify_tolerance));
             }
         }
         
         compound_paths
     }
 
-    fn build_compound_path(color: Option<String>, contours: &[(PolygonRing, RingRole)]) -> VectorPath {
+    fn build_compound_path(color: Option<String>, contours: &[(PolygonRing, RingRole)], enable_simplify: bool, simplify_tolerance: f64) -> VectorPath {
         let color_key = color.clone().unwrap_or_else(|| "none".to_string());
         let path_id = format!("group_{}", color_key.replace('#', "hex_"));
 
@@ -121,12 +129,16 @@ impl PathReconstructor {
                 }
             }
 
-            // 1. Apply RDP Node Simplification Pass (epsilon = 0.2 px)
-            let simplified_pts = rdp_simplify(&oriented_verts, 0.2);
-            let pts_to_use = if simplified_pts.is_empty() { &oriented_verts } else { &simplified_pts };
+            // 1. Apply RDP Node Simplification Pass if enabled
+            let pts_to_use = if enable_simplify {
+                let simplified_pts = rdp_simplify(&oriented_verts, simplify_tolerance);
+                if simplified_pts.is_empty() { oriented_verts.clone() } else { simplified_pts }
+            } else {
+                oriented_verts.clone()
+            };
 
             // 2. Fit smooth Bézier curves & line commands
-            let commands = fit_bezier_curves(pts_to_use, ring.is_closed, 0.5);
+            let commands = fit_bezier_curves(&pts_to_use, ring.is_closed, 0.5);
             for cmd in commands {
                 compound_path.add_command(cmd);
             }

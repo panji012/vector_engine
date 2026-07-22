@@ -12,18 +12,28 @@ pub mod logging;
 ///
 /// Catches Rust panics and errors safely, raising them as catchable Python exceptions so one failing file does not crash Python.
 #[pyfunction]
-pub fn process_svg_outset(input_path: &str, output_path: &str, distance: f64) -> PyResult<String> {
+pub fn process_svg_outset(
+    input_path: &str,
+    output_path: &str,
+    enable_outset: bool,
+    outset_distance: f64,
+    enable_simplify: bool,
+    simplify_tolerance: f64,
+) -> PyResult<String> {
     let result = std::panic::catch_unwind(|| -> Result<String, String> {
         let content = std::fs::read_to_string(input_path)
             .map_err(|e| format!("Failed to read input SVG '{}': {}", input_path, e))?;
 
-        let doc = SvgParser::parse_str(&content)
+        let mut doc = SvgParser::parse_str(&content)
             .map_err(|e| format!("SVG parse error: {}", e))?;
+
+        // 0. Detect and normalize background
+        vector_algo::BackgroundProcessor::normalize_background(&mut doc);
 
         let (combined_doc, _) = ColorCombiner::combine_document(&doc)
             .map_err(|e| format!("Color Group Combine failed: {}", e))?;
 
-        let (outset_doc, _) = GeometryOutset::outset_document(&combined_doc, distance)
+        let (outset_doc, _) = GeometryOutset::outset_document(&combined_doc, enable_outset, outset_distance, enable_simplify, simplify_tolerance)
             .map_err(|e| format!("Outset operation failed: {}", e))?;
 
         let output_svg_string = outset_doc.to_svg_string();
@@ -198,8 +208,10 @@ pub fn adjust_luminance_json(svg_content: &str, factor: f64) -> PyResult<String>
 /// Groups SVG paths by fill color and combines paths of identical color. Returns (combined_doc_json, report_json).
 #[pyfunction]
 pub fn combine_color_groups_json(svg_content: &str) -> PyResult<(String, String)> {
-    let doc = SvgParser::parse_str(svg_content)
+    let mut doc = SvgParser::parse_str(svg_content)
         .map_err(|e| PyValueError::new_err(format!("SVG parse error: {}", e)))?;
+
+    vector_algo::BackgroundProcessor::normalize_background(&mut doc);
 
     let (combined_doc, report) = ColorCombiner::combine_document(&doc)
         .map_err(|e| PyValueError::new_err(format!("Color Group Combine failed: {}", e)))?;
@@ -215,15 +227,22 @@ pub fn combine_color_groups_json(svg_content: &str) -> PyResult<(String, String)
 /// Applies an outward offset (Outset) to SVG document geometry by configurable distance (default 0.5 px).
 /// Runs ColorCombiner FIRST before outset calculation.
 #[pyfunction]
-pub fn apply_outset_json(svg_content: &str, distance: Option<f64>) -> PyResult<(String, String)> {
-    let doc = SvgParser::parse_str(svg_content)
+pub fn apply_outset_json(
+    svg_content: &str,
+    enable_outset: bool,
+    outset_distance: f64,
+    enable_simplify: bool,
+    simplify_tolerance: f64,
+) -> PyResult<(String, String)> {
+    let mut doc = SvgParser::parse_str(svg_content)
         .map_err(|e| PyValueError::new_err(format!("SVG parse error: {}", e)))?;
 
-    let dist = distance.unwrap_or(0.5);
+    vector_algo::BackgroundProcessor::normalize_background(&mut doc);
+
     let (combined_doc, _) = ColorCombiner::combine_document(&doc)
         .map_err(|e| PyValueError::new_err(format!("Color Group Combine failed: {}", e)))?;
 
-    let (outset_doc, report) = GeometryOutset::outset_document(&combined_doc, dist)
+    let (outset_doc, report) = GeometryOutset::outset_document(&combined_doc, enable_outset, outset_distance, enable_simplify, simplify_tolerance)
         .map_err(|e| PyValueError::new_err(format!("Outset operation failed: {}", e)))?;
 
     let doc_json = serde_json::to_string(&outset_doc)

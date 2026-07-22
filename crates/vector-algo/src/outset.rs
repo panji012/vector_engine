@@ -11,10 +11,13 @@ impl GeometryOutset {
     /// before executing outset calculations on unified color geometry.
     pub fn outset_document(
         doc: &VectorDocument,
-        distance: f64,
+        enable_outset: bool,
+        outset_distance: f64,
+        enable_simplify: bool,
+        simplify_tolerance: f64,
     ) -> Result<(VectorDocument, OutsetReport), VectorCoreError> {
         let (combined_doc, _) = ColorCombiner::combine_document(doc)?;
-        VectorOffsetEngine::offset_document(&combined_doc, distance)
+        VectorOffsetEngine::offset_document(&combined_doc, enable_outset, outset_distance, enable_simplify, simplify_tolerance)
     }
 }
 
@@ -35,7 +38,7 @@ mod tests {
         path.add_command(PathCommand::Close);
         doc.paths.push(path);
 
-        let (outset_doc, report) = GeometryOutset::outset_document(&doc, 0.5).unwrap();
+        let (outset_doc, report) = GeometryOutset::outset_document(&doc, true, 0.5, true, 0.2).unwrap();
 
         assert_eq!(report.outset_distance, 0.5);
         assert_eq!(report.original_bounds, (0.0, 0.0, 100.0, 100.0));
