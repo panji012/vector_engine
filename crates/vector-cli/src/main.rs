@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{debug, info, warn, Level};
 use tracing_subscriber::FmtSubscriber;
-use vector_algo::{ColorCombiner, GeometryOutset};
+use vector_algo::{BackgroundProcessor, ColorCombiner, GeometryOutset};
 use vector_io::SvgParser;
 
 /// Command line arguments struct for Vector Geometry Engine CLI
@@ -120,7 +120,12 @@ fn process_single_svg(
     debug!("Reading SVG: {}", input_file.display());
 
     let content = fs::read_to_string(input_file)?;
-    let doc = SvgParser::parse_str(&content)?;
+    let mut doc = SvgParser::parse_str(&content)?;
+
+    // 0. Detect and normalize background
+    if vector_algo::BackgroundProcessor::normalize_background(&mut doc) {
+        debug!("Background detected and normalized for {}", input_file.display());
+    }
 
     // 1. Execute ColorCombiner
     let (combined_doc, combine_report) = ColorCombiner::combine_document(&doc)?;

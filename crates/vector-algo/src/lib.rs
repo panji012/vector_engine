@@ -27,3 +27,5 @@ pub type AlgoResult<T> = Result<T, VectorCoreError>;
 pub trait GeometryAlgorithm<Input, Output> {
     fn execute(&self, input: &Input) -> AlgoResult<Output>;
 }
+pub mod background;
+pub use background::BackgroundProcessor;

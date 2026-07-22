@@ -28,6 +28,11 @@
 - CLI is fully robust for handling input and output directories (`-i input/ -o output/test_X`).
 - Tested successfully on high-complexity SVG shapes (`Remix_AI` files) yielding exact multi-path combinations and offsets.
 
+### 6. Background Normalization & Topology Scoping
+- **Fixed Global Topology Bug:** Modified the offset engine to calculate geometry topologies independently per color group to prevent shapes of different colors from accidentally punching Boolean holes in each other.
+- **Background Normalization:** Added an automatic pre-processing layer that identifies the absolute bottom-most group of the canvas (the background layer). The engine completely purges all messy fragments belonging to that layer and replaces them with a perfectly clean `<rect>` of the same color.
+- **Isolated Group IDs:** Assigned the new normalized background a unique isolated `group_id` (`usize::MAX`) so it never accidentally merges with foreground details, completely preventing Even-Odd fill-rule hole artifacts.
+
 ## 🚀 Next Steps / Pending
 1. **Quality Assurance:** Validate exact layout preservation with high-complexity graphic structures.
 2. **Curve Simplification (Bézier Fitting):** The current simplification applies RDP (polyline simplification). We can explore fitting true cubic Bezier curves (`C` or `S`) on top of the dense polyline offsets to significantly reduce output file size and improve visual smoothness (similar to Inkscape's internal contour pipeline).
