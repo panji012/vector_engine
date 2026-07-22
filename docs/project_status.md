@@ -31,13 +31,17 @@
 ### 6. Background Normalization & Topology Scoping
 - **Fixed Global Topology Bug:** Modified the offset engine to calculate geometry topologies independently per color group to prevent shapes of different colors from accidentally punching Boolean holes in each other.
 - **Background Normalization:** Added an automatic pre-processing layer that identifies the absolute bottom-most group of the canvas (the background layer). The engine completely purges all messy fragments belonging to that layer and replaces them with a perfectly clean `<rect>` of the same color.
-- **Isolated Group IDs:** Assigned the new normalized background a unique isolated `group_id` (`usize::MAX`) so it never accidentally merges with foreground details, completely preventing Even-Odd fill-rule hole artifacts.
-- [x] **Orchestrator Refactoring**:
-  - `run_batch.py` now includes a `CONFIGURATION` block for `ENABLE_OUTSET`, `DEFAULT_OUTSET_DISTANCE`, `ENABLE_SIMPLIFY`, and `SIMPLIFY_TOLERANCE`.
-  - Added formatted CLI table summary in Python execution.
-  - Rust API (`vector-offset`, `vector-algo`, `vector-ffi`, `vector-cli`) dynamically propagates these toggles.
+- **Isolated Group IDs:** Assigned the new normalized background a unique isolated `group_id` (`usize::MAX`) so it never accidentally merges with foreground details, completely preventing Even-Odd fill-rule hole## Current Status (2026-07-23)
+- **Geometry Offset Engine**:
+  - `TopologyBuilder` has been successfully refactored to process topology strictly **per-color**. This logically isolates overlapping foreground shapes from background shapes.
+  - **CRITICAL BUG FIXED**: The "Outset as Inset" (Foreground objects shrinking) bug is officially resolved. Foreground shapes and their holes now correctly expand and shrink respectively during outset operations. 
 
-## 🚀 Next Steps / Pending
-1. **Quality Assurance:** Validate exact layout preservation with high-complexity graphic structures.
-2. **Curve Simplification (Bézier Fitting):** [ ] **Livarot-Style Curve Simplification**: Implement Bézier curve fitting on top of simplified polylines. (Next Step) applies RDP (polyline simplification). We can explore fitting true cubic Bezier curves (`C` or `S`) on top of the dense polyline offsets to significantly reduce output file size and improve visual smoothness (similar to Inkscape's internal contour pipeline).
+> [!CAUTION]
+> **DEVELOPMENT WORKFLOW WARNING**
+> This project uses `PyO3` / `maturin` to bind Rust to Python. 
+> Whenever you modify **ANY** Rust code in the `crates/` directory, running `cargo build` is **NOT ENOUGH** to reflect changes in Python scripts like `run_batch.py`.
+> You **MUST** run `source .venv/bin/activate && maturin develop --release` before testing in Python!
+
+## Next Steps
+1. **Implement Bézier Simplification**: Replace the current raw polyline simplification with adaptive Bézier curve fitting to reduce output SVG file size and dramatically improve visual smoothness (similar to Inkscape's internal contour pipeline).
 3. **Engine Portability:** Continue preparing the C/C++ FFI bindings (`crates/vector-ffi`) for integration into external GUI applications if necessary.

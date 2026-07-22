@@ -47,15 +47,20 @@ impl VectorOffsetEngine {
     ) -> Result<(VectorDocument, OutsetReport), VectorCoreError> {
         let original_bounds = calculate_document_bounds(doc);
 
-        // Stage 1: Flatten ALL document paths into polyline rings while tracking color metadata
-        let mut doc_rings: Vec<PolygonRing> = Vec::new();
-        let mut ring_colors: Vec<Option<String>> = Vec::new();
+        let effective_distance = if enable_outset { outset_distance } else { 0.0 };
 
         let input_node_count = AtomicU64::new(0);
         let output_node_count = AtomicU64::new(0);
+        let mut total_subpaths = 0;
 
+        let mut color_contour_pairs: Vec<(Option<String>, Vec<(PolygonRing, RingRole)>)> = Vec::new();
+
+        // Process each color group independently to prevent cross-color topology interference
         for path in &doc.paths {
             let color = path.fill.clone();
+            let mut doc_rings: Vec<PolygonRing> = Vec::new();
+
+            // Stage 1: Flatten subpaths of the CURRENT color
             let mut subpath_cmds: Vec<Vec<PathCommand>> = Vec::new();
             let mut current_subpath: Vec<PathCommand> = Vec::new();
 
@@ -75,51 +80,41 @@ impl VectorOffsetEngine {
                 if !pts.is_empty() {
                     input_node_count.fetch_add(pts.len() as u64, Ordering::Relaxed);
                     doc_rings.push(PolygonRing::new(pts, true));
-                    ring_colors.push(color.clone());
                 }
             }
-        }
 
-        let effective_distance = if enable_outset { outset_distance } else { 0.0 };
+            if doc_rings.is_empty() {
+                continue;
+            }
 
-        if doc_rings.is_empty() {
-            let report = OutsetReport {
-                outset_distance: effective_distance,
-                original_bounds,
-                new_bounds: original_bounds,
-            };
-            return Ok((doc.clone(), report));
-        }
+            total_subpaths += doc_rings.len();
 
-        let total_subpaths = doc_rings.len();
+            // Stage 2: Topology Tree Construction (Strictly within the SAME color group)
+            let topology_nodes = TopologyBuilder::build_topology(doc_rings);
 
-        // Stage 2: Document-Wide Topology Tree Construction (evaluates containment across ALL document shapes and color layers)
-        let topology_nodes = TopologyBuilder::build_topology(doc_rings);
+            // Stage 3: Robust Polygon Offset (distance > 0 for outset, < 0 for inset)
+            let raw_offset_rings = PolygonOffsetGenerator::offset_topology(&topology_nodes, effective_distance);
 
-        // Stage 3: Robust Polygon Offset (distance > 0 for outset, < 0 for inset)
-        let raw_offset_rings = PolygonOffsetGenerator::offset_topology(&topology_nodes, effective_distance);
-
-        // Stage 4: Self-Intersection Detection, Boolean Resolution & Cleanup with Safety Fallback to Original Geometry
-        let mut color_contour_pairs: Vec<(Option<String>, Vec<(PolygonRing, RingRole)>)> = Vec::new();
-
-        for (i, ring) in raw_offset_rings.iter().enumerate() {
-            let color = ring_colors[i].clone();
-            let original_ring = &topology_nodes[i].ring;
-            let role = topology_nodes[i].role;
-
-            let resolved_loops = BooleanResolver::resolve_self_intersections(ring);
-            let rings_to_use = if resolved_loops.is_empty() {
-                vec![original_ring.clone()]
-            } else {
-                resolved_loops
-            };
-
+            // Stage 4: Self-Intersection Detection, Boolean Resolution & Cleanup with Safety Fallback
             let mut final_rings_for_color = Vec::new();
-            for loop_ring in rings_to_use {
-                if let Some(clean) = PolygonCleaner::clean_ring(&loop_ring, 1e-12) {
-                    final_rings_for_color.push((clean, role));
+
+            for (i, ring) in raw_offset_rings.iter().enumerate() {
+                let original_ring = &topology_nodes[i].ring;
+                let role = topology_nodes[i].role;
+
+                let resolved_loops = BooleanResolver::resolve_self_intersections(ring);
+                let rings_to_use = if resolved_loops.is_empty() {
+                    vec![original_ring.clone()]
                 } else {
-                    final_rings_for_color.push((original_ring.clone(), role));
+                    resolved_loops
+                };
+
+                for loop_ring in rings_to_use {
+                    if let Some(clean) = PolygonCleaner::clean_ring(&loop_ring, 1e-12) {
+                        final_rings_for_color.push((clean, role));
+                    } else {
+                        final_rings_for_color.push((original_ring.clone(), role));
+                    }
                 }
             }
 
@@ -127,11 +122,16 @@ impl VectorOffsetEngine {
                 output_node_count.fetch_add(r.vertices.len() as u64, Ordering::Relaxed);
             }
 
-            if let Some(existing) = color_contour_pairs.iter_mut().find(|(c, _)| *c == color) {
-                existing.1.extend(final_rings_for_color);
-            } else {
-                color_contour_pairs.push((color, final_rings_for_color));
-            }
+            color_contour_pairs.push((color, final_rings_for_color));
+        }
+
+        if color_contour_pairs.is_empty() {
+            let report = OutsetReport {
+                outset_distance: effective_distance,
+                original_bounds,
+                new_bounds: original_bounds,
+            };
+            return Ok((doc.clone(), report));
         }
 
         // Stage 5 & 6: SVG Path Reconstruction with Strict Z-Ordering & Dynamic Simplification
