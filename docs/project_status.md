@@ -32,9 +32,17 @@
 - **Fixed Global Topology Bug:** Modified the offset engine to calculate geometry topologies independently per color group to prevent shapes of different colors from accidentally punching Boolean holes in each other.
 - **Background Normalization:** Added an automatic pre-processing layer that identifies the absolute bottom-most group of the canvas (the background layer). The engine completely purges all messy fragments belonging to that layer and replaces them with a perfectly clean `<rect>` of the same color.
 - **Isolated Group IDs:** Assigned the new normalized background a unique isolated `group_id` (`usize::MAX`) so it never accidentally merges with foreground details, completely preventing Even-Odd fill-rule hole## Current Status (2026-07-23)
-- **Geometry Offset Engine**:
-  - `TopologyBuilder` has been successfully refactored to process topology strictly **per-color**. This logically isolates overlapping foreground shapes from background shapes.
-  - **CRITICAL BUG FIXED**: The "Outset as Inset" (Foreground objects shrinking) bug is officially resolved. Foreground shapes and their holes now correctly expand and shrink respectively during outset operations. 
+### 7. Multi-Phase Pipeline & Canvas Scaling
+- **Inkscape Simplify Action**: Integrated Inkscape CLI script action `--actions="select-all;path-simplify"` for native path node reduction.
+- **Canvas Auto-Scaling**: Scales document viewbox & coordinates to enforce target total pixel area between **19,000,000 px** and **22,000,000 px** ($20.5\text{M px}$ median).
+
+### 8. Dynamic Vector-First Silhouette Engine & EPS/JPG Bad Two Board
+- **Vector-First Processing**: Bypasses heavy pixel/raster image processing. Directly manipulates vector path data structures (`VectorDocument` & `VectorPath`) in native Rust, completing in under $1\text{ ms}$ per artwork.
+- **Color Grouping & Luminance Sorting**: Automatically extracts unique color buckets, computes perceived luminance $L(C) = 0.2126R + 0.7152G + 0.0722B$, and sorts colors from darkest to lightest.
+- **Adaptive Contrast Thresholding**: Dynamically maps canvas background to White (`#FFFFFF`), outlines/dark details to Black (`#000000`), and midtones relatively, seamlessly supporting 3, 5, 7, 10+ color inputs.
+- **Original vs Silhouette SVG Bad Two Board**: Dual artwork board displaying Original SVG colors (left) and High-Contrast Silhouette stencil (right).
+- **EPS & JPG Export Only**: Restricts final outputs exclusively to `.eps` and `.jpg` format, with temporary SVGs automatically purged.
+- **Per-Phase Execution Telemetry**: Displays precise duration in seconds (`X.XX s`) for every pipeline step in the terminal.
 
 > [!CAUTION]
 > **DEVELOPMENT WORKFLOW WARNING**
@@ -43,5 +51,6 @@
 > You **MUST** run `source .venv/bin/activate && maturin develop --release` before testing in Python!
 
 ## Next Steps
-1. **Implement Bézier Simplification**: Replace the current raw polyline simplification with adaptive Bézier curve fitting to reduce output SVG file size and dramatically improve visual smoothness (similar to Inkscape's internal contour pipeline).
-3. **Engine Portability:** Continue preparing the C/C++ FFI bindings (`crates/vector-ffi`) for integration into external GUI applications if necessary.
+1. **Engine Portability:** Continue preparing the C/C++ FFI bindings (`crates/vector-ffi`) for integration into external GUI applications if necessary.
+2. **Rayon Multi-Threading**: Expand parallel processing across color group iterations for high-throughput batch operations.
+

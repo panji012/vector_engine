@@ -155,6 +155,45 @@ impl VectorPath {
         self.commands.push(cmd);
     }
 
+    pub fn bounding_box(&self) -> (f64, f64, f64, f64) {
+        if self.commands.is_empty() {
+            return (0.0, 0.0, 0.0, 0.0);
+        }
+        let mut min_x = f64::INFINITY;
+        let mut min_y = f64::INFINITY;
+        let mut max_x = f64::NEG_INFINITY;
+        let mut max_y = f64::NEG_INFINITY;
+
+        let mut update_pt = |pt: &Point2D| {
+            if pt.x < min_x { min_x = pt.x; }
+            if pt.y < min_y { min_y = pt.y; }
+            if pt.x > max_x { max_x = pt.x; }
+            if pt.y > max_y { max_y = pt.y; }
+        };
+
+        for cmd in &self.commands {
+            match cmd {
+                PathCommand::MoveTo(pt) | PathCommand::LineTo(pt) => update_pt(pt),
+                PathCommand::QuadTo { control, end } => {
+                    update_pt(control);
+                    update_pt(end);
+                }
+                PathCommand::CubicTo { control1, control2, end } => {
+                    update_pt(control1);
+                    update_pt(control2);
+                    update_pt(end);
+                }
+                PathCommand::Close => {}
+            }
+        }
+
+        if min_x.is_infinite() {
+            (0.0, 0.0, 0.0, 0.0)
+        } else {
+            (min_x, min_y, max_x, max_y)
+        }
+    }
+
     /// Converts path commands directly to SVG path data string (`d="..."`), preserving exact coordinates,
     /// curves (`CubicTo`, `QuadTo`), sub-paths (`MoveTo`), holes, and winding order.
     pub fn to_svg_path_data(&self) -> String {

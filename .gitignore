@@ -4,6 +4,10 @@ Cargo.lock
 
 # Test Outputs & Inputs
 output/
+output_test/
+output_calibration/
+test_temp.*
+test_out.jpg
 
 # Python Virtual Environments
 .venv/

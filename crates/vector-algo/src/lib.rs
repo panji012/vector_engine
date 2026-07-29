@@ -1,7 +1,9 @@
 //! Computational geometry algorithms crate (Polygon Union, Simplification, Canvas Scaling, Pattern Detection, Pattern Generation, Color & Luminance Variants, Color Grouping, Outset).
 
+pub mod background;
 pub mod color;
 pub mod color_combine;
+pub mod duo_board;
 pub mod luminance;
 pub mod outset;
 pub mod pattern_detect;
@@ -10,8 +12,10 @@ pub mod scale;
 pub mod simplify;
 pub mod union;
 
+pub use background::BackgroundProcessor;
 pub use color::ColorVariantEngine;
 pub use color_combine::{ColorCombineReport, ColorCombiner, ColorGroupDetail};
+pub use duo_board::DuoBoardGenerator;
 pub use luminance::LuminanceEngine;
 pub use outset::{GeometryOutset, OutsetReport};
 pub use pattern_detect::{PatternDetector, PatternSuitabilityReport};
@@ -27,5 +31,4 @@ pub type AlgoResult<T> = Result<T, VectorCoreError>;
 pub trait GeometryAlgorithm<Input, Output> {
     fn execute(&self, input: &Input) -> AlgoResult<Output>;
 }
-pub mod background;
-pub use background::BackgroundProcessor;
+

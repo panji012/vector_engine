@@ -569,10 +569,18 @@ pub fn normalize_color_string(input: &str) -> String {
     }
 }
 
-/// Safely strips XML <!DOCTYPE ...> declarations to allow parsing SVGs exported from Adobe Illustrator,
-/// Inkscape, and Affinity Designer without triggering roxmltree DTD errors or exposing XXE vulnerabilities.
+/// Safely strips XML <!DOCTYPE ...> declarations and <?xml ... ?> prologs to allow parsing SVGs
+/// exported from Adobe Illustrator, Inkscape, and Affinity Designer without roxmltree errors.
 fn strip_doctype(xml: &str) -> String {
-    let mut result = xml.to_string();
+    let mut result = xml.trim_start_matches('\u{feff}').trim().to_string();
+
+    // Strip XML prolog <?xml ... ?>
+    if result.starts_with("<?xml") {
+        if let Some(end_idx) = result.find("?>") {
+            result = result[end_idx + 2..].trim().to_string();
+        }
+    }
+
     while let Some(start) = result.find("<!DOCTYPE") {
         let bytes = result.as_bytes();
         let mut end = start + 9;
@@ -593,8 +601,9 @@ fn strip_doctype(xml: &str) -> String {
 
         result = format!("{}{}", &result[..start], &result[end.min(result.len())..]);
     }
-    result
+    result.trim().to_string()
 }
+
 
 fn parse_length(val: &str) -> Option<f64> {
     let clean = val.trim_end_matches(|c: char| c.is_alphabetic() || c == '%');
