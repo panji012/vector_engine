@@ -1062,6 +1062,59 @@ def run_batch_queue(
                 if bad_two_temp_svg.exists():
                     bad_two_temp_svg.unlink()
 
+                # ------------------------------------------------------------------
+                # Phase 7: Seamless Pattern Generation & Export (if enabled)
+                # ------------------------------------------------------------------
+                pattern_config = prof_cfg.get("pattern_config", {})
+                if pattern_config.get("enable", True):
+                    p7_start = time.time()
+                    try:
+                        from vector_engine._native import analyze_pattern_suitability_json, generate_pattern_styled_json
+                        report_raw = analyze_pattern_suitability_json(original_svg)
+                        report = json.loads(report_raw)
+                        detected_shape = report.get("detected_shape", "other")
+                        allowed_shapes = pattern_config.get("allowed_shapes", ["circular", "square"])
+                        detect_suitable_only = pattern_config.get("detect_suitable_only", True)
+
+                        is_approved = not detect_suitable_only or (report.get("is_suitable", False) and (detected_shape in allowed_shapes or report.get("is_circular_shape") or report.get("is_square_shape")))
+
+                        if is_approved:
+                            grid_x = pattern_config.get("grid_x", 3)
+                            grid_y = pattern_config.get("grid_y", 3)
+                            style = pattern_config.get("style", "alternating")
+
+                            pattern_svg = generate_pattern_styled_json(
+                                original_scaled_svg,
+                                grid_x=grid_x,
+                                grid_y=grid_y,
+                                style=style,
+                                detect_suitable_only=False
+                            )
+
+                            pattern_temp_svg = RAM_TEMP_DIR / f"{stem}_pattern_temp_{idx}.svg"
+                            pattern_temp_svg.write_text(pattern_svg)
+
+                            pattern_final_eps = output_path / f"{stem}_pattern.eps"
+                            pattern_final_jpg = output_path / f"{stem}_pattern.jpg"
+                            pattern_final_svg = output_path / f"{stem}_pattern.svg"
+
+                            eps_p, jpg_p = export_eps_and_jpg(pattern_temp_svg)
+                            if eps_p.exists():
+                                shutil.move(str(eps_p), str(pattern_final_eps))
+                            if jpg_p.exists():
+                                shutil.move(str(jpg_p), str(pattern_final_jpg))
+                            pattern_final_svg.write_text(pattern_svg)
+
+                            if pattern_temp_svg.exists():
+                                pattern_temp_svg.unlink()
+
+                            p7_sec = time.time() - p7_start
+                            print(f"  - Phase 7 (Seamless Pattern Exported: shape='{detected_shape}', style='{style}'): {p7_sec:.2f} s")
+                        else:
+                            print(f"  - Phase 7 (Pattern Skipped: shape='{detected_shape}' not in allowed_shapes)")
+                    except Exception as pe:
+                        print(f"  - Phase 7 Warning (Pattern export skipped): {pe}")
+
                 p6_sec = time.time() - p6_start
                 print(f"  - Phase 6 (Export in RAM -> Harddisk): {p6_sec:.2f} s")
 

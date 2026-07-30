@@ -5,25 +5,36 @@ pub struct PatternGenerator;
 
 impl PatternGenerator {
     /// Generates a seamless tiled pattern SVG `VectorDocument` ONLY if PatternDetector approves.
-    ///
-    /// Preserves original fill and stroke color attributes across all translated pattern tiles.
     pub fn generate_pattern(
         doc: &VectorDocument,
         grid_x: u32,
         grid_y: u32,
     ) -> Result<VectorDocument, VectorCoreError> {
+        Self::generate_pattern_styled(doc, grid_x, grid_y, "alternating", true)
+    }
+
+    /// Generates a seamless tiled pattern SVG with configurable layout style ("grid" or "alternating").
+    pub fn generate_pattern_styled(
+        doc: &VectorDocument,
+        grid_x: u32,
+        grid_y: u32,
+        style: &str,
+        detect_suitable_only: bool,
+    ) -> Result<VectorDocument, VectorCoreError> {
         if grid_x == 0 || grid_y == 0 {
             return Err(VectorCoreError::InvalidGeometry("Grid dimensions must be > 0".to_string()));
         }
 
-        // Gatekeeper Check: Only generate if PatternDetector approves
-        let report = PatternDetector::analyze_document(doc)?;
-        if !report.is_suitable {
-            return Err(VectorCoreError::InvalidGeometry(format!(
-                "SVG is not suitable for seamless pattern generation. Suitability score is {:.1}/100. Recommendations: {}",
-                report.suitability_score,
-                report.recommendations.join("; ")
-            )));
+        // Gatekeeper Check: Optional screening
+        if detect_suitable_only {
+            let report = PatternDetector::analyze_document(doc)?;
+            if !report.is_suitable {
+                return Err(VectorCoreError::InvalidGeometry(format!(
+                    "SVG is not suitable for seamless pattern generation. Suitability score is {:.1}/100. Recommendations: {}",
+                    report.suitability_score,
+                    report.recommendations.join("; ")
+                )));
+            }
         }
 
         let (base_w, base_h) = match doc.view_box {
@@ -36,10 +47,13 @@ impl PatternGenerator {
         tiled_doc.height = Some(base_h * grid_y as f64);
         tiled_doc.view_box = Some((0.0, 0.0, base_w * grid_x as f64, base_h * grid_y as f64));
 
+        let is_alternating = style.eq_ignore_ascii_case("alternating") || style.eq_ignore_ascii_case("flipped") || style.eq_ignore_ascii_case("bolak_balik");
+
         for r in 0..grid_y {
             for c in 0..grid_x {
                 let dx = c as f64 * base_w;
                 let dy = r as f64 * base_h;
+                let flip_tile = is_alternating && ((r + c) % 2 == 1);
 
                 for (_idx, path) in doc.paths.iter().enumerate() {
                     let mut translated_path = VectorPath::new(Some(format!(
@@ -49,23 +63,32 @@ impl PatternGenerator {
                         r
                     )));
 
-                    // PRESERVE ORIGINAL COLORS AND STYLES
                     translated_path.fill = path.fill.clone();
                     translated_path.stroke = path.stroke.clone();
                     translated_path.stroke_width = path.stroke_width;
 
+                    let transform_pt = |p: &Point2D| -> Point2D {
+                        if flip_tile {
+                            // Flipped / mirrored relative to tile cell bounds (bolak-balik)
+                            Point2D::new(dx + (base_w - p.x), dy + (base_h - p.y))
+                        } else {
+                            // Standard parallel alignment (sejajar simetris)
+                            Point2D::new(p.x + dx, p.y + dy)
+                        }
+                    };
+
                     for cmd in &path.commands {
                         let translated_cmd = match cmd {
-                            PathCommand::MoveTo(p) => PathCommand::MoveTo(Point2D::new(p.x + dx, p.y + dy)),
-                            PathCommand::LineTo(p) => PathCommand::LineTo(Point2D::new(p.x + dx, p.y + dy)),
+                            PathCommand::MoveTo(p) => PathCommand::MoveTo(transform_pt(p)),
+                            PathCommand::LineTo(p) => PathCommand::LineTo(transform_pt(p)),
                             PathCommand::QuadTo { control, end } => PathCommand::QuadTo {
-                                control: Point2D::new(control.x + dx, control.y + dy),
-                                end: Point2D::new(end.x + dx, end.y + dy),
+                                control: transform_pt(control),
+                                end: transform_pt(end),
                             },
                             PathCommand::CubicTo { control1, control2, end } => PathCommand::CubicTo {
-                                control1: Point2D::new(control1.x + dx, control1.y + dy),
-                                control2: Point2D::new(control2.x + dx, control2.y + dy),
-                                end: Point2D::new(end.x + dx, end.y + dy),
+                                control1: transform_pt(control1),
+                                control2: transform_pt(control2),
+                                end: transform_pt(end),
                             },
                             PathCommand::Close => PathCommand::Close,
                         };

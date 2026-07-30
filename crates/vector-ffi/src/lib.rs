@@ -188,6 +188,27 @@ pub fn generate_pattern_svg_json(svg_content: &str, grid_x: u32, grid_y: u32) ->
     Ok(tiled_doc.to_svg_string())
 }
 
+/// Generates a seamless tiled pattern SVG document with configurable style ("grid" or "alternating") and shape filter option.
+#[pyfunction]
+pub fn generate_pattern_styled_json(
+    svg_content: &str,
+    grid_x: u32,
+    grid_y: u32,
+    style: Option<&str>,
+    detect_suitable_only: Option<bool>,
+) -> PyResult<String> {
+    let doc = SvgParser::parse_str(svg_content)
+        .map_err(|e| PyValueError::new_err(format!("SVG parse error: {}", e)))?;
+
+    let pattern_style = style.unwrap_or("alternating");
+    let suitable_only = detect_suitable_only.unwrap_or(true);
+
+    let tiled_doc = PatternGenerator::generate_pattern_styled(&doc, grid_x, grid_y, pattern_style, suitable_only)
+        .map_err(|e| PyValueError::new_err(format!("Pattern Generation failed: {}", e)))?;
+
+    Ok(tiled_doc.to_svg_string())
+}
+
 /// Applies a custom HEX color palette (or preset name) to an SVG document.
 #[pyfunction]
 pub fn apply_color_palette_json(svg_content: &str, palette: Vec<String>) -> PyResult<String> {
@@ -375,6 +396,7 @@ fn _native(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(render_jpg_preview_json, m)?)?;
     m.add_function(wrap_pyfunction!(analyze_pattern_suitability_json, m)?)?;
     m.add_function(wrap_pyfunction!(generate_pattern_svg_json, m)?)?;
+    m.add_function(wrap_pyfunction!(generate_pattern_styled_json, m)?)?;
     m.add_function(wrap_pyfunction!(apply_color_palette_json, m)?)?;
     m.add_function(wrap_pyfunction!(adjust_luminance_json, m)?)?;
     m.add_function(wrap_pyfunction!(combine_color_groups_json, m)?)?;

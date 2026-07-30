@@ -5,6 +5,8 @@ use vector_core::{PathCommand, VectorCoreError, VectorDocument};
 pub struct PatternSuitabilityReport {
     pub is_suitable: bool,
     pub is_circular_shape: bool,
+    pub is_square_shape: bool,
+    pub detected_shape: String,
     pub suitability_score: f64,
     pub aspect_ratio_score: f64,
     pub closed_path_score: f64,
@@ -16,7 +18,7 @@ pub struct PatternSuitabilityReport {
 pub struct PatternDetector;
 
 impl PatternDetector {
-    /// Analyzes an SVG `VectorDocument` for circular shape ("bulat melingkar") and pattern suitability.
+    /// Analyzes an SVG `VectorDocument` for shape (circular / square) and pattern suitability.
     pub fn analyze_document(doc: &VectorDocument) -> Result<PatternSuitabilityReport, VectorCoreError> {
         let (width, height) = match doc.view_box {
             Some(vb) => (vb.2 - vb.0, vb.3 - vb.1),
@@ -35,8 +37,8 @@ impl PatternDetector {
         let aspect_ratio = min_dim / max_dim;
         let aspect_ratio_score = aspect_ratio * 100.0;
 
-        // 2. Circular / Radial Shape Check ("bulat melingkar")
-        let is_aspect_square = aspect_ratio >= 0.85;
+        // 2. Shape Detection (Circular / Square)
+        let is_aspect_square = aspect_ratio >= 0.75;
 
         let total_paths = doc.paths.len();
         let closed_paths = doc.paths.iter().filter(|p| {
@@ -49,11 +51,21 @@ impl PatternDetector {
             (closed_paths as f64 / total_paths as f64) * 100.0
         };
 
-        // Circularity check: Check symmetry and closed contours
         let is_circular_shape = is_aspect_square && closed_path_score >= 60.0;
+        let is_square_shape = is_aspect_square && closed_path_score >= 40.0;
+
+        let detected_shape = if is_circular_shape {
+            "circular".to_string()
+        } else if is_square_shape {
+            "square".to_string()
+        } else {
+            "other".to_string()
+        };
 
         if is_circular_shape {
-            recommendations.push("Desain terdeteksi berbentuk bulat/melingkar. Sangat cocok untuk dibuat pattern.".to_string());
+            recommendations.push("Desain terdeteksi berbentuk melingkar/bulat. Sangat cocok untuk pattern.".to_string());
+        } else if is_square_shape {
+            recommendations.push("Desain terdeteksi berbentuk persegi. Cocok untuk pattern.".to_string());
         } else {
             recommendations.push(format!("Canvas aspect ratio is {:.2}:1.", max_dim / min_dim));
         }
@@ -112,11 +124,13 @@ impl PatternDetector {
             + (edge_alignment_score * 0.15)
             + (coverage_score * 0.15);
 
-        let is_suitable = suitability_score >= 50.0 || is_circular_shape;
+        let is_suitable = suitability_score >= 50.0 || is_circular_shape || is_square_shape;
 
         Ok(PatternSuitabilityReport {
             is_suitable,
             is_circular_shape,
+            is_square_shape,
+            detected_shape,
             suitability_score,
             aspect_ratio_score,
             closed_path_score,
