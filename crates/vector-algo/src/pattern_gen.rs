@@ -10,15 +10,28 @@ impl PatternGenerator {
         grid_x: u32,
         grid_y: u32,
     ) -> Result<VectorDocument, VectorCoreError> {
-        Self::generate_pattern_styled(doc, grid_x, grid_y, "alternating", true)
+        Self::generate_pattern_full_config(doc, grid_x, grid_y, "slanted_left", -0.5, true, true)
     }
 
-    /// Generates a seamless tiled pattern SVG with configurable layout style ("grid" or "alternating").
+    /// Generates a seamless tiled pattern SVG with configurable layout style ("grid", "alternating", or "slanted_left").
     pub fn generate_pattern_styled(
         doc: &VectorDocument,
         grid_x: u32,
         grid_y: u32,
         style: &str,
+        detect_suitable_only: bool,
+    ) -> Result<VectorDocument, VectorCoreError> {
+        Self::generate_pattern_full_config(doc, grid_x, grid_y, style, -0.5, true, detect_suitable_only)
+    }
+
+    /// Full configurable seamless pattern generator supporting slanted offset, alternating tiles, and toroidal edge wraparound.
+    pub fn generate_pattern_full_config(
+        doc: &VectorDocument,
+        grid_x: u32,
+        grid_y: u32,
+        style: &str,
+        slant_offset_ratio: f64,
+        wraparound_seamless: bool,
         detect_suitable_only: bool,
     ) -> Result<VectorDocument, VectorCoreError> {
         if grid_x == 0 || grid_y == 0 {
@@ -42,18 +55,35 @@ impl PatternGenerator {
             None => (doc.width.unwrap_or(100.0), doc.height.unwrap_or(100.0)),
         };
 
+        let total_w = base_w * grid_x as f64;
+        let total_h = base_h * grid_y as f64;
+
         let mut tiled_doc = VectorDocument::new();
-        tiled_doc.width = Some(base_w * grid_x as f64);
-        tiled_doc.height = Some(base_h * grid_y as f64);
-        tiled_doc.view_box = Some((0.0, 0.0, base_w * grid_x as f64, base_h * grid_y as f64));
+        tiled_doc.width = Some(total_w);
+        tiled_doc.height = Some(total_h);
+        tiled_doc.view_box = Some((0.0, 0.0, total_w, total_h));
 
         let is_alternating = style.eq_ignore_ascii_case("alternating") || style.eq_ignore_ascii_case("flipped") || style.eq_ignore_ascii_case("bolak_balik");
+        let is_slanted = style.contains("slanted") || style.contains("miring") || style.contains("half_drop");
 
-        for r in 0..grid_y {
-            for c in 0..grid_x {
-                let dx = c as f64 * base_w;
+        let mut candidate_paths: Vec<VectorPath> = Vec::new();
+
+        // Extended grid coverage to account for slanted offsets
+        let extra_cols = if is_slanted { 2 } else { 0 };
+        let col_start = 0 - extra_cols;
+        let col_end = grid_x as i32 + extra_cols;
+
+        for r in 0..grid_y as i32 {
+            let slant_shift = if is_slanted {
+                r as f64 * (base_w * slant_offset_ratio)
+            } else {
+                0.0
+            };
+
+            for c in col_start..col_end {
+                let dx = c as f64 * base_w + slant_shift;
                 let dy = r as f64 * base_h;
-                let flip_tile = is_alternating && ((r + c) % 2 == 1);
+                let flip_tile = is_alternating && ((r.abs() + c.abs()) % 2 == 1);
 
                 for (_idx, path) in doc.paths.iter().enumerate() {
                     let mut translated_path = VectorPath::new(Some(format!(
@@ -69,10 +99,8 @@ impl PatternGenerator {
 
                     let transform_pt = |p: &Point2D| -> Point2D {
                         if flip_tile {
-                            // Flipped / mirrored relative to tile cell bounds (bolak-balik)
                             Point2D::new(dx + (base_w - p.x), dy + (base_h - p.y))
                         } else {
-                            // Standard parallel alignment (sejajar simetris)
                             Point2D::new(p.x + dx, p.y + dy)
                         }
                     };
@@ -94,7 +122,75 @@ impl PatternGenerator {
                         };
                         translated_path.add_command(translated_cmd);
                     }
-                    tiled_doc.paths.push(translated_path);
+                    candidate_paths.push(translated_path);
+                }
+            }
+        }
+
+        // Toroidal Edge Wraparound: duplicate geometry extending across left/right/top/bottom boundaries
+        for path in candidate_paths {
+            let mut min_x = f64::INFINITY;
+            let mut min_y = f64::INFINITY;
+            let mut max_x = f64::NEG_INFINITY;
+            let mut max_y = f64::NEG_INFINITY;
+
+            for cmd in &path.commands {
+                let pt = match cmd {
+                    PathCommand::MoveTo(p) | PathCommand::LineTo(p) => *p,
+                    PathCommand::QuadTo { end, .. } => *end,
+                    PathCommand::CubicTo { end, .. } => *end,
+                    PathCommand::Close => continue,
+                };
+                if pt.x < min_x { min_x = pt.x; }
+                if pt.y < min_y { min_y = pt.y; }
+                if pt.x > max_x { max_x = pt.x; }
+                if pt.y > max_y { max_y = pt.y; }
+            }
+
+            if min_x == f64::INFINITY {
+                continue;
+            }
+
+            // Primary path inclusion
+            let is_visible = max_x >= 0.0 && min_x <= total_w && max_y >= 0.0 && min_y <= total_h;
+            if is_visible {
+                tiled_doc.paths.push(path.clone());
+            }
+
+            // Wraparound duplicates when wraparound_seamless is enabled
+            if wraparound_seamless {
+                let offsets_x = if min_x < 0.0 {
+                    vec![total_w]
+                } else if max_x > total_w {
+                    vec![-total_w]
+                } else {
+                    vec![]
+                };
+
+                for shift_x in offsets_x {
+                    let mut wrapped_path = VectorPath::new(Some(format!("{}_wrap_x", path.id.as_deref().unwrap_or("path"))));
+                    wrapped_path.fill = path.fill.clone();
+                    wrapped_path.stroke = path.stroke.clone();
+                    wrapped_path.stroke_width = path.stroke_width;
+
+                    for cmd in &path.commands {
+                        let shift_cmd = match cmd {
+                            PathCommand::MoveTo(p) => PathCommand::MoveTo(Point2D::new(p.x + shift_x, p.y)),
+                            PathCommand::LineTo(p) => PathCommand::LineTo(Point2D::new(p.x + shift_x, p.y)),
+                            PathCommand::QuadTo { control, end } => PathCommand::QuadTo {
+                                control: Point2D::new(control.x + shift_x, control.y),
+                                end: Point2D::new(end.x + shift_x, end.y),
+                            },
+                            PathCommand::CubicTo { control1, control2, end } => PathCommand::CubicTo {
+                                control1: Point2D::new(control1.x + shift_x, control1.y),
+                                control2: Point2D::new(control2.x + shift_x, control2.y),
+                                end: Point2D::new(end.x + shift_x, end.y),
+                            },
+                            PathCommand::Close => PathCommand::Close,
+                        };
+                        wrapped_path.add_command(shift_cmd);
+                    }
+                    tiled_doc.paths.push(wrapped_path);
                 }
             }
         }

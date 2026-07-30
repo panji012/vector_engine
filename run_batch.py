@@ -1081,14 +1081,18 @@ def run_batch_queue(
                         if is_approved:
                             grid_x = pattern_config.get("grid_x", 3)
                             grid_y = pattern_config.get("grid_y", 3)
-                            style = pattern_config.get("style", "alternating")
+                            style = pattern_config.get("style", "slanted_left")
+                            slant_ratio = pattern_config.get("slant_offset_ratio", -0.5)
+                            wraparound = pattern_config.get("wraparound_seamless", True)
 
                             pattern_svg = generate_pattern_styled_json(
                                 original_scaled_svg,
                                 grid_x=grid_x,
                                 grid_y=grid_y,
                                 style=style,
-                                detect_suitable_only=False
+                                detect_suitable_only=False,
+                                slant_offset_ratio=slant_ratio,
+                                wraparound_seamless=wraparound
                             )
 
                             pattern_temp_svg = RAM_TEMP_DIR / f"{stem}_pattern_temp_{idx}.svg"

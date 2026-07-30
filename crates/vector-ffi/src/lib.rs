@@ -188,7 +188,7 @@ pub fn generate_pattern_svg_json(svg_content: &str, grid_x: u32, grid_y: u32) ->
     Ok(tiled_doc.to_svg_string())
 }
 
-/// Generates a seamless tiled pattern SVG document with configurable style ("grid" or "alternating") and shape filter option.
+/// Generates a seamless tiled pattern SVG document with configurable style ("slanted_left", "alternating", "grid"), slant ratio, wraparound, and shape filter option.
 #[pyfunction]
 pub fn generate_pattern_styled_json(
     svg_content: &str,
@@ -196,15 +196,27 @@ pub fn generate_pattern_styled_json(
     grid_y: u32,
     style: Option<&str>,
     detect_suitable_only: Option<bool>,
+    slant_offset_ratio: Option<f64>,
+    wraparound_seamless: Option<bool>,
 ) -> PyResult<String> {
     let doc = SvgParser::parse_str(svg_content)
         .map_err(|e| PyValueError::new_err(format!("SVG parse error: {}", e)))?;
 
-    let pattern_style = style.unwrap_or("alternating");
+    let pattern_style = style.unwrap_or("slanted_left");
     let suitable_only = detect_suitable_only.unwrap_or(true);
+    let slant_ratio = slant_offset_ratio.unwrap_or(-0.5);
+    let wraparound = wraparound_seamless.unwrap_or(true);
 
-    let tiled_doc = PatternGenerator::generate_pattern_styled(&doc, grid_x, grid_y, pattern_style, suitable_only)
-        .map_err(|e| PyValueError::new_err(format!("Pattern Generation failed: {}", e)))?;
+    let tiled_doc = PatternGenerator::generate_pattern_full_config(
+        &doc,
+        grid_x,
+        grid_y,
+        pattern_style,
+        slant_ratio,
+        wraparound,
+        suitable_only,
+    )
+    .map_err(|e| PyValueError::new_err(format!("Pattern Generation failed: {}", e)))?;
 
     Ok(tiled_doc.to_svg_string())
 }

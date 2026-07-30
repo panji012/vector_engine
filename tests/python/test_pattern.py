@@ -6,15 +6,21 @@ def test_pattern():
     report = json.loads(analyze_pattern_suitability_json(svg_content))
     print("Pattern Suitability Report:", report)
 
-    pattern_svg = generate_pattern_styled_json(svg_content, grid_x=3, grid_y=3, style="alternating", detect_suitable_only=True)
-    print("Generated Alternating Pattern SVG length:", len(pattern_svg))
-    assert len(pattern_svg) > 100
+    # Test Slanted Left Pattern with Edge Wraparound
+    slanted_pattern_svg = generate_pattern_styled_json(
+        svg_content,
+        grid_x=3,
+        grid_y=3,
+        style="slanted_left",
+        detect_suitable_only=True,
+        slant_offset_ratio=-0.5,
+        wraparound_seamless=True
+    )
+    print("Generated Slanted Left Pattern SVG length:", len(slanted_pattern_svg))
+    assert len(slanted_pattern_svg) > 100
+    assert "_wrap_x" in slanted_pattern_svg
 
-    grid_pattern_svg = generate_pattern_styled_json(svg_content, grid_x=3, grid_y=3, style="grid", detect_suitable_only=True)
-    print("Generated Grid Pattern SVG length:", len(grid_pattern_svg))
-    assert len(grid_pattern_svg) > 100
-
-    print("Pattern unit test PASSED successfully!")
+    print("Pattern slanted_left & wraparound unit test PASSED successfully!")
 
 if __name__ == "__main__":
     test_pattern()

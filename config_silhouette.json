@@ -18,7 +18,9 @@
             "enable": true,
             "detect_suitable_only": true,
             "allowed_shapes": ["circular", "square"],
-            "style": "alternating",
+            "style": "slanted_left",
+            "slant_offset_ratio": -0.5,
+            "wraparound_seamless": true,
             "grid_x": 3,
             "grid_y": 3,
             "seamless_combine": true
@@ -39,7 +41,9 @@
             "enable": true,
             "detect_suitable_only": true,
             "allowed_shapes": ["circular", "square"],
-            "style": "alternating",
+            "style": "slanted_left",
+            "slant_offset_ratio": -0.5,
+            "wraparound_seamless": true,
             "grid_x": 3,
             "grid_y": 3,
             "seamless_combine": true
