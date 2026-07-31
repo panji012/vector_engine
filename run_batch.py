@@ -15,6 +15,7 @@ End-to-End Pipeline:
 """
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import shutil
@@ -105,19 +106,36 @@ def run_inkscape_action_simplify(svg_path: Path, out_path: Path, simplify_tolera
 
 
 
+CPU_WORKER_COUNT = max(4, os.cpu_count() or 4)
+PARALLEL_EXECUTOR = ThreadPoolExecutor(max_workers=CPU_WORKER_COUNT)
+
+
+def _run_inkscape_command(cmd: list[str]) -> None:
+    env = os.environ.copy()
+    num_threads = str(os.cpu_count() or 12)
+    env["OMP_NUM_THREADS"] = num_threads
+    env["OPENBLAS_NUM_THREADS"] = num_threads
+    env["MKL_NUM_THREADS"] = num_threads
+    env["VECLIB_MAXIMUM_THREADS"] = num_threads
+    env["NUMEXPR_NUM_THREADS"] = num_threads
+    subprocess.run(cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+
+
 def export_eps_and_jpg(svg_path: Path) -> tuple[Path, Path]:
-    """Exports SVG to EPS and JPG formats cleanly."""
+    """Exports SVG to EPS and JPG formats cleanly using parallel Inkscape rendering across multi-core CPU threads."""
     eps_path = svg_path.with_suffix(".eps")
     jpg_path = svg_path.with_suffix(".jpg")
     png_temp_path = svg_path.with_suffix(".png")
 
-    # 1. Export EPS via Inkscape (exact board page bounds)
-    cmd_eps = ["inkscape", str(svg_path), f"--export-filename={eps_path}"]
-    subprocess.run(cmd_eps, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    cmd_eps = ["inkscape", str(svg_path), "--export-area-page", f"--export-filename={eps_path}"]
+    cmd_png = ["inkscape", str(svg_path), "--export-area-page", f"--export-filename={png_temp_path}"]
 
-    # 2. Export PNG via Inkscape, then convert to JPG via PIL
-    cmd_png = ["inkscape", str(svg_path), f"--export-filename={png_temp_path}"]
-    subprocess.run(cmd_png, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Execute Inkscape EPS and PNG export tasks concurrently in parallel on separate CPU cores
+    fut_eps = PARALLEL_EXECUTOR.submit(_run_inkscape_command, cmd_eps)
+    fut_png = PARALLEL_EXECUTOR.submit(_run_inkscape_command, cmd_png)
+
+    fut_eps.result()
+    fut_png.result()
 
     if png_temp_path.exists():
         try:
@@ -829,22 +847,47 @@ def run_batch_queue(
     min_area_override: float = None,
     max_area_override: float = None,
     config_data: dict = None,
+    mode_single: bool = False,
+    mode_double: bool = False,
+    mode_triple: bool = False,
+    mode_pattern: bool = False,
+    style_override: str = None,
+    no_emoji: bool = False,
 ) -> None:
     """Processes SVG files in a sequential fault-tolerant multi-phase pipeline with adaptive profile selection."""
     if config_data is None:
         config_data = {}
 
+    ic_engine = "🚀" if not no_emoji else "[ENGINE]"
+    ic_input = "📁" if not no_emoji else "[INPUT]"
+    ic_output = "📂" if not no_emoji else "[OUTPUT]"
+    ic_prof = "⚙️" if not no_emoji else "[PROFILE]"
+    ic_canvas = "📏" if not no_emoji else "[CANVAS]"
+    ic_file = "📄" if not no_emoji else "[FILE]"
+    ic_p1 = "🌀" if not no_emoji else "[P1]"
+    ic_p2 = "⚡" if not no_emoji else "[P2]"
+    ic_p3 = "🎨" if not no_emoji else "[P3]"
+    ic_p4 = "📐" if not no_emoji else "[P4]"
+    ic_p5 = "🖼️" if not no_emoji else "[P5]"
+    ic_p7 = "🧩" if not no_emoji else "[P7]"
+    ic_p6 = "💾" if not no_emoji else "[P6]"
+    ic_time = "⏱️" if not no_emoji else "[TIME]"
+    ic_summary = "📊" if not no_emoji else "[SUMMARY]"
+    ic_bottleneck_tag = "🔴 [PRIMARY BOTTLENECK]" if not no_emoji else "[*] [PRIMARY BOTTLENECK]"
+    ic_success = "✅ SUCCESS" if not no_emoji else "[OK] SUCCESS"
+    ic_failed = "❌ FAILED" if not no_emoji else "[FAIL] FAILED"
+
     print("================================================================================")
-    print(" Vector Geometry Engine - Adaptive Multi-Phase Batch Queue Pipeline ")
+    print(f" {ic_engine} Vector Geometry Engine - Multi-Phase Batch Queue Pipeline")
     print("================================================================================")
-    print(f"Input Directory  : {input_path}")
+    print(f" {ic_input} Input Directory  : {input_path}")
+    print(f" {ic_output} Output Directory : {output_path}")
     low_cfg = config_data.get("low_color_bad_two", {})
     multi_cfg = config_data.get("multi_color_bad_two", {})
     max_c = low_cfg.get("max_colors", 5)
     min_c = multi_cfg.get("min_colors", 6)
-    print(f"Output Directory : {output_path}")
-    print(f"Adaptive Profiles: 'low_color_bad_two' (<={max_c} colors) | 'multi_color_bad_two' (>={min_c} colors)")
-    print(f"Target Canvas    : {MIN_CANVAS_AREA_PX:,.0f} px to {MAX_CANVAS_AREA_PX:,.0f} px total area")
+    print(f" {ic_prof} Adaptive Profiles: 'low_color_bad_two' (<={max_c} colors) | 'multi_color_bad_two' (>={min_c} colors)")
+    print(f" {ic_canvas} Target Canvas    : {MIN_CANVAS_AREA_PX:,.0f} px to {MAX_CANVAS_AREA_PX:,.0f} px total area")
     print("================================================================================\n")
 
     output_path.mkdir(parents=True, exist_ok=True)
@@ -852,11 +895,10 @@ def run_batch_queue(
 
     svg_files = discover_svg_files(input_path)
     if not svg_files:
-        print(f"WARNING: No SVG files found at input path: {input_path}")
+        print(f"⚠️ WARNING: No SVG files found at input path: {input_path}")
         return
 
-    print(f"RAM Work Directory: {RAM_TEMP_DIR}")
-    print(f"Found {len(svg_files)} SVG file(s) to process in queue...\n")
+    print(f" Found {len(svg_files)} SVG file(s) in queue to process...\n")
 
     success_count = 0
     failure_count = 0
@@ -892,7 +934,11 @@ def run_batch_queue(
             max_area = max_area_override if max_area_override is not None else prof_cfg.get("max_area_px", MAX_CANVAS_AREA_PX)
             bg_already_removed = bool(remove_layers)
 
-            print(f"[{idx}/{len(svg_files)}] Processing Pipeline for: {rel_name} ({color_count} colors -> Profile: '{prof_name}', Line Art: {line_art}, Color Merge: {color_merge_threshold:.2f}, BG: {bg_color}, FG: {fg_color}) ...")
+            print(f"────────────────────────────────────────────────────────────────────────────────")
+            print(f" {ic_file} [{idx}/{len(svg_files)}] Processing File: {rel_name} ({color_count} Colors | Profile: '{prof_name}')")
+            print(f"────────────────────────────────────────────────────────────────────────────────")
+
+            deliverables = []
 
             try:
                 # ------------------------------------------------------------------
@@ -909,7 +955,7 @@ def run_batch_queue(
                     simplify_tolerance
                 )
                 p1_sec = time.time() - p1_start
-                print(f"  - Phase 1 (Outset & Combine in RAM)  : {p1_sec:.2f} s")
+                print(f"  {ic_p1} Phase 1 (Outset & Combine Geometry in RAM)  : {p1_sec:>6.2f} s")
 
                 # ------------------------------------------------------------------
                 # Phase 2: Native Inkscape Path Simplify Action (in RAM)
@@ -918,7 +964,7 @@ def run_batch_queue(
                 simplified_path = RAM_TEMP_DIR / f"{stem}_simplified_{idx}.svg"
                 raw_outset_svg_content = run_inkscape_action_simplify(raw_outset_path, simplified_path, simplify_tolerance)
                 p2_sec = time.time() - p2_start
-                print(f"  - Phase 2 (Inkscape Simplify in RAM) : {p2_sec:.2f} s")
+                print(f"  {ic_p2} Phase 2 (Livarot Node Simplification)        : {p2_sec:>6.2f} s")
 
                 # Clean up intermediate SVG files in RAM
                 if raw_outset_path.exists():
@@ -930,12 +976,10 @@ def run_batch_queue(
                 # Phase 3: Minimal-Layer Original & Silhouette Preparation
                 # ------------------------------------------------------------------
                 p3_start = time.time()
-                # Left side: Color-combined Original SVG with merged similar colors (e.g., light greens)
                 original_svg = raw_outset_svg_content
                 if color_merge_threshold > 0.0:
                     original_svg = merge_similar_colors_in_svg(original_svg, color_merge_threshold)
 
-                # Right side: Silhouette SVG variant with layer removal, thresholding, and line_art flag
                 sil_input_svg = original_svg
                 if remove_layers or min_nodes > 0:
                     sil_input_svg = remove_specific_layers_from_svg(sil_input_svg, remove_layers, min_nodes)
@@ -986,7 +1030,7 @@ def run_batch_queue(
                             bg_already_removed
                         )
                 p3_sec = time.time() - p3_start
-                print(f"  - Phase 3 (Minimal Original & Silhouette)  : {p3_sec:.2f} s")
+                print(f"  {ic_p3} Phase 3 (Color Isolation & Silhouette)      : {p3_sec:>6.2f} s")
 
                 # ------------------------------------------------------------------
                 # Phase 4: Canvas Auto-Scale & Scale Factor S Synchronization
@@ -996,14 +1040,11 @@ def run_batch_queue(
                 original_scaled_raw, orig_scale_factor = scale_document_area_json(
                     original_svg, min_area, max_area
                 )
-                # Auto-center original artwork within canvas measuring from artwork path bounds
                 original_scaled_svg = center_svg_artwork_content(original_scaled_raw)
 
-                # Apply the EXACT SAME scale factor S derived from original artwork to silhouette artwork
                 silhouette_scaled_raw = scale_document_by_factor_json(
                     silhouette_svg, orig_scale_factor
                 )
-                # Enforce 100% identical canvas dimensions and center artwork
                 silhouette_scaled_svg = center_svg_artwork_content(synchronize_svg_dimensions(original_scaled_svg, silhouette_scaled_raw))
 
                 panel3_scaled_svg = None
@@ -1014,59 +1055,79 @@ def run_batch_queue(
                     panel3_scaled_svg = center_svg_artwork_content(synchronize_svg_dimensions(original_scaled_svg, panel3_scaled_raw))
 
                 p4_sec = time.time() - p4_start
-                print(f"  - Phase 4 (Canvas Auto-Scale & Sync): {p4_sec:.2f} s")
+                print(f"  {ic_p4} Phase 4 (Canvas Auto-Scale & Sync)          : {p4_sec:>6.2f} s")
 
-                # ------------------------------------------------------------------
-                # Phase 5: SVG Bad (Two / Three) Board Generation
-                # ------------------------------------------------------------------
-                p5_start = time.time()
+                # Mode Flag Resolution
+                mode_specified = mode_single or mode_double or mode_triple or mode_pattern
+                do_single = mode_single
+                do_double = mode_double or (not mode_specified)
+                do_triple = mode_triple
+                do_pattern = mode_pattern or (not mode_specified)
 
-                # Automatically calculate dynamic gap for landscape SVGs if gap was not explicitly overridden
-                effective_gap = gap
-                if gap_override is None:
-                    try:
-                        ref_doc_info = json.loads(parse_svg_string(original_scaled_svg))
-                        orig_w = float(ref_doc_info.get("width") or 0.0)
-                        orig_h = float(ref_doc_info.get("height") or 0.0)
-                        if orig_w > orig_h and orig_h > 0:
-                            aspect_ratio = orig_w / orig_h
-                            effective_gap = max(5.0, gap / aspect_ratio)
-                    except Exception:
-                        effective_gap = gap
-
-                if panel3_scaled_svg is not None:
-                    duo_1_2 = create_duo_board_json(original_scaled_svg, silhouette_scaled_svg, gap=effective_gap)
-                    duo_svg = create_duo_board_json(duo_1_2, panel3_scaled_svg, gap=effective_gap)
-                else:
-                    duo_svg = create_duo_board_json(original_scaled_svg, silhouette_scaled_svg, gap=effective_gap)
-                p5_sec = time.time() - p5_start
-                print(f"  - Phase 5 (Bad Board Generation)           : {p5_sec:.2f} s")
-
-                # ------------------------------------------------------------------
-                # Phase 6: Export Output EPS & JPG in RAM -> Move Final to Harddisk
-                # ------------------------------------------------------------------
+                p5_sec = 0.0
+                p6_sec = 0.0
+                p7_sec = 0.0
                 p6_start = time.time()
-                bad_two_temp_svg = RAM_TEMP_DIR / f"{stem}_bad_two_temp_{idx}.svg"
-                bad_two_temp_svg.write_text(duo_svg)
 
-                eps_ram_path, jpg_ram_path = export_eps_and_jpg(bad_two_temp_svg)
-                
-                final_eps = output_path / f"{stem}_bad_two.eps"
-                final_jpg = output_path / f"{stem}_bad_two.jpg"
-                if eps_ram_path.exists():
-                    shutil.move(str(eps_ram_path), str(final_eps))
-                if jpg_ram_path.exists():
-                    shutil.move(str(jpg_ram_path), str(final_jpg))
+                # Mode 1: Single Design Artwork Export (--single)
+                if do_single:
+                    single_temp_svg = RAM_TEMP_DIR / f"{stem}_single_temp_{idx}.svg"
+                    single_temp_svg.write_text(original_scaled_svg)
+                    eps_p, jpg_p = export_eps_and_jpg(single_temp_svg)
+                    if eps_p.exists():
+                        shutil.move(str(eps_p), str(output_path / f"{stem}_single.eps"))
+                    if jpg_p.exists():
+                        shutil.move(str(jpg_p), str(output_path / f"{stem}_single.jpg"))
+                    if single_temp_svg.exists():
+                        single_temp_svg.unlink()
+                    deliverables.append("single.eps, single.jpg")
 
-                # Purge temporary SVG file in RAM
-                if bad_two_temp_svg.exists():
-                    bad_two_temp_svg.unlink()
+                # Phase 5: SVG Bad (Two / Three) Board Generation (--double / --triple)
+                if do_double or do_triple:
+                    p5_start = time.time()
 
-                # ------------------------------------------------------------------
-                # Phase 7: Seamless Pattern Generation & Export (if enabled)
-                # ------------------------------------------------------------------
+                    effective_gap = gap
+                    if gap_override is None:
+                        try:
+                            ref_doc_info = json.loads(parse_svg_string(original_scaled_svg))
+                            orig_w = float(ref_doc_info.get("width") or 0.0)
+                            orig_h = float(ref_doc_info.get("height") or 0.0)
+                            if orig_w > orig_h and orig_h > 0:
+                                aspect_ratio = orig_w / orig_h
+                                effective_gap = max(5.0, gap / aspect_ratio)
+                        except Exception:
+                            effective_gap = gap
+
+                    if (do_triple or panel3_scaled_svg is not None) and panel3_scaled_svg is not None:
+                        duo_1_2 = create_duo_board_json(original_scaled_svg, silhouette_scaled_svg, gap=effective_gap)
+                        board_svg = create_duo_board_json(duo_1_2, panel3_scaled_svg, gap=effective_gap)
+                        board_suffix = "bad_three"
+                    else:
+                        board_svg = create_duo_board_json(original_scaled_svg, silhouette_scaled_svg, gap=effective_gap)
+                        board_suffix = "bad_two"
+                    p5_sec = time.time() - p5_start
+                    print(f"  {ic_p5} Phase 5 (Bad Board Generation: {board_suffix})   : {p5_sec:>6.2f} s")
+
+                    board_temp_svg = RAM_TEMP_DIR / f"{stem}_{board_suffix}_temp_{idx}.svg"
+                    board_temp_svg.write_text(board_svg)
+                    eps_ram_path, jpg_ram_path = export_eps_and_jpg(board_temp_svg)
+                    
+                    final_eps = output_path / f"{stem}_{board_suffix}.eps"
+                    final_jpg = output_path / f"{stem}_{board_suffix}.jpg"
+                    if eps_ram_path.exists():
+                        shutil.move(str(eps_ram_path), str(final_eps))
+                    if jpg_ram_path.exists():
+                        shutil.move(str(jpg_ram_path), str(final_jpg))
+
+                    if board_temp_svg.exists():
+                        board_temp_svg.unlink()
+                    deliverables.append(f"{board_suffix}.eps, {board_suffix}.jpg")
+
+                # Phase 7: Seamless Pattern Generation & Export (--pattern)
                 pattern_config = prof_cfg.get("pattern_config", {})
-                if pattern_config.get("enable", True):
+                pattern_enabled_config = pattern_config.get("enable", True)
+                style_used = "none"
+                if do_pattern and (pattern_enabled_config or mode_pattern):
                     p7_start = time.time()
                     try:
                         from vector_engine._native import analyze_pattern_suitability_json, generate_pattern_styled_json
@@ -1075,21 +1136,32 @@ def run_batch_queue(
                         detected_shape = report.get("detected_shape", "other")
                         allowed_shapes = pattern_config.get("allowed_shapes", ["circular", "square"])
                         detect_suitable_only = pattern_config.get("detect_suitable_only", True)
+                        if mode_pattern:
+                            detect_suitable_only = False
 
                         is_approved = not detect_suitable_only or (report.get("is_suitable", False) and (detected_shape in allowed_shapes or report.get("is_circular_shape") or report.get("is_square_shape")))
 
                         if is_approved:
                             grid_x = pattern_config.get("grid_x", 3)
                             grid_y = pattern_config.get("grid_y", 3)
-                            style = pattern_config.get("style", "slanted_left")
+                            style_used = style_override or pattern_config.get("style", "slanted_left")
                             slant_ratio = pattern_config.get("slant_offset_ratio", -0.5)
                             wraparound = pattern_config.get("wraparound_seamless", True)
 
+                            total_tiles = max(1, grid_x * grid_y)
+                            target_tile_min_area = min_area / float(total_tiles)
+                            target_tile_max_area = max_area / float(total_tiles)
+
+                            pattern_base_scaled_svg, _ = scale_document_area_json(
+                                original_svg, target_tile_min_area, target_tile_max_area
+                            )
+                            pattern_base_scaled_svg = center_svg_artwork_content(pattern_base_scaled_svg)
+
                             pattern_svg = generate_pattern_styled_json(
-                                original_scaled_svg,
+                                pattern_base_scaled_svg,
                                 grid_x=grid_x,
                                 grid_y=grid_y,
-                                style=style,
+                                style=style_used,
                                 detect_suitable_only=False,
                                 slant_offset_ratio=slant_ratio,
                                 wraparound_seamless=wraparound
@@ -1100,38 +1172,63 @@ def run_batch_queue(
 
                             pattern_final_eps = output_path / f"{stem}_pattern.eps"
                             pattern_final_jpg = output_path / f"{stem}_pattern.jpg"
-                            pattern_final_svg = output_path / f"{stem}_pattern.svg"
 
                             eps_p, jpg_p = export_eps_and_jpg(pattern_temp_svg)
                             if eps_p.exists():
                                 shutil.move(str(eps_p), str(pattern_final_eps))
                             if jpg_p.exists():
                                 shutil.move(str(jpg_p), str(pattern_final_jpg))
-                            pattern_final_svg.write_text(pattern_svg)
 
                             if pattern_temp_svg.exists():
                                 pattern_temp_svg.unlink()
 
                             p7_sec = time.time() - p7_start
-                            print(f"  - Phase 7 (Seamless Pattern Exported: shape='{detected_shape}', style='{style}'): {p7_sec:.2f} s")
+                            print(f"  {ic_p7} Phase 7 (Seamless Pattern: style='{style_used}')     : {p7_sec:>6.2f} s")
+                            deliverables.append("pattern.eps, pattern.jpg")
                         else:
-                            print(f"  - Phase 7 (Pattern Skipped: shape='{detected_shape}' not in allowed_shapes)")
+                            p7_sec = time.time() - p7_start
+                            print(f"  {ic_p7} Phase 7 (Pattern Skipped: shape='{detected_shape}') : {p7_sec:>6.2f} s")
                     except Exception as pe:
-                        print(f"  - Phase 7 Warning (Pattern export skipped): {pe}")
+                        p7_sec = time.time() - p7_start
+                        print(f"  {ic_p7} Phase 7 Warning (Pattern skipped: {pe})")
 
                 p6_sec = time.time() - p6_start
-                print(f"  - Phase 6 (Export in RAM -> Harddisk): {p6_sec:.2f} s")
-
+                print(f"  {ic_p6} Phase 6 (Disk Export EPS & JPG Render)      : {p6_sec:>6.2f} s")
                 file_elapsed_sec = time.time() - file_start_time
-                print(f"  --> TOTAL TIME for {rel_name}: {file_elapsed_sec:.2f} s\n")
-                results_table.append((rel_name, f"{file_elapsed_sec:.2f} s", "SUCCESS"))
+
+                # Detailed Telemetry & Bottleneck Analysis Logging
+                phase_times = [
+                    (f"{ic_p1} Phase 1: Outset & Combine Geometry", p1_sec),
+                    (f"{ic_p2} Phase 2: Livarot Node Simplification", p2_sec),
+                    (f"{ic_p3} Phase 3: Color Isolation & Silhouette", p3_sec),
+                    (f"{ic_p4} Phase 4: Canvas Auto-Scale & Sync", p4_sec),
+                ]
+                if do_double or do_triple:
+                    phase_times.append((f"{ic_p5} Phase 5: Bad Board Generation", p5_sec))
+                if do_pattern and p7_sec > 0:
+                    phase_times.append((f"{ic_p7} Phase 7: Seamless Pattern Generation", p7_sec))
+                phase_times.append((f"{ic_p6} Phase 6: Disk Export EPS & JPG Render", p6_sec))
+
+                max_phase_name, max_phase_time = max(phase_times, key=lambda x: x[1])
+
+                print(f"\n  --------------------------------------------------------------------------------")
+                print(f"  {ic_time} PHASE TIMING & BOTTLENECK SUMMARY ({rel_name})")
+                print(f"  --------------------------------------------------------------------------------")
+                for name, t_sec in phase_times:
+                    pct = (t_sec / file_elapsed_sec * 100.0) if file_elapsed_sec > 0 else 0.0
+                    bottleneck_tag = f" {ic_bottleneck_tag}" if name == max_phase_name else ""
+                    print(f"   {name:<44} : {t_sec:>6.2f} s  ({pct:>5.1f}%){bottleneck_tag}")
+                print(f"  --------------------------------------------------------------------------------")
+                deliv_str = ", ".join(deliverables) if deliverables else "None"
+                print(f"  Finished {rel_name} in {file_elapsed_sec:.2f} s | Bottleneck: {max_phase_name} ({max_phase_time:.2f} s)\n")
+                results_table.append((rel_name, f"{file_elapsed_sec:.2f} s", deliv_str, ic_success))
                 success_count += 1
 
             except Exception as e:
                 file_elapsed_sec = time.time() - file_start_time
-                print(f"  --> ERROR: Failed to process '{rel_name}' ({file_elapsed_sec:.2f} s)", file=sys.stderr)
-                print(f"      Details: {e}", file=sys.stderr)
-                results_table.append((rel_name, f"{file_elapsed_sec:.2f} s", "FAILED"))
+                print(f"  {ic_failed}: Failed to process '{rel_name}' ({file_elapsed_sec:.2f} s)", file=sys.stderr)
+                print(f"     Details: {e}", file=sys.stderr)
+                results_table.append((rel_name, f"{file_elapsed_sec:.2f} s", "None", ic_failed))
                 failure_count += 1
                 print("  --> Safely proceeding to next file in queue...\n")
                 continue
@@ -1140,24 +1237,21 @@ def run_batch_queue(
         if RAM_TEMP_DIR.exists():
             try:
                 shutil.rmtree(RAM_TEMP_DIR)
-                print(f"Cleaned up RAM work directory: {RAM_TEMP_DIR}")
             except Exception as e:
-                print(f"WARNING: Failed to cleanup RAM work directory '{RAM_TEMP_DIR}': {e}", file=sys.stderr)
+                pass
 
     total_elapsed = time.time() - total_start_time
 
     print("\n================================================================================")
-    print(" Multi-Phase Queue Execution Summary (Results Table) ")
+    print(f" {ic_summary} BATCH QUEUE SUMMARY REPORT")
     print("================================================================================")
-    print(f"{'File Name':<45} | {'Time (s)':<15} | {'Status':<25}")
+    print(f" {'File Name':<32} | {'Time (s)':<9} | {'Output Deliverables':<26} | {'Status'}")
     print("-" * 85)
-    for name, time_s, status in results_table:
-        print(f"{name:<45} | {time_s:<15} | {status:<25}")
+    for fname, ftime, fouts, fstatus in results_table:
+        print(f" {fname:<32} | {ftime:>9} | {fouts:<26} | {fstatus}")
     print("-" * 85)
-    print(f"Total Files Processed : {len(svg_files)}")
-    print(f"Successfully Saved    : {success_count}")
-    print(f"Failures / Errors     : {failure_count}")
-    print(f"Total Queue Time      : {total_elapsed:.2f} s")
+    print(f" {ic_time} Total Queue Time : {total_elapsed:.2f} s")
+    print(f" Total Processed   : {len(svg_files)} File(s) ({success_count} Successful, {failure_count} Failed)")
     print("================================================================================\n")
 
 
@@ -1208,11 +1302,16 @@ def json_to_svg_string(doc_struct: dict) -> str:
 
 
 def load_config_file(config_path: Path) -> dict:
-    """Loads calibration parameters dictionary from config_silhouette.json if present."""
+    """Loads calibration parameters dictionary from config_silhouette.json if present (supports # comment lines)."""
     if not config_path or not config_path.exists():
         return {}
     try:
-        return json.loads(config_path.read_text())
+        content = config_path.read_text()
+        clean_lines = [
+            line for line in content.splitlines()
+            if not line.strip().startswith("#") and not line.strip().startswith("//")
+        ]
+        return json.loads("\n".join(clean_lines))
     except Exception as e:
         print(f"WARNING: Could not parse config JSON file '{config_path}': {e}", file=sys.stderr)
         return {}
@@ -1319,6 +1418,46 @@ def main() -> None:
         help="Target canvas maximum area in pixels (default: 22000000)"
     )
 
+    parser.add_argument(
+        "--single",
+        action="store_true",
+        default=False,
+        help="Export single artwork design ONLY (single.eps, single.jpg)"
+    )
+    parser.add_argument(
+        "--double", "--bad-two",
+        action="store_true",
+        dest="double",
+        default=False,
+        help="Export 2-panel bad board ONLY (bad_two.eps, bad_two.jpg)"
+    )
+    parser.add_argument(
+        "--triple", "--bad-three",
+        action="store_true",
+        dest="triple",
+        default=False,
+        help="Export 3-panel bad board ONLY (bad_three.eps, bad_three.jpg)"
+    )
+    parser.add_argument(
+        "--pattern",
+        action="store_true",
+        default=False,
+        help="Export seamless pattern ONLY (pattern.eps, pattern.jpg)"
+    )
+    parser.add_argument(
+        "--style",
+        type=str,
+        default=None,
+        help="Override pattern layout style (e.g. half_drop_vertical, brick_wall, diamond_stagger, checker_pinwheel, scale_rhythm, wave_sine_offset, kaleidoscope_mirror, slanted_left)"
+    )
+    parser.add_argument(
+        "--no-emoji", "--clean",
+        action="store_true",
+        dest="no_emoji",
+        default=False,
+        help="Use clean ASCII/Text labels ([P1], [P2], [OK], [*]) instead of Unicode emoji icons for 100% terminal compatibility"
+    )
+
     args = parser.parse_args()
 
     # Load parameters from JSON configuration file
@@ -1349,6 +1488,12 @@ def main() -> None:
         min_area_override=args.min_area,
         max_area_override=args.max_area,
         config_data=full_cfg,
+        mode_single=args.single,
+        mode_double=args.double,
+        mode_triple=args.triple,
+        mode_pattern=args.pattern,
+        style_override=args.style,
+        no_emoji=args.no_emoji,
     )
 
 

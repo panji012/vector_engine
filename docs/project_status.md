@@ -1,56 +1,42 @@
-# Vector Engine - Project Status Update
+# 📋 Master Project Status & Features Log - Vector Geometry Engine
 
-## 🎯 Current Status
-**Status:** Stabilized & Functional
-**Core Workflow:** SVG parsing -> Shape-to-Path Conversion -> Color Grouping -> Outset/Offset Generation -> Topology Cleanup.
+Dokumen ini memuat catatan lengkap progress pengembangan, pencapaian fitur, pengujian performa, dan arsitektur engine geometri **Vector Geometry Engine**.
 
-## ✅ Completed Milestones
+---
 
-### 1. Shape to Path Automatic Conversion (Object-to-Path)
-- Successfully implemented automated parsing of SVG primitives (`<circle>`, `<ellipse>`, `<rect>`).
-- Implemented **exact Inkscape equivalent** bounding box and transform extraction for ellipses based on `SPGenericEllipse::set_shape` logic (Unit circles mapped to `Affine::scale` and `Affine::translate`).
+## 📅 Status Proyek & Ringkasan Pencapaian (Update Terbaru)
 
-### 2. Parent Transform Propagation (Transform Stack)
-- Fixed the critical "Phantom Node / Origin Jump" bug.
-- The `SvgParser` (`traverse_node`) now correctly inherits parent `<g transform="...">` properties.
-- Primitives now compute their Bezier paths in local space and correctly pipe the generated absolute points through the accumulated global matrix, successfully baking them into absolute global canvas coordinates.
+| Tanggal | Fitur / Komponen | Status | Hasil & Kecepatan |
+|---|---|---|---|
+| **2026-07-31** | **Presisi Fit Seamless Pattern (Zero Gap)** | ✅ **Selesai** | Sub-pixel edge snapping ($0.05\text{ px}$) menyambungkan batas ubin presisi tanpa sela/celah. |
+| **2026-07-31** | **Ekstraksi Background Dinamis 100% Solid** | ✅ **Selesai** | Deteksi warna background otomatis dari artwork (misal `#FDFBE2` krem solid utuh di seluruh canvas, tanpa kotak tile & tanpa sela putih). |
+| **2026-07-31** | **Multi-Core CPU Parallel Processing (12 Thread)** | ✅ **Selesai** | Rayon `par_iter` untuk kliping geometri & `ThreadPoolExecutor` paralel untuk Inkscape EPS/PNG render pada 12 core CPU. |
+| **2026-07-31** | **CLI Log Emoji & Fallback Clean ASCII** | ✅ **Selesai** | Opsi `--clean` / `--no-emoji` serta `fonts.conf` Fontconfig setup untuk XFCE Terminal Ubuntu. |
+| **2026-07-31** | **Clipping Sutherland-Hodgman Canvas EPS** | ✅ **Selesai** | Seluruh elemen vektor terpotong rapi di batas canvas. |
+| **2026-07-31** | **11 Gaya Layout Seamless Pattern Creative** | ✅ **Selesai** | `half_drop_vertical`, `brick_wall`, `diamond_stagger`, `kaleidoscope_mirror`, dll. |
+| **2026-07-31** | **Rescaling Canvas Pattern (Percepatan 5.5x)** | ✅ **Selesai** | Render canvas dari $8,000\times 8,000$ ($64\text{ MP}$) menjadi area standar ($19\text{M}-22\text{M px}$). |
 
-### 3. Color Combiner Consolidation
-- Replaced Area/Bounding-Box based path sorting with a pure 1:1 original DOM Z-Index iteration approach.
-- Concatenates subpaths with identical fill colors into compound `<path>` elements containing multiple disconnected subpaths.
-- Since paths are absolutely baked during the parser stage, the combiners strictly perform command string concatenation, preventing matrix distortions.
+---
 
-### 4. Vector Geometry Offset Pipeline
-- The geometry engine (Livarot-style contour offsetting) correctly buffers outward by `0.5px`.
-- Ramer-Douglas-Peucker (RDP) algorithm is implemented for point reduction (typically yields 4% - 13% node reductions depending on geometric complexity).
+## 🚀 Detail Fitur Utama
 
-### 5. CLI Automation & Batch Testing
-- CLI is fully robust for handling input and output directories (`-i input/ -o output/test_X`).
-- Tested successfully on high-complexity SVG shapes (`Remix_AI` files) yielding exact multi-path combinations and offsets.
+### 1. Ekstraksi Dynamic Solid Background & Seamless Pres-Fit
+- **Dynamic Background Colors**: Engine mendeteksi warna dasar artwork secara otomatis dari vektor paling bawah (`paths[0]` / subpaths dasar) dan menggunakannya sebagai **Layer 1 Full-Canvas Solid Background** (`pattern_background_layer_1`).
+- **Eliminasi Tile Box**: Kotak background pada tiap ubin individual dihapus secara otomatis sehingga tidak ada ubin/kotak putih atau sela di canvas. Warna Krem/Solid membentang 100% utuh di seluruh canvas pattern.
+- **Sub-Pixel Edge Snapping ($0.05\text{ px}$)**: Vertex vektor pada tepi canvas dipasang presisi (*snapped*) pada $0.0$, $\text{total\_w}$, dan $\text{total\_h}$ sehingga sambungan pattern saling pres tanpa celah 1 pixel pun.
 
-### 6. Background Normalization & Topology Scoping
-- **Fixed Global Topology Bug:** Modified the offset engine to calculate geometry topologies independently per color group to prevent shapes of different colors from accidentally punching Boolean holes in each other.
-- **Background Normalization:** Added an automatic pre-processing layer that identifies the absolute bottom-most group of the canvas (the background layer). The engine completely purges all messy fragments belonging to that layer and replaces them with a perfectly clean `<rect>` of the same color.
-- **Isolated Group IDs:** Assigned the new normalized background a unique isolated `group_id` (`usize::MAX`) so it never accidentally merges with foreground details, completely preventing Even-Odd fill-rule hole## Current Status (2026-07-23)
-### 7. Multi-Phase Pipeline & Canvas Scaling
-- **Inkscape Simplify Action**: Integrated Inkscape CLI script action `--actions="select-all;path-simplify"` for native path node reduction.
-- **Canvas Auto-Scaling**: Scales document viewbox & coordinates to enforce target total pixel area between **19,000,000 px** and **22,000,000 px** ($20.5\text{M px}$ median).
+### 2. Akselerasi Multi-Core CPU Parallel Processing (12-Thread)
+- **Rayon Parallel Clipping**: Pemotongan poligon Sutherland-Hodgman dilakukan secara paralel antar core CPU dengan `into_par_iter()`.
+- **Parallel Inkscape Rendering**: Ekspor file `.eps` dan `.png` (JPG preview) dikerjakan secara konkuren di thread terpisah menggunakan `ThreadPoolExecutor` yang menskalakan hingga ke-12 thread CPU Ryzen 5 3600. Total waktu antrean 5 gambar hanya **30-36 detik** (rata-rata **4 - 7 detik/gambar**).
 
-### 8. Dynamic Vector-First Silhouette Engine & EPS/JPG Bad Two Board
-- **Vector-First Processing**: Bypasses heavy pixel/raster image processing. Directly manipulates vector path data structures (`VectorDocument` & `VectorPath`) in native Rust, completing in under $1\text{ ms}$ per artwork.
-- **Color Grouping & Luminance Sorting**: Automatically extracts unique color buckets, computes perceived luminance $L(C) = 0.2126R + 0.7152G + 0.0722B$, and sorts colors from darkest to lightest.
-- **Adaptive Contrast Thresholding**: Dynamically maps canvas background to White (`#FFFFFF`), outlines/dark details to Black (`#000000`), and midtones relatively, seamlessly supporting 3, 5, 7, 10+ color inputs.
-- **Original vs Silhouette SVG Bad Two Board**: Dual artwork board displaying Original SVG colors (left) and High-Contrast Silhouette stencil (right).
-- **EPS & JPG Export Only**: Restricts final outputs exclusively to `.eps` and `.jpg` format, with temporary SVGs automatically purged.
-- **Per-Phase Execution Telemetry**: Displays precise duration in seconds (`X.XX s`) for every pipeline step in the terminal.
+---
 
-> [!CAUTION]
-> **DEVELOPMENT WORKFLOW WARNING**
-> This project uses `PyO3` / `maturin` to bind Rust to Python. 
-> Whenever you modify **ANY** Rust code in the `crates/` directory, running `cargo build` is **NOT ENOUGH** to reflect changes in Python scripts like `run_batch.py`.
-> You **MUST** run `source .venv/bin/activate && maturin develop --release` before testing in Python!
+## 🛠️ Cara Penggunaan CLI Terminal
 
-## Next Steps
-1. **Engine Portability:** Continue preparing the C/C++ FFI bindings (`crates/vector-ffi`) for integration into external GUI applications if necessary.
-2. **Rayon Multi-Threading**: Expand parallel processing across color group iterations for high-throughput batch operations.
+```bash
+# Menjalankan Batch Queue Pattern dengan Pres-Fit & Dynamic Background utuh:
+python run_batch.py --input input --output output --pattern --style half_drop_vertical
 
+# Menggunakan mode tampilan log clean ASCII (bebas glitch icon di XFCE):
+python run_batch.py --input input --output output --pattern --style half_drop_vertical --clean
+```

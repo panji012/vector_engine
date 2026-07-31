@@ -423,7 +423,7 @@ def export_jpg(svg_path: Path, jpg_path: Path) -> None:
     """Exports SVG to JPG format via PNG rasterization."""
     png_temp = svg_path.with_suffix(".temp.png")
     subprocess.run(
-        ["inkscape", str(svg_path), f"--export-filename={png_temp}"],
+        ["inkscape", str(svg_path), "--export-area-page", f"--export-filename={png_temp}"],
         check=False,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -871,7 +871,7 @@ def run_calibration(
 
         export_jpg(temp_duo_svg, ram_jpg)
         subprocess.run(
-            ["inkscape", str(temp_duo_svg), f"--export-filename={ram_eps}"],
+            ["inkscape", str(temp_duo_svg), "--export-area-page", f"--export-filename={ram_eps}"],
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -901,11 +901,16 @@ def run_calibration(
 
 
 def load_config_file(config_path: Path) -> dict:
-    """Loads calibration parameters from config_silhouette.json if present."""
+    """Loads calibration parameters from config_silhouette.json if present (supports # comment lines)."""
     if not config_path or not config_path.exists():
         return {}
     try:
-        return json.loads(config_path.read_text())
+        content = config_path.read_text()
+        clean_lines = [
+            line for line in content.splitlines()
+            if not line.strip().startswith("#") and not line.strip().startswith("//")
+        ]
+        return json.loads("\n".join(clean_lines))
     except Exception as e:
         print(f"WARNING: Could not parse config JSON file '{config_path}': {e}", file=sys.stderr)
         return {}

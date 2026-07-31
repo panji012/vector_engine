@@ -1,5 +1,19 @@
 {
+    "_GUIDE_PENGGUNAAN_STYLE": {
+        "1_slanted_left": "Miring ke kiri bertahap per baris (default: slant_offset_ratio = -0.5)",
+        "2_slanted_right": "Miring ke kanan bertahap per baris (default: slant_offset_ratio = 0.5)",
+        "3_half_drop_vertical": "Half-Drop Vertikal: pergeseran 50% tinggi pada kolom selang-seling",
+        "4_brick_wall": "Brick Wall / Half-Drop Horizontal: pergeseran 50% lebar pada baris selang-seling",
+        "5_diamond_stagger": "Diamond Matrix: pergeseran 50% horizontal + 50% vertikal simultan",
+        "6_checker_pinwheel": "Rotasi kincir 90 derajat berurutan (0 deg, 90 deg, 180 deg, 270 deg)",
+        "7_scale_rhythm": "Pergeseran baris + irama skala ganda selang-seling (100% dan 75%)",
+        "8_wave_sine_offset": "Pergeseran baris bergelombang mengikuti kurva gelombang sinus",
+        "9_kaleidoscope_mirror": "Pencerminan 4 arah selang-seling (Quad Mirroring: Flip X & Flip Y)",
+        "10_grid": "Grid lurus sejajar standar NxM",
+        "11_alternating": "Pencerminan cermin selang-seling (Flip X+Y selang-seling)"
+    },
     "low_color_bad_two": {
+        "_comment_profile": "Profil otomatis untuk gambar dengan jumlah warna <= 5",
         "max_colors": 5,
         "threshold": 0.50,
         "tolerance": 0.20,
@@ -16,17 +30,26 @@
         "max_area_px": 22000000.0,
         "pattern_config": {
             "enable": true,
-            "detect_suitable_only": true,
+            "_comment_enable": "true = aktifkan ekspor pattern, false = matikan ekspor pattern",
+            "detect_suitable_only": false,
+            "_comment_detect_suitable_only": "true = hanya buat pattern jika rasio gambar sesuai (1:1), false = selalu buat pattern",
             "allowed_shapes": ["circular", "square"],
-            "style": "slanted_left",
+            "_comment_allowed_shapes": "Bentuk gambar yang diizinkan untuk pola pattern ('circular', 'square')",
+            "style": "half_drop_vertical",
+            "_comment_style": "Pilihan style: 'slanted_left', 'slanted_right', 'half_drop_vertical', 'brick_wall', 'diamond_stagger', 'checker_pinwheel', 'scale_rhythm', 'wave_sine_offset', 'kaleidoscope_mirror', 'grid', 'alternating'",
             "slant_offset_ratio": -0.5,
+            "_comment_slant_offset_ratio": "Rasio pergeseran miring untuk style slanted (-0.5 = geser 50% ke kiri, 0.5 = geser 50% ke kanan)",
             "wraparound_seamless": true,
+            "_comment_wraparound_seamless": "true = buat duplikat tepi melingkar agar seamless di pinggir canvas",
             "grid_x": 3,
+            "_comment_grid_x": "Jumlah ubin pengulangan ke arah horizontal (kolom)",
             "grid_y": 3,
+            "_comment_grid_y": "Jumlah ubin pengulangan ke arah vertikal (baris)",
             "seamless_combine": true
         }
     },
     "multi_color_bad_two": {
+        "_comment_profile": "Profil otomatis untuk gambar dengan jumlah warna >= 6",
         "min_colors": 6,
         "threshold": 0.95,
         "tolerance": 0.30,
@@ -39,13 +62,21 @@
         "max_area_px": 22000000.0,
         "pattern_config": {
             "enable": true,
-            "detect_suitable_only": true,
+            "_comment_enable": "true = aktifkan ekspor pattern, false = matikan ekspor pattern",
+            "detect_suitable_only": false,
+            "_comment_detect_suitable_only": "true = hanya buat pattern jika rasio gambar sesuai (1:1), false = selalu buat pattern",
             "allowed_shapes": ["circular", "square"],
-            "style": "slanted_left",
+            "_comment_allowed_shapes": "Bentuk gambar yang diizinkan untuk pola pattern ('circular', 'square')",
+            "style": "half_drop_vertical",
+            "_comment_style": "Pilihan style: 'slanted_left', 'slanted_right', 'half_drop_vertical', 'brick_wall', 'diamond_stagger', 'checker_pinwheel', 'scale_rhythm', 'wave_sine_offset', 'kaleidoscope_mirror', 'grid', 'alternating'",
             "slant_offset_ratio": -0.5,
+            "_comment_slant_offset_ratio": "Rasio pergeseran miring untuk style slanted (-0.5 = geser 50% ke kiri, 0.5 = geser 50% ke kanan)",
             "wraparound_seamless": true,
+            "_comment_wraparound_seamless": "true = buat duplikat tepi melingkar agar seamless di pinggir canvas",
             "grid_x": 3,
+            "_comment_grid_x": "Jumlah ubin pengulangan ke arah horizontal (kolom)",
             "grid_y": 3,
+            "_comment_grid_y": "Jumlah ubin pengulangan ke arah vertikal (baris)",
             "seamless_combine": true
         },
         "middle_panel": {

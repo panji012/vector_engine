@@ -262,11 +262,12 @@ pub fn combine_color_groups_json(svg_content: &str) -> PyResult<(String, String)
     let (combined_doc, report) = ColorCombiner::combine_document(&doc)
         .map_err(|e| PyValueError::new_err(format!("Color Group Combine failed: {}", e)))?;
 
-    let doc_svg = combined_doc.to_svg_string();
+    let doc_json = serde_json::to_string(&combined_doc)
+        .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))?;
     let report_json = serde_json::to_string(&report)
         .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))?;
 
-    Ok((doc_svg, report_json))
+    Ok((doc_json, report_json))
 }
 
 /// Applies an outward offset (Outset) to SVG document geometry by configurable distance (default 0.5 px).

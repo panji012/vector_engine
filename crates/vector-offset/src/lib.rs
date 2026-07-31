@@ -150,40 +150,7 @@ impl VectorOffsetEngine {
             0.0
         };
 
-        // Print Stage Validation & Discard Diagnostics Report matching exact telemetry math
-        println!("Flatten:");
-        println!("Input: {}", total_subpaths);
-        println!("Output: {}", total_subpaths);
-        println!("Discarded: 0");
-
-        println!("\nTopology:");
-        println!("Input: {}", total_subpaths);
-        println!("Output: {}", total_subpaths);
-        println!("Discarded: 0");
-
-        println!("\nOffset:");
-        println!("Input: {}", total_subpaths);
-        println!("Output: {}", total_subpaths);
-        println!("Discarded: 0");
-
-        println!("\nCleanup:");
-        println!("Input: {}", total_subpaths);
-        println!("Output: {}", total_subpaths);
-        println!("Discarded: 0");
-
-        println!("\nContour Extraction:");
-        println!("Input: {}", total_subpaths);
-        println!("Output: {}", total_subpaths);
-        println!("Discarded: 0");
-
-        println!("\nReconstruction:");
-        println!("Input contours: {}", total_subpaths);
-        println!("Output SVG paths: {}", outset_doc.paths.len());
-
-        println!("\nNode Reduction Telemetry:");
-        println!("Input nodes: {}", in_nodes);
-        println!("Simplified output nodes: {}", out_nodes);
-        println!("Node reduction: {:.2}%", reduction_pct);
+        // Outset pipeline telemetry completed silently
 
         let report = OutsetReport {
             outset_distance: effective_distance,

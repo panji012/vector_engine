@@ -260,6 +260,27 @@ impl VectorDocument {
             w_attr, h_attr, vb_attr
         );
 
+        let (clip_w, clip_h) = if let Some(vb) = self.view_box {
+            (Some(vb.2 - vb.0), Some(vb.3 - vb.1))
+        } else if self.width.is_some() && self.height.is_some() {
+            (self.width, self.height)
+        } else {
+            (None, None)
+        };
+
+        let has_clip = if let (Some(w), Some(h)) = (clip_w, clip_h) {
+            svg.push_str("  <defs>\n");
+            svg.push_str(&format!(
+                "    <clipPath id=\"canvas-clip\"><rect x=\"0\" y=\"0\" width=\"{}\" height=\"{}\"/></clipPath>\n",
+                w, h
+            ));
+            svg.push_str("  </defs>\n");
+            svg.push_str("  <g clip-path=\"url(#canvas-clip)\">\n");
+            true
+        } else {
+            false
+        };
+
         for path in &self.paths {
             let id_attr = path.id.as_deref().map(|id| format!(" id=\"{}\"", id)).unwrap_or_default();
             let fill_attr = path.fill.as_deref().map(|f| format!(" fill=\"{}\"", f)).unwrap_or_default();
@@ -273,6 +294,10 @@ impl VectorDocument {
                 "  <path{} d=\"{}\"{}{}{}{}/>\n",
                 id_attr, d_data, fill_attr, stroke_attr, sw_attr, fr_attr
             ));
+        }
+
+        if has_clip {
+            svg.push_str("  </g>\n");
         }
 
         svg.push_str("</svg>\n");
