@@ -86,6 +86,10 @@ impl EpsWriter {
     }
 
     fn write_path_commands(eps: &mut String, path: &VectorPath) {
+        if path.commands.is_empty() {
+            return;
+        }
+
         eps.push_str("newpath\n");
         for cmd in &path.commands {
             match cmd {
@@ -98,7 +102,46 @@ impl EpsWriter {
                 PathCommand::Close => eps.push_str("closepath\n"),
             }
         }
-        eps.push_str("0 0 0 setrgbcolor fill\n");
+
+        let fill_color = path.fill.as_deref().unwrap_or("none");
+        let stroke_color = path.stroke.as_deref().unwrap_or("none");
+
+        if let Some((r, g, b)) = parse_color_rgb(fill_color) {
+            eps.push_str(&format!("{:.4} {:.4} {:.4} setrgbcolor\n", r, g, b));
+            if path.fill_rule.as_deref() == Some("evenodd") {
+                eps.push_str("eofill\n");
+            } else {
+                eps.push_str("fill\n");
+            }
+        }
+
+        if let Some((r, g, b)) = parse_color_rgb(stroke_color) {
+            let width = path.stroke_width.unwrap_or(1.0);
+            eps.push_str(&format!("{:.4} setlinewidth\n", width));
+            eps.push_str(&format!("{:.4} {:.4} {:.4} setrgbcolor\n", r, g, b));
+            eps.push_str("stroke\n");
+        }
+    }
+}
+
+fn parse_color_rgb(color_str: &str) -> Option<(f64, f64, f64)> {
+    let clean = color_str.trim();
+    if clean.is_empty() || clean.eq_ignore_ascii_case("none") {
+        return None;
+    }
+    let hex = clean.trim_start_matches('#');
+    if hex.len() == 6 {
+        let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+        let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+        let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+        Some((r as f64 / 255.0, g as f64 / 255.0, b as f64 / 255.0))
+    } else if hex.len() == 3 {
+        let r = u8::from_str_radix(&hex[0..1], 16).ok()? * 17;
+        let g = u8::from_str_radix(&hex[1..2], 16).ok()? * 17;
+        let b = u8::from_str_radix(&hex[2..3], 16).ok()? * 17;
+        Some((r as f64 / 255.0, g as f64 / 255.0, b as f64 / 255.0))
+    } else {
+        Some((0.0, 0.0, 0.0))
     }
 }
 

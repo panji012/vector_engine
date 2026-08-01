@@ -107,11 +107,19 @@ impl LuminanceEngine {
         let doc_w = doc_out.width.unwrap_or(1000.0);
         let doc_h = doc_out.height.unwrap_or(1000.0);
 
+        let path0_bg_fill = if !bg_already_removed && !doc_out.paths.is_empty() {
+            doc_out.paths[0].fill.clone()
+        } else {
+            None
+        };
+
         // Resolve background & foreground colors
         let mut resolved_bg = bg_color_override
             .filter(|s| !s.trim().is_empty())
-            .unwrap_or("#FFFFFF")
-            .to_string();
+            .map(|s| s.to_string())
+            .or(path0_bg_fill)
+            .unwrap_or_else(|| "#FFFFFF".to_string());
+
         let mut resolved_fg = fg_color_override
             .filter(|s| !s.trim().is_empty())
             .unwrap_or("#000000")

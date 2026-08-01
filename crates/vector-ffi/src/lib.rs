@@ -144,6 +144,17 @@ pub fn export_eps_json(poly_json: &str, title: Option<&str>) -> PyResult<String>
         .map_err(|e| PyValueError::new_err(format!("EPS Export failed: {}", e)))
 }
 
+/// Exports an SVG string directly into Adobe PostScript 3.0 EPS format in memory.
+#[pyfunction]
+pub fn export_svg_to_eps_json(svg_str: &str, title: Option<&str>) -> PyResult<String> {
+    let doc = SvgParser::parse_str(svg_str)
+        .map_err(|e| PyValueError::new_err(format!("Failed to parse SVG string: {}", e)))?;
+
+    let title_str = title.unwrap_or("Vector Engine Export");
+    EpsWriter::write_document(&doc, title_str)
+        .map_err(|e| PyValueError::new_err(format!("Native EPS Export failed: {}", e)))
+}
+
 /// Renders a JSON-encoded 2D polygon into a JPEG preview image at configurable resolution.
 #[pyfunction]
 pub fn render_jpg_preview_json<'py>(
@@ -406,6 +417,7 @@ fn _native(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(simplify_polygon_json, m)?)?;
     m.add_function(wrap_pyfunction!(scale_canvas_json, m)?)?;
     m.add_function(wrap_pyfunction!(export_eps_json, m)?)?;
+    m.add_function(wrap_pyfunction!(export_svg_to_eps_json, m)?)?;
     m.add_function(wrap_pyfunction!(render_jpg_preview_json, m)?)?;
     m.add_function(wrap_pyfunction!(analyze_pattern_suitability_json, m)?)?;
     m.add_function(wrap_pyfunction!(generate_pattern_svg_json, m)?)?;
