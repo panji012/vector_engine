@@ -30,6 +30,7 @@ rayon = "1.8"
 roxmltree = "0.19"
 svgtypes = "0.13"
 image = { version = "0.24", default-features = false, features = ["jpeg"] }
+resvg = "0.38"
 clap = { version = "4.4", features = ["derive"] }
 
 # Internal crates workspace dependencies

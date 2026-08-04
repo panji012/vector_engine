@@ -6,6 +6,63 @@ use vector_core::{Point2D, Polygon2D, VectorCoreError};
 pub struct JpgPreviewGenerator;
 
 impl JpgPreviewGenerator {
+    /// Renders an SVG XML string into a JPEG byte array natively in Rust with white background composite.
+    pub fn render_svg_str_jpg(
+        svg_str: &str,
+        quality: u8,
+    ) -> Result<Vec<u8>, VectorCoreError> {
+        use resvg::tiny_skia::{Pixmap, Transform};
+        use resvg::usvg::{Options, Tree, TreeParsing};
+
+        let opt = Options::default();
+        let tree = Tree::from_str(svg_str, &opt)
+            .map_err(|e| VectorCoreError::IoError(format!("USVG parse error: {}", e)))?;
+
+        let size = tree.size.to_int_size();
+        let width = size.width();
+        let height = size.height();
+
+        if width == 0 || height == 0 {
+            return Err(VectorCoreError::IoError("Invalid SVG dimensions for JPG rendering".to_string()));
+        }
+
+        let mut pixmap = Pixmap::new(width, height)
+            .ok_or_else(|| VectorCoreError::IoError("Failed to allocate Pixmap".to_string()))?;
+
+        resvg::render(&tree, Transform::default(), &mut pixmap.as_mut());
+
+        let mut img = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(width, height);
+        let pixels = pixmap.data();
+        if pixels.len() >= 20 {
+            println!("Pixmap first 20 bytes: {:?}", &pixels[..20]);
+        }
+
+        for (i, pixel) in pixels.chunks_exact(4).enumerate() {
+            let r = pixel[0];
+            let g = pixel[1];
+            let b = pixel[2];
+            let a = pixel[3] as f32 / 255.0;
+
+            let final_r = (r as f32 * a + 255.0 * (1.0 - a)).round() as u8;
+            let final_g = (g as f32 * a + 255.0 * (1.0 - a)).round() as u8;
+            let final_b = (b as f32 * a + 255.0 * (1.0 - a)).round() as u8;
+
+            let x = (i as u32) % width;
+            let y = (i as u32) / width;
+            img.put_pixel(x, y, Rgb([final_r, final_g, final_b]));
+        }
+
+        let mut buffer = Vec::new();
+        let mut cursor = Cursor::new(&mut buffer);
+        let mut encoder = JpegEncoder::new_with_quality(&mut cursor, quality.clamp(1, 100));
+
+        encoder
+            .encode_image(&img)
+            .map_err(|e| VectorCoreError::IoError(format!("JPEG encoding failed: {}", e)))?;
+
+        Ok(buffer)
+    }
+
     /// Renders a `Polygon2D` into a JPG/JPEG preview byte array with configurable resolution.
     pub fn render_polygon_jpg(
         polygon: &Polygon2D,

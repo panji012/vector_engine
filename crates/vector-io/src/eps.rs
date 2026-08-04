@@ -58,10 +58,14 @@ impl EpsWriter {
     pub fn write_document(doc: &VectorDocument, title: &str) -> Result<String, VectorCoreError> {
         let bbox = doc.view_box.unwrap_or((0.0, 0.0, doc.width.unwrap_or(500.0), doc.height.unwrap_or(500.0)));
 
-        let llx = bbox.0.floor() as i64;
-        let lly = bbox.1.floor() as i64;
-        let urx = bbox.2.ceil() as i64;
-        let ury = bbox.3.ceil() as i64;
+        // Scale PostScript points (72 DPI) so when opened in 96 DPI software (Inkscape), the canvas matches exact SVG screen pixels.
+        let dpi_scale = 72.0 / 96.0; // 0.75
+        let (min_x_ps, min_y_ps, w_ps, h_ps) = (bbox.0 * dpi_scale, bbox.1 * dpi_scale, bbox.2 * dpi_scale, bbox.3 * dpi_scale);
+
+        let llx = min_x_ps.floor() as i64;
+        let lly = min_y_ps.floor() as i64;
+        let urx = w_ps.ceil() as i64;
+        let ury = h_ps.ceil() as i64;
 
         let mut eps = String::new();
 
@@ -69,10 +73,11 @@ impl EpsWriter {
         eps.push_str(&format!("%%Title: {}\n", title));
         eps.push_str("%%Creator: Vector Geometry Engine\n");
         eps.push_str(&format!("%%BoundingBox: {} {} {} {}\n", llx, lly, urx, ury));
-        eps.push_str(&format!("%%HiResBoundingBox: {:.4} {:.4} {:.4} {:.4}\n", bbox.0, bbox.1, bbox.2, bbox.3));
+        eps.push_str(&format!("%%HiResBoundingBox: {:.4} {:.4} {:.4} {:.4}\n", min_x_ps, min_y_ps, w_ps, h_ps));
         eps.push_str("%%EndComments\n\n");
 
         eps.push_str("gsave\n");
+        eps.push_str(&format!("0 {:.4} translate 0.75 -0.75 scale\n", h_ps));
 
         for path in &doc.paths {
             Self::write_path_commands(&mut eps, path);

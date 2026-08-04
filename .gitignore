@@ -6,6 +6,9 @@ Cargo.lock
 output/
 output_test/
 output_calibration/
+output_final/
+input/*.eps
+input/*.jpg
 test_temp.*
 test_out.jpg
 
