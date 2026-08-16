@@ -14,7 +14,18 @@ test_out.jpg
 
 # Python Virtual Environments
 .venv/
+venv/
 __pycache__/
+
+# Built Binary Shared Objects
+*.so
+
+# Temporary Directories
+tes/
+backup/
+output_test/
+output_calibration/
+output_final/
 
 # Agent and IDE configuration
 .agents/

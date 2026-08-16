@@ -33,7 +33,7 @@ Anda dapat mengontrol secara langsung fitur/mode mana saja yang ingin diekspor d
 
 | Flag | Fungsi | File Output |
 | :--- | :--- | :--- |
-| **`--single`** | Ekspor desain gambar tunggal berukuran standar | `file_single.eps`, `file_single.jpg` |
+| **`--single`** | Ekspor desain gambar tunggal berukuran standar | `file_single.eps`, `file_single.jpg`, `file_single.svg` |
 | **`--double`** (atau `--bad-two`) | Ekspor Papan 2 Panel (*Asli \| Silhouette*) | `file_bad_two.eps`, `file_bad_two.jpg` |
 | **`--triple`** (atau `--bad-three`) | Ekspor Papan 3 Panel (*Asli \| Greyscale \| Dominant*) | `file_bad_three.eps`, `file_bad_three.jpg` |
 | **`--pattern`** | Ekspor Seamless Pattern saja | `file_pattern.eps`, `file_pattern.jpg` |

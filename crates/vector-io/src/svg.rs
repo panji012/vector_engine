@@ -39,7 +39,7 @@ impl SvgParser {
         let root_style = resolve_node_style(&root, &InheritedStyle::default());
         let mut group_id_counter = 0;
 
-        Self::traverse_node(&root, &mut vector_doc, &root_style, 0, &mut group_id_counter, Transform::default())?;
+        Self::traverse_node(&root, &mut vector_doc, &root_style, 0, None, &mut group_id_counter, Transform::default())?;
 
         Ok(vector_doc)
     }
@@ -68,12 +68,18 @@ impl SvgParser {
         let mut subpath_start_pt = Point2D::new(0.0, 0.0);
         let mut is_first_command = true;
 
+        let mut last_control2: Option<Point2D> = None;
+        let mut last_quad_control: Option<Point2D> = None;
+
         for segment in PathParser::from(d) {
             let segment = segment.map_err(|e| VectorCoreError::IoError(format!("SVG path syntax error: {}", e)))?;
             let apply_tx = |pt: Point2D| -> Point2D {
                 let (x, y) = Self::apply_transform(transform, pt.x, pt.y);
                 Point2D::new(x, y)
             };
+
+            let mut next_last_control2: Option<Point2D> = None;
+            let mut next_last_quad_control: Option<Point2D> = None;
 
             match segment {
                 PathSegment::MoveTo { abs, x, y } => {
@@ -102,20 +108,65 @@ impl SvgParser {
                     let c2 = if abs || is_first_command { Point2D::new(x2, y2) } else { Point2D::new(current_pt.x + x2, current_pt.y + y2) };
                     let end = if abs || is_first_command { Point2D::new(x, y) } else { Point2D::new(current_pt.x + x, current_pt.y + y) };
                     current_pt = end;
+                    next_last_control2 = Some(c2);
+                    path.add_command(PathCommand::CubicTo { control1: apply_tx(c1), control2: apply_tx(c2), end: apply_tx(end) });
+                }
+                PathSegment::SmoothCurveTo { abs, x2, y2, x, y } => {
+                    let c1 = if let Some(prev_c2) = last_control2 {
+                        Point2D::new(2.0 * current_pt.x - prev_c2.x, 2.0 * current_pt.y - prev_c2.y)
+                    } else {
+                        current_pt
+                    };
+                    let c2 = if abs || is_first_command { Point2D::new(x2, y2) } else { Point2D::new(current_pt.x + x2, current_pt.y + y2) };
+                    let end = if abs || is_first_command { Point2D::new(x, y) } else { Point2D::new(current_pt.x + x, current_pt.y + y) };
+                    current_pt = end;
+                    next_last_control2 = Some(c2);
                     path.add_command(PathCommand::CubicTo { control1: apply_tx(c1), control2: apply_tx(c2), end: apply_tx(end) });
                 }
                 PathSegment::Quadratic { abs, x1, y1, x, y } => {
                     let c = if abs || is_first_command { Point2D::new(x1, y1) } else { Point2D::new(current_pt.x + x1, current_pt.y + y1) };
                     let end = if abs || is_first_command { Point2D::new(x, y) } else { Point2D::new(current_pt.x + x, current_pt.y + y) };
                     current_pt = end;
+                    next_last_quad_control = Some(c);
                     path.add_command(PathCommand::QuadTo { control: apply_tx(c), end: apply_tx(end) });
+                }
+                PathSegment::SmoothQuadratic { abs, x, y } => {
+                    let c = if let Some(prev_qc) = last_quad_control {
+                        Point2D::new(2.0 * current_pt.x - prev_qc.x, 2.0 * current_pt.y - prev_qc.y)
+                    } else {
+                        current_pt
+                    };
+                    let end = if abs || is_first_command { Point2D::new(x, y) } else { Point2D::new(current_pt.x + x, current_pt.y + y) };
+                    current_pt = end;
+                    next_last_quad_control = Some(c);
+                    path.add_command(PathCommand::QuadTo { control: apply_tx(c), end: apply_tx(end) });
+                }
+                PathSegment::EllipticalArc { abs, rx, ry, x_axis_rotation, large_arc, sweep, x, y } => {
+                    let end = if abs || is_first_command { Point2D::new(x, y) } else { Point2D::new(current_pt.x + x, current_pt.y + y) };
+                    let start = current_pt;
+                    current_pt = end;
+
+                    let cubics = arc_to_cubics(start, end, rx, ry, x_axis_rotation, large_arc, sweep);
+                    if cubics.is_empty() {
+                        path.add_command(PathCommand::LineTo(apply_tx(end)));
+                    } else {
+                        for (c1, c2, cend) in cubics {
+                            next_last_control2 = Some(c2);
+                            path.add_command(PathCommand::CubicTo {
+                                control1: apply_tx(c1),
+                                control2: apply_tx(c2),
+                                end: apply_tx(cend),
+                            });
+                        }
+                    }
                 }
                 PathSegment::ClosePath { .. } => {
                     path.add_command(PathCommand::Close);
                     current_pt = subpath_start_pt;
                 }
-                _ => {}
             }
+            last_control2 = next_last_control2;
+            last_quad_control = next_last_quad_control;
             is_first_command = false;
         }
 
@@ -143,7 +194,7 @@ impl SvgParser {
         Ok(d_out)
     }
 
-    fn traverse_node(node: &Node, doc: &mut VectorDocument, current_style: &InheritedStyle, current_group_id: usize, group_id_counter: &mut usize, current_transform: Transform) -> CoreResult<()> {
+    fn traverse_node(node: &Node, doc: &mut VectorDocument, current_style: &InheritedStyle, current_group_id: usize, current_badge_id: Option<usize>, group_id_counter: &mut usize, current_transform: Transform) -> CoreResult<()> {
         for child in node.children() {
             if !child.is_element() {
                 continue;
@@ -172,6 +223,7 @@ impl SvgParser {
                     if let Some(mut path) = Self::parse_path_element(&child, &child_transform)? {
                         apply_style_to_path(&mut path, &child_style);
                         path.group_id = current_group_id;
+                        path.badge_id = current_badge_id;
                         doc.paths.push(path);
                     }
                 }
@@ -179,6 +231,7 @@ impl SvgParser {
                     if let Some(mut path) = Self::parse_rect_element(&child, &child_transform)? {
                         apply_style_to_path(&mut path, &child_style);
                         path.group_id = current_group_id;
+                        path.badge_id = current_badge_id;
                         doc.paths.push(path);
                     }
                 }
@@ -186,6 +239,7 @@ impl SvgParser {
                     if let Some(mut path) = Self::parse_circle_element(&child, &child_transform)? {
                         apply_style_to_path(&mut path, &child_style);
                         path.group_id = current_group_id;
+                        path.badge_id = current_badge_id;
                         doc.paths.push(path);
                     }
                 }
@@ -193,6 +247,7 @@ impl SvgParser {
                     if let Some(mut path) = Self::parse_ellipse_element(&child, &child_transform)? {
                         apply_style_to_path(&mut path, &child_style);
                         path.group_id = current_group_id;
+                        path.badge_id = current_badge_id;
                         doc.paths.push(path);
                     }
                 }
@@ -200,6 +255,7 @@ impl SvgParser {
                     if let Some(mut path) = Self::parse_line_element(&child, &child_transform)? {
                         apply_style_to_path(&mut path, &child_style);
                         path.group_id = current_group_id;
+                        path.badge_id = current_badge_id;
                         doc.paths.push(path);
                     }
                 }
@@ -208,13 +264,18 @@ impl SvgParser {
                     if let Some(mut path) = Self::parse_poly_element(&child, is_closed, &child_transform)? {
                         apply_style_to_path(&mut path, &child_style);
                         path.group_id = current_group_id;
+                        path.badge_id = current_badge_id;
                         doc.paths.push(path);
                     }
                 }
                 "g" | "svg" => {
                     *group_id_counter += 1;
                     let next_group_id = *group_id_counter;
-                    Self::traverse_node(&child, doc, &child_style, next_group_id, group_id_counter, child_transform)?;
+                    let next_badge_id = child.attribute("id")
+                        .and_then(|id| id.strip_prefix("badge_"))
+                        .and_then(|num_str| num_str.parse::<usize>().ok())
+                        .or(current_badge_id);
+                    Self::traverse_node(&child, doc, &child_style, next_group_id, next_badge_id, group_id_counter, child_transform)?;
                 }
                 _ => {}
             }
@@ -622,6 +683,139 @@ fn parse_viewbox(val: &str) -> Option<(f64, f64, f64, f64)> {
     } else {
         None
     }
+}
+
+/// Converts SVG Elliptical Arc parameters (Endpoint Parametrization) into Cubic Bézier curves.
+fn arc_to_cubics(
+    p0: Point2D,
+    p1: Point2D,
+    mut rx: f64,
+    mut ry: f64,
+    phi_deg: f64,
+    large_arc: bool,
+    sweep: bool,
+) -> Vec<(Point2D, Point2D, Point2D)> {
+    if (p0.x - p1.x).abs() < 1e-7 && (p0.y - p1.y).abs() < 1e-7 {
+        return Vec::new();
+    }
+    rx = rx.abs();
+    ry = ry.abs();
+    if rx < 1e-7 || ry < 1e-7 {
+        return vec![(p0, p1, p1)];
+    }
+
+    let phi = phi_deg.to_radians();
+    let cos_phi = phi.cos();
+    let sin_phi = phi.sin();
+
+    let dx2 = (p0.x - p1.x) / 2.0;
+    let dy2 = (p0.y - p1.y) / 2.0;
+    let x1_prime = cos_phi * dx2 + sin_phi * dy2;
+    let y1_prime = -sin_phi * dx2 + cos_phi * dy2;
+
+    let rx_sq = rx * rx;
+    let ry_sq = ry * ry;
+    let x1_prime_sq = x1_prime * x1_prime;
+    let y1_prime_sq = y1_prime * y1_prime;
+
+    let radii_check = x1_prime_sq / rx_sq + y1_prime_sq / ry_sq;
+    if radii_check > 1.0 {
+        let scale = radii_check.sqrt();
+        rx *= scale;
+        ry *= scale;
+    }
+
+    let rx_sq = rx * rx;
+    let ry_sq = ry * ry;
+
+    let sign = if large_arc == sweep { -1.0 } else { 1.0 };
+    let sq_num = (rx_sq * ry_sq) - (rx_sq * y1_prime_sq) - (ry_sq * x1_prime_sq);
+    let sq_den = (rx_sq * y1_prime_sq) + (ry_sq * x1_prime_sq);
+    let sq_val = if sq_den > 0.0 { (sq_num / sq_den).max(0.0) } else { 0.0 };
+    let coef = sign * sq_val.sqrt();
+
+    let cx_prime = coef * (rx * y1_prime / ry);
+    let cy_prime = coef * (-ry * x1_prime / rx);
+
+    let cx = cos_phi * cx_prime - sin_phi * cy_prime + (p0.x + p1.x) / 2.0;
+    let cy = sin_phi * cx_prime + cos_phi * cy_prime + (p0.y + p1.y) / 2.0;
+
+    fn angle(ux: f64, uy: f64, vx: f64, vy: f64) -> f64 {
+        let dot = ux * vx + uy * vy;
+        let len = (ux * ux + uy * uy).sqrt() * (vx * vx + vy * vy).sqrt();
+        if len < 1e-9 {
+            return 0.0;
+        }
+        let cos_val = (dot / len).clamp(-1.0, 1.0);
+        let ang = cos_val.acos();
+        if (ux * vy - uy * vx) < 0.0 {
+            -ang
+        } else {
+            ang
+        }
+    }
+
+    let v1x = (x1_prime - cx_prime) / rx;
+    let v1y = (y1_prime - cy_prime) / ry;
+    let v2x = (-x1_prime - cx_prime) / rx;
+    let v2y = (-y1_prime - cy_prime) / ry;
+
+    let theta1 = angle(1.0, 0.0, v1x, v1y);
+    let mut d_theta = angle(v1x, v1y, v2x, v2y);
+
+    if !sweep && d_theta > 0.0 {
+        d_theta -= std::f64::consts::TAU;
+    } else if sweep && d_theta < 0.0 {
+        d_theta += std::f64::consts::TAU;
+    }
+
+    let num_segments = (d_theta.abs() / (std::f64::consts::FRAC_PI_2)).ceil() as usize;
+    let num_segments = num_segments.max(1);
+    let segment_d_theta = d_theta / (num_segments as f64);
+
+    let mut result = Vec::new();
+    let mut curr_theta = theta1;
+
+    for _ in 0..num_segments {
+        let next_theta = curr_theta + segment_d_theta;
+        let alpha = (4.0 / 3.0) * (segment_d_theta / 4.0).tan();
+
+        let cos_th1 = curr_theta.cos();
+        let sin_th1 = curr_theta.sin();
+        let cos_th2 = next_theta.cos();
+        let sin_th2 = next_theta.sin();
+
+        let p1_unit_x = rx * cos_th1;
+        let p1_unit_y = ry * sin_th1;
+        let p2_unit_x = rx * cos_th2;
+        let p2_unit_y = ry * sin_th2;
+
+        let t1_unit_x = -rx * sin_th1;
+        let t1_unit_y = ry * cos_th1;
+        let t2_unit_x = -rx * sin_th2;
+        let t2_unit_y = ry * cos_th2;
+
+        let q1_x = p1_unit_x + alpha * t1_unit_x;
+        let q1_y = p1_unit_y + alpha * t1_unit_y;
+        let q2_x = p2_unit_x - alpha * t2_unit_x;
+        let q2_y = p2_unit_y - alpha * t2_unit_y;
+
+        let transform_pt = |x: f64, y: f64| -> Point2D {
+            Point2D::new(
+                cos_phi * x - sin_phi * y + cx,
+                sin_phi * x + cos_phi * y + cy,
+            )
+        };
+
+        let c1 = transform_pt(q1_x, q1_y);
+        let c2 = transform_pt(q2_x, q2_y);
+        let end = transform_pt(p2_unit_x, p2_unit_y);
+
+        result.push((c1, c2, end));
+        curr_theta = next_theta;
+    }
+
+    result
 }
 
 #[cfg(test)]

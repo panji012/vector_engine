@@ -41,12 +41,37 @@ impl BackgroundProcessor {
             return false;
         }
 
-        // 2. The user specified that the background is ALWAYS the very first group (bottom-most layer).
-        // We extract the group_id of the first path, and delete ALL paths belonging to that group.
+        // 2. Check if the first path actually covers >= 80% of the canvas area.
+        // Only normalize background if path 0 is a simple 4-point rectangle (commands.len() <= 5)
+        if doc.paths[0].commands.len() > 5 {
+            return false;
+        }
+
+        let first_poly = doc.paths[0].to_polygon();
+        let first_area = first_poly.area();
+        if first_area < canvas_area * 0.80 {
+            return false;
+        }
+
         let bg_group_id = doc.paths[0].group_id;
         let bg_color = doc.paths[0].fill.clone();
         
-        doc.paths.retain(|p| p.group_id != bg_group_id);
+        // Delete paths belonging ONLY to the background group if it's an isolated bg group, or just the background path itself
+        let mut removed = false;
+        doc.paths.retain(|p| {
+            if !removed && p.group_id == bg_group_id {
+                let p_area = p.to_polygon().area();
+                if p_area >= canvas_area * 0.80 {
+                    removed = true;
+                    return false;
+                }
+            }
+            true
+        });
+
+        if !removed {
+            return false;
+        }
 
         // 3. Create a clean rectangle
         let mut clean_bg = VectorPath::new(Some("normalized_background".to_string()));

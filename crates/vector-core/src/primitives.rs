@@ -136,6 +136,8 @@ pub struct VectorPath {
     pub stroke_width: Option<f64>,
     pub fill_rule: Option<String>,
     pub group_id: usize,
+    #[serde(default)]
+    pub badge_id: Option<usize>,
 }
 
 impl VectorPath {
@@ -148,6 +150,7 @@ impl VectorPath {
             stroke_width: None,
             fill_rule: None,
             group_id: 0,
+            badge_id: None,
         }
     }
 
@@ -281,7 +284,20 @@ impl VectorDocument {
             false
         };
 
+        let mut current_badge_group: Option<usize> = None;
+
         for path in &self.paths {
+            if path.badge_id != current_badge_group {
+                if current_badge_group.is_some() {
+                    svg.push_str("    </g>\n");
+                }
+                current_badge_group = path.badge_id;
+                if let Some(b_id) = current_badge_group {
+                    svg.push_str(&format!("    <g id=\"badge_{}\">\n", b_id));
+                }
+            }
+
+            let indent = if current_badge_group.is_some() { "      " } else { "    " };
             let id_attr = path.id.as_deref().map(|id| format!(" id=\"{}\"", id)).unwrap_or_default();
             let fill_attr = path.fill.as_deref().map(|f| format!(" fill=\"{}\"", f)).unwrap_or_default();
             let stroke_attr = path.stroke.as_deref().map(|s| format!(" stroke=\"{}\"", s)).unwrap_or_default();
@@ -291,9 +307,13 @@ impl VectorDocument {
             let d_data = path.to_svg_path_data();
 
             svg.push_str(&format!(
-                "  <path{} d=\"{}\"{}{}{}{}/>\n",
-                id_attr, d_data, fill_attr, stroke_attr, sw_attr, fr_attr
+                "{}<path{} d=\"{}\"{}{}{}{}/>\n",
+                indent, id_attr, d_data, fill_attr, stroke_attr, sw_attr, fr_attr
             ));
+        }
+
+        if current_badge_group.is_some() {
+            svg.push_str("    </g>\n");
         }
 
         if has_clip {

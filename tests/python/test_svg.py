@@ -19,7 +19,7 @@ def test_parse_svg_string():
         assert doc["viewBox"] == [0.0, 0.0, 100.0, 100.0]
         assert len(doc["paths"]) == 6
         assert doc["paths"][0]["id"] == "square"
-        assert doc["paths"][0]["fill"] == "red"
+        assert doc["paths"][0]["fill"].lower() in ("red", "#ff0000")
     except IOError as e:
         if "Failed to parse SVG" in str(e):
             pytest.skip("Native FFI extension module not built yet")

@@ -1,6 +1,7 @@
 //! Computational geometry algorithms crate (Polygon Union, Simplification, Canvas Scaling, Pattern Detection, Pattern Generation, Color & Luminance Variants, Color Grouping, Outset).
 
 pub mod background;
+pub mod badge_cluster;
 pub mod color;
 pub mod color_combine;
 pub mod duo_board;
@@ -13,6 +14,7 @@ pub mod simplify;
 pub mod union;
 
 pub use background::BackgroundProcessor;
+pub use badge_cluster::{BadgeCluster, BadgeDetector};
 pub use color::ColorVariantEngine;
 pub use color_combine::{ColorCombineReport, ColorCombiner, ColorGroupDetail};
 pub use duo_board::DuoBoardGenerator;

@@ -16,7 +16,7 @@ impl GeometryOutset {
         enable_simplify: bool,
         simplify_tolerance: f64,
     ) -> Result<(VectorDocument, OutsetReport), VectorCoreError> {
-        let (combined_doc, _) = ColorCombiner::combine_document(doc)?;
+        let (combined_doc, _) = ColorCombiner::combine_document_badge_aware(doc, true)?;
         VectorOffsetEngine::offset_document(&combined_doc, enable_outset, outset_distance, enable_simplify, simplify_tolerance)
     }
 }

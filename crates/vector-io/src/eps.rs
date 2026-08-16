@@ -76,11 +76,64 @@ impl EpsWriter {
         eps.push_str(&format!("%%HiResBoundingBox: {:.4} {:.4} {:.4} {:.4}\n", min_x_ps, min_y_ps, w_ps, h_ps));
         eps.push_str("%%EndComments\n\n");
 
+        eps.push_str("/u { gsave } def\n");
+        eps.push_str("/U { grestore } def\n\n");
+
         eps.push_str("gsave\n");
         eps.push_str(&format!("0 {:.4} translate 0.75 -0.75 scale\n", h_ps));
 
-        for path in &doc.paths {
+        let mut current_badge: Option<usize> = None;
+
+        let has_any_badge = doc.paths.iter().any(|p| p.badge_id.is_some());
+        let mut sorted_paths: Vec<&VectorPath> = Vec::with_capacity(doc.paths.len());
+
+        if has_any_badge {
+            for p in &doc.paths {
+                if p.badge_id.is_none() {
+                    sorted_paths.push(p);
+                }
+            }
+            let mut badge_ids: Vec<usize> = Vec::new();
+            for p in &doc.paths {
+                if let Some(b_id) = p.badge_id {
+                    if !badge_ids.contains(&b_id) {
+                        badge_ids.push(b_id);
+                    }
+                }
+            }
+            badge_ids.sort();
+
+            for b_id in badge_ids {
+                for p in &doc.paths {
+                    if p.badge_id == Some(b_id) {
+                        sorted_paths.push(p);
+                    }
+                }
+            }
+        } else {
+            for p in &doc.paths {
+                sorted_paths.push(p);
+            }
+        }
+
+        for path in sorted_paths {
+            if path.badge_id != current_badge {
+                if current_badge.is_some() {
+                    eps.push_str("%AI5_EndLayer\n");
+                }
+                current_badge = path.badge_id;
+                if let Some(b_id) = current_badge {
+                    eps.push_str("%AI5_BeginLayer\n");
+                    eps.push_str(&format!("%1 1 1 1 0 0 0 0 0 0 0 (badge_{}) Adobe_Layer_Group\n", b_id));
+                    eps.push_str("%0 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 Lb\n");
+                    eps.push_str(&format!("%(badge_{}) Ln\n", b_id));
+                }
+            }
             Self::write_path_commands(&mut eps, path);
+        }
+
+        if current_badge.is_some() {
+            eps.push_str("%AI5_EndLayer\n");
         }
 
         eps.push_str("grestore\n");
@@ -95,32 +148,75 @@ impl EpsWriter {
             return;
         }
 
+        let mut current_pt = vector_core::Point2D::new(0.0, 0.0);
+        let mut subpath_start_pt = vector_core::Point2D::new(0.0, 0.0);
+
         eps.push_str("newpath\n");
         for cmd in &path.commands {
             match cmd {
-                PathCommand::MoveTo(pt) => eps.push_str(&format!("{:.4} {:.4} moveto\n", pt.x, pt.y)),
-                PathCommand::LineTo(pt) => eps.push_str(&format!("{:.4} {:.4} lineto\n", pt.x, pt.y)),
-                PathCommand::QuadTo { control, end } => eps.push_str(&format!("{:.4} {:.4} {:.4} {:.4} lineto\n", control.x, control.y, end.x, end.y)),
-                PathCommand::CubicTo { control1, control2, end } => {
-                    eps.push_str(&format!("{:.4} {:.4} {:.4} {:.4} {:.4} {:.4} curveto\n", control1.x, control1.y, control2.x, control2.y, end.x, end.y))
+                PathCommand::MoveTo(pt) => {
+                    current_pt = *pt;
+                    subpath_start_pt = *pt;
+                    eps.push_str(&format!("{:.4} {:.4} moveto\n", pt.x, pt.y));
                 }
-                PathCommand::Close => eps.push_str("closepath\n"),
+                PathCommand::LineTo(pt) => {
+                    current_pt = *pt;
+                    eps.push_str(&format!("{:.4} {:.4} lineto\n", pt.x, pt.y));
+                }
+                PathCommand::QuadTo { control, end } => {
+                    // Convert Quadratic Bézier (P0, Pc, Pe) to Cubic Bézier (P0, C1, C2, Pe)
+                    let c1_x = (current_pt.x + 2.0 * control.x) / 3.0;
+                    let c1_y = (current_pt.y + 2.0 * control.y) / 3.0;
+                    let c2_x = (end.x + 2.0 * control.x) / 3.0;
+                    let c2_y = (end.y + 2.0 * control.y) / 3.0;
+                    eps.push_str(&format!(
+                        "{:.4} {:.4} {:.4} {:.4} {:.4} {:.4} curveto\n",
+                        c1_x, c1_y, c2_x, c2_y, end.x, end.y
+                    ));
+                    current_pt = *end;
+                }
+                PathCommand::CubicTo { control1, control2, end } => {
+                    eps.push_str(&format!(
+                        "{:.4} {:.4} {:.4} {:.4} {:.4} {:.4} curveto\n",
+                        control1.x, control1.y, control2.x, control2.y, end.x, end.y
+                    ));
+                    current_pt = *end;
+                }
+                PathCommand::Close => {
+                    eps.push_str("closepath\n");
+                    current_pt = subpath_start_pt;
+                }
             }
         }
 
-        let fill_color = path.fill.as_deref().unwrap_or("none");
-        let stroke_color = path.stroke.as_deref().unwrap_or("none");
+        let fill_rgb = path.fill.as_deref().and_then(parse_color_rgb);
+        let stroke_rgb = path.stroke.as_deref().and_then(parse_color_rgb);
 
-        if let Some((r, g, b)) = parse_color_rgb(fill_color) {
+        if fill_rgb.is_some() && stroke_rgb.is_some() {
+            if let Some((r, g, b)) = fill_rgb {
+                eps.push_str("gsave\n");
+                eps.push_str(&format!("{:.4} {:.4} {:.4} setrgbcolor\n", r, g, b));
+                if path.fill_rule.as_deref() == Some("evenodd") {
+                    eps.push_str("eofill\n");
+                } else {
+                    eps.push_str("fill\n");
+                }
+                eps.push_str("grestore\n");
+            }
+            if let Some((r, g, b)) = stroke_rgb {
+                let width = path.stroke_width.unwrap_or(1.0);
+                eps.push_str(&format!("{:.4} setlinewidth\n", width));
+                eps.push_str(&format!("{:.4} {:.4} {:.4} setrgbcolor\n", r, g, b));
+                eps.push_str("stroke\n");
+            }
+        } else if let Some((r, g, b)) = fill_rgb {
             eps.push_str(&format!("{:.4} {:.4} {:.4} setrgbcolor\n", r, g, b));
             if path.fill_rule.as_deref() == Some("evenodd") {
                 eps.push_str("eofill\n");
             } else {
                 eps.push_str("fill\n");
             }
-        }
-
-        if let Some((r, g, b)) = parse_color_rgb(stroke_color) {
+        } else if let Some((r, g, b)) = stroke_rgb {
             let width = path.stroke_width.unwrap_or(1.0);
             eps.push_str(&format!("{:.4} setlinewidth\n", width));
             eps.push_str(&format!("{:.4} {:.4} {:.4} setrgbcolor\n", r, g, b));

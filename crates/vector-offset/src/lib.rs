@@ -53,11 +53,12 @@ impl VectorOffsetEngine {
         let output_node_count = AtomicU64::new(0);
         let mut total_subpaths = 0;
 
-        let mut color_contour_pairs: Vec<(Option<String>, Vec<(PolygonRing, RingRole)>)> = Vec::new();
+        let mut color_contour_pairs: Vec<(Option<String>, Option<usize>, Vec<(PolygonRing, RingRole)>)> = Vec::new();
 
         // Process each color group independently to prevent cross-color topology interference
         for path in &doc.paths {
             let color = path.fill.clone();
+            let badge_id = path.badge_id;
             let mut doc_rings: Vec<PolygonRing> = Vec::new();
 
             // Stage 1: Flatten subpaths of the CURRENT color
@@ -122,7 +123,7 @@ impl VectorOffsetEngine {
                 output_node_count.fetch_add(r.vertices.len() as u64, Ordering::Relaxed);
             }
 
-            color_contour_pairs.push((color, final_rings_for_color));
+            color_contour_pairs.push((color, badge_id, final_rings_for_color));
         }
 
         if color_contour_pairs.is_empty() {

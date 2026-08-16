@@ -248,6 +248,7 @@ impl LuminanceEngine {
                 stroke_width: None,
                 fill_rule: None,
                 group_id: usize::MAX,
+                badge_id: None,
             };
             doc_out.paths.insert(0, bg_path);
         }

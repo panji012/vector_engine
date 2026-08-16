@@ -62,49 +62,55 @@ impl PathReconstructor {
     ///
     /// Strictly preserves original SVG DOM Z-ordering (draw order) without area-based sorting.
     pub fn combine_contours_by_color(
-        color_contour_pairs: Vec<(Option<String>, Vec<(PolygonRing, RingRole)>)>,
+        color_contour_pairs: Vec<(Option<String>, Option<usize>, Vec<(PolygonRing, RingRole)>)>,
         enable_simplify: bool,
         simplify_tolerance: f64,
     ) -> Vec<VectorPath> {
         let mut compound_paths = Vec::new();
         
-        // Iterating sequentially and combining adjacent identical colors strictly preserves original draw order
-        let mut current_color: Option<Option<String>> = None;
+        // Iterating sequentially and combining adjacent identical colors and badge_ids strictly preserves draw order
+        let mut current_key: Option<(Option<String>, Option<usize>)> = None;
         let mut current_contours: Vec<(PolygonRing, RingRole)> = Vec::new();
         
-        for (color, contours) in color_contour_pairs {
-            if let Some(ref c) = current_color {
-                if *c == color {
+        for (color, badge_id, contours) in color_contour_pairs {
+            let key = (color.clone(), badge_id);
+            if let Some(ref k) = current_key {
+                if *k == key {
                     current_contours.extend(contours);
                     continue;
                 } else {
                     // Finalize current path
                     if !current_contours.is_empty() {
-                        compound_paths.push(Self::build_compound_path(c.clone(), &current_contours, enable_simplify, simplify_tolerance));
+                        compound_paths.push(Self::build_compound_path(k.0.clone(), k.1, &current_contours, enable_simplify, simplify_tolerance));
                     }
                     current_contours.clear();
                 }
             }
-            current_color = Some(color);
+            current_key = Some(key);
             current_contours.extend(contours);
         }
         
-        if let Some(c) = current_color {
+        if let Some(k) = current_key {
             if !current_contours.is_empty() {
-                compound_paths.push(Self::build_compound_path(c, &current_contours, enable_simplify, simplify_tolerance));
+                compound_paths.push(Self::build_compound_path(k.0, k.1, &current_contours, enable_simplify, simplify_tolerance));
             }
         }
         
         compound_paths
     }
 
-    fn build_compound_path(color: Option<String>, contours: &[(PolygonRing, RingRole)], enable_simplify: bool, simplify_tolerance: f64) -> VectorPath {
+    fn build_compound_path(color: Option<String>, badge_id: Option<usize>, contours: &[(PolygonRing, RingRole)], enable_simplify: bool, simplify_tolerance: f64) -> VectorPath {
         let color_key = color.clone().unwrap_or_else(|| "none".to_string());
-        let path_id = format!("group_{}", color_key.replace('#', "hex_"));
+        let path_id = if let Some(b_id) = badge_id {
+            format!("badge_{}_group_hex_{}", b_id, color_key.replace('#', ""))
+        } else {
+            format!("group_{}", color_key.replace('#', "hex_"))
+        };
 
         let mut compound_path = VectorPath::new(Some(path_id));
         compound_path.fill = color;
         compound_path.fill_rule = Some("evenodd".to_string());
+        compound_path.badge_id = badge_id;
 
         for (ring, role) in contours {
             // Filter out degenerate rings (e.g. orphan MoveTo points) that distort bounds

@@ -370,12 +370,13 @@ def merge_similar_colors_in_svg(svg_content: str, threshold: float = 0.15) -> st
             clusters.append(c)
             color_map[c] = c
 
-    layer_commands: dict[str, list[str]] = {}
-    layer_order: list[str] = []
+    badge_layers: dict[tuple, list[str]] = {}
+    badge_order: list[tuple] = []
 
     for p in paths:
         fill = p.get("fill") or "#000000"
         merged_fill = color_map.get(fill, fill)
+        b_id = p.get("badge_id")
 
         d_parts = []
         for cmd in p.get("commands", []):
@@ -396,10 +397,11 @@ def merge_similar_colors_in_svg(svg_content: str, threshold: float = 0.15) -> st
                 d_parts.append("Z")
 
         if d_parts:
-            if merged_fill not in layer_commands:
-                layer_commands[merged_fill] = []
-                layer_order.append(merged_fill)
-            layer_commands[merged_fill].append(" ".join(d_parts))
+            key = (b_id, merged_fill)
+            if key not in badge_layers:
+                badge_layers[key] = []
+                badge_order.append(key)
+            badge_layers[key].append(" ".join(d_parts))
 
     width = doc.get("width") or 1000.0
     height = doc.get("height") or 1000.0
@@ -411,9 +413,21 @@ def merge_similar_colors_in_svg(svg_content: str, threshold: float = 0.15) -> st
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="{vb_str}">',
     ]
 
-    for idx, fill in enumerate(layer_order):
-        combined_d = " ".join(layer_commands[fill])
-        lines.append(f'  <path id="layer_{idx}_{fill.lstrip("#")}" fill="{fill}" stroke="none" fill-rule="evenodd" d="{combined_d}"/>')
+    current_badge = None
+    for idx, (b_id, fill) in enumerate(badge_order):
+        if b_id != current_badge:
+            if current_badge is not None:
+                lines.append('  </g>')
+            current_badge = b_id
+            if current_badge is not None:
+                lines.append(f'  <g id="badge_{current_badge}">')
+
+        indent = '    ' if current_badge is not None else '  '
+        combined_d = " ".join(badge_layers[(b_id, fill)])
+        lines.append(f'{indent}<path id="layer_{idx}_{fill.lstrip("#")}" fill="{fill}" stroke="none" fill-rule="evenodd" d="{combined_d}"/>')
+
+    if current_badge is not None:
+        lines.append('  </g>')
 
     lines.append('</svg>')
     return "\n".join(lines)

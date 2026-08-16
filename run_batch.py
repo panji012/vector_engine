@@ -512,12 +512,13 @@ def merge_similar_colors_in_svg(svg_content: str, threshold: float = 0.15) -> st
             clusters.append(c)
             color_map[c] = c
 
-    layer_commands: dict[str, list[str]] = {}
-    layer_order: list[str] = []
+    badge_layers: dict[tuple, list[str]] = {}
+    badge_order: list[tuple] = []
 
     for p in paths:
         fill = p.get("fill") or "#000000"
         merged_fill = color_map.get(fill, fill)
+        b_id = p.get("badge_id")
 
         d_parts = []
         for cmd in p.get("commands", []):
@@ -538,10 +539,11 @@ def merge_similar_colors_in_svg(svg_content: str, threshold: float = 0.15) -> st
                 d_parts.append("Z")
 
         if d_parts:
-            if merged_fill not in layer_commands:
-                layer_commands[merged_fill] = []
-                layer_order.append(merged_fill)
-            layer_commands[merged_fill].append(" ".join(d_parts))
+            key = (b_id, merged_fill)
+            if key not in badge_layers:
+                badge_layers[key] = []
+                badge_order.append(key)
+            badge_layers[key].append(" ".join(d_parts))
 
     width = doc.get("width") or 1000.0
     height = doc.get("height") or 1000.0
@@ -553,9 +555,21 @@ def merge_similar_colors_in_svg(svg_content: str, threshold: float = 0.15) -> st
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="{vb_str}">',
     ]
 
-    for idx, fill in enumerate(layer_order):
-        combined_d = " ".join(layer_commands[fill])
-        lines.append(f'  <path id="layer_{idx}_{fill.lstrip("#")}" fill="{fill}" stroke="none" fill-rule="evenodd" d="{combined_d}"/>')
+    current_badge = None
+    for idx, (b_id, fill) in enumerate(badge_order):
+        if b_id != current_badge:
+            if current_badge is not None:
+                lines.append('  </g>')
+            current_badge = b_id
+            if current_badge is not None:
+                lines.append(f'  <g id="badge_{current_badge}">')
+
+        indent = '    ' if current_badge is not None else '  '
+        combined_d = " ".join(badge_layers[(b_id, fill)])
+        lines.append(f'{indent}<path id="layer_{idx}_{fill.lstrip("#")}" fill="{fill}" stroke="none" fill-rule="evenodd" d="{combined_d}"/>')
+
+    if current_badge is not None:
+        lines.append('  </g>')
 
     lines.append('</svg>')
     return "\n".join(lines)
@@ -783,12 +797,21 @@ def center_svg_artwork_content(svg_content: str, padding: float = 20.0) -> str:
             bg_pid = bg_path.get("id") or "normalized_background"
             lines.append(f'  <path id="{bg_pid}" fill="{bg_fill}" d="M 0 0 L {final_w} 0 L {final_w} {final_h} L 0 {final_h} Z"/>')
 
+        current_badge = None
         for idx, p in enumerate(paths):
             if idx == bg_idx:
                 continue
-            fill = p.get("fill") or "#000000"
-            stroke = p.get("stroke") or "none"
-            stroke_w = p.get("stroke_width") or 1.0
+            b_id = p.get("badge_id")
+            if b_id != current_badge:
+                if current_badge is not None:
+                    lines.append('  </g>')
+                current_badge = b_id
+                if current_badge is not None:
+                    lines.append(f'  <g id="badge_{current_badge}">')
+
+            fill_attr = f' fill="{p["fill"]}"' if p.get("fill") else ''
+            stroke_attr = f' stroke="{p["stroke"]}"' if p.get("stroke") else ''
+            stroke_w_attr = f' stroke-width="{p["stroke_width"]}"' if p.get("stroke_width") else ''
             pid = p.get("id") or "path"
 
             d_parts = []
@@ -811,7 +834,11 @@ def center_svg_artwork_content(svg_content: str, padding: float = 20.0) -> str:
 
             if d_parts:
                 d_str = " ".join(d_parts)
-                lines.append(f'  <path id="{pid}" fill="{fill}" stroke="{stroke}" stroke-width="{stroke_w}" d="{d_str}"/>')
+                indent = "    " if current_badge is not None else "  "
+                lines.append(f'{indent}<path id="{pid}"{fill_attr}{stroke_attr}{stroke_w_attr} d="{d_str}"/>')
+
+        if current_badge is not None:
+            lines.append('  </g>')
 
         lines.append('</svg>')
         return "\n".join(lines)
@@ -968,99 +995,127 @@ def run_batch_queue(
                 # Phase 1: Geometry Outset & Color Combiner (in RAM)
                 # ------------------------------------------------------------------
                 p1_start = time.time()
+                pristine_input_svg = svg_file.read_text(encoding="utf-8")
                 raw_outset_path = RAM_TEMP_DIR / f"{stem}_outset_{idx}.svg"
-                process_svg_outset(
+                raw_outset_svg_content = process_svg_outset(
                     str(svg_file), 
                     str(raw_outset_path), 
-                    enable_outset, 
-                    distance, 
-                    enable_simplify, 
-                    simplify_tolerance
+                    False, 
+                    0.0, 
+                    False, 
+                    0.0
                 )
                 p1_sec = time.time() - p1_start
                 print(f"  {ic_p1} Phase 1 (Outset & Combine Geometry in RAM)  : {p1_sec:>6.2f} s")
 
-                # ------------------------------------------------------------------
-                # Phase 2: Native Inkscape Path Simplify Action (in RAM)
-                # ------------------------------------------------------------------
-                p2_start = time.time()
-                simplified_path = RAM_TEMP_DIR / f"{stem}_simplified_{idx}.svg"
-                raw_outset_svg_content = run_inkscape_action_simplify(raw_outset_path, simplified_path, simplify_tolerance)
-                p2_sec = time.time() - p2_start
-                print(f"  {ic_p2} Phase 2 (Livarot Node Simplification)        : {p2_sec:>6.2f} s")
+                # Detect if SVG is a Badge Grid
+                is_badge_svg = '<g id="badge_' in raw_outset_svg_content or 'badge_1' in raw_outset_svg_content or '<g id="badge_' in pristine_input_svg or 'badge_1' in pristine_input_svg
 
-                # Clean up intermediate SVG files in RAM
-                if raw_outset_path.exists():
-                    raw_outset_path.unlink()
-                if simplified_path.exists():
-                    simplified_path.unlink()
+                if is_badge_svg:
+                    # 100% Pure Rust Pipeline for Badge SVGs: Bypass Inkscape CLI simplify to preserve pristine fonts & colors
+                    p2_sec = 0.0
+                    print(f"  {ic_p2} Phase 2 (Livarot Simplification Bypassed) :   0.00 s (Preserving Pristine Fonts)")
+                    if raw_outset_path.exists():
+                        raw_outset_path.unlink()
 
-                # ------------------------------------------------------------------
-                # Phase 3: Minimal-Layer Original & Silhouette Preparation
-                # ------------------------------------------------------------------
-                p3_start = time.time()
-                original_svg = raw_outset_svg_content
-                if color_merge_threshold > 0.0:
-                    original_svg = merge_similar_colors_in_svg(original_svg, color_merge_threshold)
-
-                sil_input_svg = original_svg
-                if remove_layers or min_nodes > 0:
-                    sil_input_svg = remove_specific_layers_from_svg(sil_input_svg, remove_layers, min_nodes)
-
-                if prof_name == "multi_color_bad_two":
-                    mid_cfg = prof_cfg.get("middle_panel", {})
-                    right_cfg = prof_cfg.get("right_panel", {})
-
-                    mid_min_lum = float(mid_cfg.get("min_luminance", 0.20))
-                    mid_max_lum = float(mid_cfg.get("max_luminance", 0.62))
-
-                    right_min_lum = float(right_cfg.get("min_luminance", 0.20))
-                    right_max_lum = float(right_cfg.get("max_luminance", 0.62))
-
-                    silhouette_svg = apply_multi_shade_luminance_recoloring(
-                        sil_input_svg,
-                        threshold=silhouette_threshold,
-                        mode="grey",
-                        min_luminance=mid_min_lum,
-                        max_luminance=mid_max_lum,
-                    )
-                    panel3_svg = apply_multi_shade_luminance_recoloring(
-                        sil_input_svg,
-                        threshold=silhouette_threshold,
-                        mode="colored",
-                        min_luminance=right_min_lum,
-                        max_luminance=right_max_lum,
-                    )
-                else:
-                    silhouette_svg = apply_silhouette_variant_json(
-                        sil_input_svg,
-                        silhouette_threshold,
-                        line_art,
-                        bg_color,
-                        fg_color,
-                        invert,
-                        bg_already_removed
-                    )
+                    p3_start = time.time()
+                    original_svg = raw_outset_svg_content
+                    sil_input_svg = original_svg
+                    silhouette_svg = original_svg
                     panel3_svg = None
-                    if bg_color_3 and fg_color_3:
-                        panel3_svg = apply_silhouette_variant_json(
+                    p3_sec = time.time() - p3_start
+                    print(f"  {ic_p3} Phase 3 (Color Isolation & Silhouette)      : {p3_sec:>6.2f} s")
+
+                    print(f"  [INFO] SVG Badge Grid layout detected -> Forcing Single mode export ONLY (_single.eps, _single.jpg & _single.svg)")
+                    do_single = True
+                    do_double = False
+                    do_triple = False
+                    do_pattern = False
+                else:
+                    # Standard Multi-Phase Pipeline for Non-Badge SVGs
+                    if enable_outset or enable_simplify:
+                        process_svg_outset(
+                            str(svg_file), 
+                            str(raw_outset_path), 
+                            enable_outset, 
+                            distance, 
+                            enable_simplify, 
+                            simplify_tolerance
+                        )
+
+                    p2_start = time.time()
+                    simplified_path = RAM_TEMP_DIR / f"{stem}_simplified_{idx}.svg"
+                    raw_outset_svg_content = run_inkscape_action_simplify(raw_outset_path, simplified_path, simplify_tolerance)
+                    p2_sec = time.time() - p2_start
+                    print(f"  {ic_p2} Phase 2 (Livarot Node Simplification)        : {p2_sec:>6.2f} s")
+
+                    if raw_outset_path.exists():
+                        raw_outset_path.unlink()
+                    if simplified_path.exists():
+                        simplified_path.unlink()
+
+                    p3_start = time.time()
+                    original_svg = raw_outset_svg_content
+                    if color_merge_threshold > 0.0:
+                        original_svg = merge_similar_colors_in_svg(original_svg, color_merge_threshold)
+
+                    sil_input_svg = original_svg
+                    if remove_layers or min_nodes > 0:
+                        sil_input_svg = remove_specific_layers_from_svg(sil_input_svg, remove_layers, min_nodes)
+
+                    if prof_name == "multi_color_bad_two":
+                        mid_cfg = prof_cfg.get("middle_panel", {})
+                        right_cfg = prof_cfg.get("right_panel", {})
+
+                        mid_min_lum = float(mid_cfg.get("min_luminance", 0.20))
+                        mid_max_lum = float(mid_cfg.get("max_luminance", 0.62))
+
+                        right_min_lum = float(right_cfg.get("min_luminance", 0.20))
+                        right_max_lum = float(right_cfg.get("max_luminance", 0.62))
+
+                        silhouette_svg = apply_multi_shade_luminance_recoloring(
+                            sil_input_svg,
+                            threshold=silhouette_threshold,
+                            mode="grey",
+                            min_luminance=mid_min_lum,
+                            max_luminance=mid_max_lum,
+                        )
+                        panel3_svg = apply_multi_shade_luminance_recoloring(
+                            sil_input_svg,
+                            threshold=silhouette_threshold,
+                            mode="colored",
+                            min_luminance=right_min_lum,
+                            max_luminance=right_max_lum,
+                        )
+                    else:
+                        silhouette_svg = apply_silhouette_variant_json(
                             sil_input_svg,
                             silhouette_threshold,
                             line_art,
-                            bg_color_3,
-                            fg_color_3,
+                            bg_color,
+                            fg_color,
                             invert,
                             bg_already_removed
                         )
-                p3_sec = time.time() - p3_start
-                print(f"  {ic_p3} Phase 3 (Color Isolation & Silhouette)      : {p3_sec:>6.2f} s")
+                        panel3_svg = None
+                        if bg_color_3 and fg_color_3:
+                            panel3_svg = apply_silhouette_variant_json(
+                                sil_input_svg,
+                                silhouette_threshold,
+                                line_art,
+                                bg_color_3,
+                                fg_color_3,
+                                invert,
+                                bg_already_removed
+                            )
+                    p3_sec = time.time() - p3_start
+                    print(f"  {ic_p3} Phase 3 (Color Isolation & Silhouette)      : {p3_sec:>6.2f} s")
 
-                # Mode Flag Resolution
-                mode_specified = mode_single or mode_double or mode_triple or mode_pattern
-                do_single = mode_single
-                do_double = mode_double or (not mode_specified)
-                do_triple = mode_triple
-                do_pattern = mode_pattern or (not mode_specified)
+                    mode_specified = mode_single or mode_double or mode_triple or mode_pattern
+                    do_single = mode_single
+                    do_double = mode_double or (not mode_specified)
+                    do_triple = mode_triple
+                    do_pattern = mode_pattern or (not mode_specified)
 
                 export_queue = []  # List of (svg_content_str, suffix_name)
 
@@ -1163,9 +1218,13 @@ def run_batch_queue(
                 # ------------------------------------------------------------------
                 p6_start = time.time()
                 if do_single:
-                    original_scaled_raw, _ = scale_document_area_json(original_svg, min_area, max_area)
-                    original_scaled_svg = center_svg_artwork_content(original_scaled_raw)
-                    export_queue.append((original_scaled_svg, original_svg, "single"))
+                    svg_for_single = raw_outset_svg_content if is_badge_svg else (pristine_input_svg if mode_single else original_svg)
+                    original_scaled_raw, _ = scale_document_area_json(svg_for_single, min_area, max_area)
+                    if is_badge_svg or mode_single:
+                        export_queue.append((original_scaled_raw, svg_for_single, "single"))
+                    else:
+                        original_scaled_svg = center_svg_artwork_content(original_scaled_raw)
+                        export_queue.append((original_scaled_svg, svg_for_single, "single"))
                 p6_sec = time.time() - p6_start
                 print(f"  {ic_p4} Phase 6 (Canvas Auto-Scale 1x Target)      : {p6_sec:>6.2f} s")
 
@@ -1176,8 +1235,14 @@ def run_batch_queue(
                 for scaled_svg, unscaled_svg, suffix in export_queue:
                     final_eps = output_path / f"{stem}_{suffix}.eps"
                     final_jpg = output_path / f"{stem}_{suffix}.jpg"
-                    export_eps_and_jpg(scaled_svg, unscaled_svg, final_eps, final_jpg)
-                    deliverables.append(f"{suffix}.eps, {suffix}.jpg")
+                    if suffix == "single":
+                        final_svg = output_path / f"{stem}_{suffix}.svg"
+                        final_svg.write_text(unscaled_svg, encoding="utf-8")
+                        export_eps_and_jpg(scaled_svg, unscaled_svg, final_eps, final_jpg)
+                        deliverables.append(f"{suffix}.eps, {suffix}.jpg, {suffix}.svg")
+                    else:
+                        export_eps_and_jpg(scaled_svg, unscaled_svg, final_eps, final_jpg)
+                        deliverables.append(f"{suffix}.eps, {suffix}.jpg")
 
                 p7_sec = time.time() - p7_start
                 print(f"  {ic_p6} Phase 7 (Disk Export EPS & JPG Render)      : {p7_sec:>6.2f} s")
@@ -1254,7 +1319,16 @@ def json_to_svg_string(doc_struct: dict) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="{vb_str}">',
     ]
 
+    current_badge = None
     for path in doc_struct.get("paths", []):
+        b_id = path.get("badge_id")
+        if b_id != current_badge:
+            if current_badge is not None:
+                lines.append('  </g>')
+            current_badge = b_id
+            if current_badge is not None:
+                lines.append(f'  <g id="badge_{current_badge}">')
+
         fill = path.get("fill") or "none"
         stroke = path.get("stroke") or "none"
         stroke_width = path.get("stroke_width") or 1.0
@@ -1282,7 +1356,11 @@ def json_to_svg_string(doc_struct: dict) -> str:
                 d_parts.append("Z")
 
         d_str = " ".join(d_parts)
-        lines.append(f'  <path id="{path_id}" fill="{fill}" stroke="{stroke}" stroke-width="{stroke_width}" d="{d_str}"/>')
+        indent = "    " if current_badge is not None else "  "
+        lines.append(f'{indent}<path id="{path_id}" fill="{fill}" stroke="{stroke}" stroke-width="{stroke_width}" d="{d_str}"/>')
+
+    if current_badge is not None:
+        lines.append('  </g>')
 
     lines.append('</svg>')
     return "\n".join(lines)
@@ -1409,7 +1487,7 @@ def main() -> None:
         "--single",
         action="store_true",
         default=False,
-        help="Export single artwork design ONLY (single.eps, single.jpg)"
+        help="Export single artwork design ONLY (single.eps, single.jpg, single.svg)"
     )
     parser.add_argument(
         "--double", "--bad-two",

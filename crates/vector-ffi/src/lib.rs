@@ -43,10 +43,21 @@ pub fn process_svg_outset(
         let mut doc = SvgParser::parse_str(&content)
             .map_err(|e| format!("SVG parse error: {}", e))?;
 
+        if !enable_outset && !enable_simplify {
+            let (combined_doc, _) = vector_algo::ColorCombiner::combine_document_badge_aware(&doc, true)
+                .map_err(|e| format!("Color Group Combine failed: {}", e))?;
+            let output_svg_string = combined_doc.to_svg_string();
+            if let Some(parent) = std::path::Path::new(output_path).parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let _ = std::fs::write(output_path, &output_svg_string);
+            return Ok(output_svg_string);
+        }
+
         // 0. Detect and normalize background
         vector_algo::BackgroundProcessor::normalize_background(&mut doc);
 
-        let (combined_doc, _) = ColorCombiner::combine_document(&doc)
+        let (combined_doc, _) = ColorCombiner::combine_document_badge_aware(&doc, true)
             .map_err(|e| format!("Color Group Combine failed: {}", e))?;
 
         let (outset_doc, _) = GeometryOutset::outset_document(&combined_doc, enable_outset, outset_distance, enable_simplify, simplify_tolerance)
@@ -150,8 +161,11 @@ pub fn export_svg_to_eps_json(svg_str: &str, title: Option<&str>) -> PyResult<St
     let doc = SvgParser::parse_str(svg_str)
         .map_err(|e| PyValueError::new_err(format!("Failed to parse SVG string: {}", e)))?;
 
+    let (combined_doc, _) = ColorCombiner::combine_document_badge_aware(&doc, true)
+        .map_err(|e| PyValueError::new_err(format!("Color Group Combine failed: {}", e)))?;
+
     let title_str = title.unwrap_or("Vector Engine Export");
-    EpsWriter::write_document(&doc, title_str)
+    EpsWriter::write_document(&combined_doc, title_str)
         .map_err(|e| PyValueError::new_err(format!("Native EPS Export failed: {}", e)))
 }
 

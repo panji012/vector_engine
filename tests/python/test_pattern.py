@@ -2,7 +2,12 @@ import json
 from vector_engine._native import analyze_pattern_suitability_json, generate_pattern_styled_json
 
 def test_pattern():
-    svg_content = open("input/Remix_AI_455_1784485211792.svg").read()
+    from pathlib import Path
+    svg_files = list(Path("input").glob("*.svg"))
+    if not svg_files:
+        import pytest
+        pytest.skip("No SVG input files found for pattern test")
+    svg_content = svg_files[0].read_text(encoding="utf-8")
     report = json.loads(analyze_pattern_suitability_json(svg_content))
     print("Pattern Suitability Report:", report)
 
