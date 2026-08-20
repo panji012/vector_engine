@@ -1,0 +1,95 @@
+# ==============================================================================
+# Vector Geometry Engine - Unified Configuration
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. System Level Settings
+# ------------------------------------------------------------------------------
+system:
+  precision:
+    epsilon: 1e-9
+    numeric_backend: "f64"
+
+  execution:
+    parallelism: 0  # 0 auto-detects CPU core count
+    buffer_strategy: "zero_copy"
+
+  spatial_index:
+    node_capacity: 16
+    index_type: "rtree"
+
+  logging:
+    level: "INFO"
+    format: "console"  # options: console, json
+    bridge_rust_tracing: true
+
+# ------------------------------------------------------------------------------
+# 2. Workflow Silhouette & Pattern Profiles
+# ------------------------------------------------------------------------------
+profiles:
+  # ----------------------------------------------------------------------------
+  # Low-Color Profile (<= 5 unique colors)
+  # ----------------------------------------------------------------------------
+  low_color_bad_two:
+    max_colors: 5
+    threshold: 0.50
+    tolerance: 0.20
+    distance: 0.5
+    color_merge_threshold: 0.15
+    remove_layers: []
+    min_nodes: 0
+    line_art: false
+    bg_color: "#FFFFFF"
+    fg_color: "#000000"
+    invert: false
+    gap: 50.0
+    min_area_px: 19000000.0
+    max_area_px: 22000000.0
+    pattern_config:
+      enable: true
+      detect_suitable_only: false
+      allowed_shapes:
+        - "circular"
+        - "square"
+      style: "brick_wall"
+      slant_offset_ratio: -0.5
+      wraparound_seamless: true
+      grid_x: 3
+      grid_y: 3
+      seamless_combine: true
+
+  # ----------------------------------------------------------------------------
+  # Multi-Color Profile (>= 6 unique colors)
+  # ----------------------------------------------------------------------------
+  multi_color_bad_two:
+    min_colors: 6
+    threshold: 0.95
+    tolerance: 0.30
+    distance: 0.75
+    color_merge_threshold: 0.15
+    remove_layers: []
+    min_nodes: 0
+    gap: 50.0
+    min_area_px: 18000000.0
+    max_area_px: 22000000.0
+    pattern_config:
+      enable: false
+      detect_suitable_only: false
+      allowed_shapes:
+        - "circular"
+        - "square"
+      style: "slanted_left"
+      slant_offset_ratio: -0.5
+      wraparound_seamless: true
+      grid_x: 3
+      grid_y: 3
+      seamless_combine: true
+    middle_panel:
+      type: "greyscale"
+      min_luminance: 0.20
+      max_luminance: 0.62
+    right_panel:
+      type: "dominant_color"
+      min_luminance: 0.20
+      max_luminance: 0.62
+      exclude_background: true

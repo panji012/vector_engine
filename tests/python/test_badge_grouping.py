@@ -80,6 +80,73 @@ def test_badge_svg_forces_single_mode():
 
     print("SUCCESS: Badge SVG Single Mode Deliverables Test Passed!")
 
+def test_single_badge_grouping():
+    SINGLE_BADGE_SVG = """<svg width="400" height="400" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Single Badge in Center -->
+  <path id="badge_ring" d="M 100 100 A 100 100 0 1 1 300 300 Z" fill="#1E7B34"/>
+  <path id="badge_center" d="M 150 150 L 250 150 L 250 250 L 150 250 Z" fill="#FFFFFF"/>
+</svg>"""
+    input_file = Path("output_test/test_1badge.svg")
+    input_file.parent.mkdir(parents=True, exist_ok=True)
+    input_file.write_text(SINGLE_BADGE_SVG)
+
+    output_file = Path("output_test/out_1badge.svg")
+
+    output_svg = process_svg_outset(
+        str(input_file),
+        str(output_file),
+        False, 0.0, False, 0.0
+    )
+
+    # 1. Verify that SVG contains <g id="badge_1">
+    assert '<g id="badge_1">' in output_svg
+
+    # 2. Verify parsed JSON doc has badge_id attributes set
+    doc = json.loads(parse_svg_string(output_svg))
+    badge_ids = {p.get("badge_id") for p in doc["paths"]}
+    assert 1 in badge_ids
+
+    print("SUCCESS: 1-Badge Spatial Grouping Test Passed!")
+
+def test_sticker_sheet_varying_sizes_grouping():
+    # Sticker sheet with 1 large central sticker and 2 small surrounding accessory stickers
+    STICKER_SHEET_SVG = """<svg width="1000" height="1000" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+  <!-- Meditating Girl Sticker (Large 200x200 in center) -->
+  <path id="girl_body" d="M 400 400 L 600 400 L 600 600 L 400 600 Z" fill="#D32F2F"/>
+  <path id="girl_text" d="M 450 350 L 550 350 L 550 370 L 450 370 Z" fill="#2B2B2B"/>
+
+  <!-- Coffee Cup Sticker (Small 50x50 at top-left) -->
+  <path id="cup_body" d="M 50 50 L 100 50 L 100 100 L 50 100 Z" fill="#1E7B34"/>
+  
+  <!-- Alarm Clock Sticker (Small 50x50 at bottom-right) -->
+  <path id="clock_body" d="M 850 850 L 900 850 L 900 900 L 850 900 Z" fill="#FBC02D"/>
+</svg>"""
+    input_file = Path("output_test/test_sticker_sheet.svg")
+    input_file.parent.mkdir(parents=True, exist_ok=True)
+    input_file.write_text(STICKER_SHEET_SVG)
+
+    output_file = Path("output_test/out_sticker_sheet.svg")
+
+    output_svg = process_svg_outset(
+        str(input_file),
+        str(output_file),
+        False, 0.0, False, 0.0
+    )
+
+    # 1. Verify that SVG contains <g id="badge_1">, <g id="badge_2">, <g id="badge_3">
+    assert '<g id="badge_1">' in output_svg
+    assert '<g id="badge_2">' in output_svg
+    assert '<g id="badge_3">' in output_svg
+
+    # 2. Verify parsed JSON doc has badge_id attributes set
+    doc = json.loads(parse_svg_string(output_svg))
+    badge_ids = {p.get("badge_id") for p in doc["paths"]}
+    assert badge_ids == {1, 2, 3}
+
+    print("SUCCESS: Sticker Sheet (Varying Element Sizes) Grouping Test Passed!")
+
 if __name__ == "__main__":
     test_four_badge_grouping()
+    test_single_badge_grouping()
+    test_sticker_sheet_varying_sizes_grouping()
     test_badge_svg_forces_single_mode()

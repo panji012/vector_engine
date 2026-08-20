@@ -64,7 +64,7 @@
         "min_area_px": 18000000.0,
         "max_area_px": 22000000.0,
         "pattern_config": {
-            "enable": true,
+            "enable": false,
             "_comment_enable": "true = aktifkan ekspor pattern, false = matikan ekspor pattern",
             "detect_suitable_only": false,
             "_comment_detect_suitable_only": "true = hanya buat pattern jika rasio gambar sesuai (1:1), false = selalu buat pattern",

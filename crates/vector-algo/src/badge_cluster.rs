@@ -99,20 +99,79 @@ impl BadgeDetector {
             }
         }
 
-        // Connect paths whose bounding boxes overlap or are within margin distance
+        // Compute adaptive proximity margin relative to canvas size (0.8% canvas size)
+        let effective_margin = margin.max(0.008 * canvas_w).max(0.008 * canvas_h);
+        let max_geom_dist = effective_margin + 6.0;
+        let max_geom_dist_sq = max_geom_dist * max_geom_dist;
+
+        // Collect subsampled points for fast geometry distance validation (max 20 points per path)
+        let max_samples_per_path = 20;
+        let sample_pts: Vec<Vec<vector_core::Point2D>> = doc.paths.iter().map(|p| {
+            let mut all_pts = Vec::new();
+            for cmd in &p.commands {
+                match cmd {
+                    vector_core::PathCommand::MoveTo(pt) | vector_core::PathCommand::LineTo(pt) => all_pts.push(*pt),
+                    vector_core::PathCommand::QuadTo { control, end } => {
+                        all_pts.push(vector_core::Point2D::new((control.x + end.x) * 0.5, (control.y + end.y) * 0.5));
+                        all_pts.push(*end);
+                    }
+                    vector_core::PathCommand::CubicTo { control1, control2, end } => {
+                        all_pts.push(vector_core::Point2D::new((control1.x + control2.x) * 0.5, (control1.y + control2.y) * 0.5));
+                        all_pts.push(*end);
+                    }
+                    vector_core::PathCommand::Close => {}
+                }
+            }
+            if all_pts.len() <= max_samples_per_path {
+                all_pts
+            } else {
+                let stride = all_pts.len() / max_samples_per_path;
+                all_pts.into_iter().step_by(stride.max(1)).take(max_samples_per_path).collect()
+            }
+        }).collect();
+
+        // Connect paths whose bounding boxes overlap/are close AND actual geometry distance is within max_geom_dist
         for i in 0..n {
+            let idx_i = fg_indices[i];
+            let pts_i = &sample_pts[idx_i];
+            if pts_i.is_empty() { continue; }
+
             for j in (i + 1)..n {
                 let b1 = bboxes[i];
                 let b2 = bboxes[j];
-                if (b1.0 - margin) <= b2.2
-                    && (b1.2 + margin) >= b2.0
-                    && (b1.1 - margin) <= b2.3
-                    && (b1.3 + margin) >= b2.1
+                if (b1.0 - effective_margin) <= b2.2
+                    && (b1.2 + effective_margin) >= b2.0
+                    && (b1.1 - effective_margin) <= b2.3
+                    && (b1.3 + effective_margin) >= b2.1
                 {
-                    union(&mut parent, i, j);
+                    let idx_j = fg_indices[j];
+                    let pts_j = &sample_pts[idx_j];
+                    if pts_j.is_empty() { continue; }
+
+                    // Fast 2D geometry distance validation with squared distance & early exit
+                    let mut is_close = false;
+                    for p1 in pts_i {
+                        for p2 in pts_j {
+                            let dx = p1.x - p2.x;
+                            let dy = p1.y - p2.y;
+                            if (dx * dx + dy * dy) <= max_geom_dist_sq {
+                                is_close = true;
+                                break;
+                            }
+                        }
+                        if is_close {
+                            break;
+                        }
+                    }
+
+                    if is_close {
+                        union(&mut parent, i, j);
+                    }
                 }
             }
         }
+
+
 
         // Group path indices by cluster root
         let mut clusters_map: std::collections::HashMap<usize, Vec<usize>> =
@@ -125,7 +184,10 @@ impl BadgeDetector {
         let canvas_area = canvas_w * canvas_h;
         let mut candidate_clusters: Vec<BadgeCluster> = Vec::new();
 
-        for (_root, indices) in clusters_map {
+        let mut sorted_keys: Vec<usize> = clusters_map.keys().cloned().collect();
+        sorted_keys.sort_unstable();
+        for root in sorted_keys {
+            let indices = clusters_map.remove(&root).unwrap();
             let mut min_x = f64::INFINITY;
             let mut min_y = f64::INFINITY;
             let mut max_x = f64::NEG_INFINITY;
@@ -143,8 +205,8 @@ impl BadgeDetector {
             let h = (max_y - min_y).abs();
             let area = w * h;
 
-            // Only consider major clusters with area >= 0.5% of canvas area and dimension >= 3% canvas
-            if canvas_area > 0.0 && area >= 0.005 * canvas_area && w >= 0.03 * canvas_w && h >= 0.03 * canvas_h {
+            // Only consider clusters with area >= 0.2% of canvas area and dimension >= 2% canvas
+            if canvas_area > 0.0 && area >= 0.002 * canvas_area && w >= 0.02 * canvas_w && h >= 0.02 * canvas_h {
                 candidate_clusters.push(BadgeCluster {
                     badge_id: 0,
                     path_indices: indices,
@@ -153,34 +215,100 @@ impl BadgeDetector {
             }
         }
 
-        // Must have at least 2 major clusters to be considered a Multi-Badge Grid
-        if candidate_clusters.len() < 2 {
+        if candidate_clusters.is_empty() {
             return Vec::new();
         }
 
-        // Check area ratio among major clusters to distinguish true uniform badge grids from single posters
-        let mut min_area = f64::INFINITY;
-        let mut max_area = f64::NEG_INFINITY;
+        // Merge candidate sub-clusters whose bounding boxes touch or are close (belonging to 1 badge/sticker artwork)
+        let max_gap_x = canvas_w * 0.05;
+        let max_gap_y = canvas_h * 0.05;
 
-        for c in &candidate_clusters {
-            let w = (c.bounding_box.2 - c.bounding_box.0).abs();
-            let h = (c.bounding_box.3 - c.bounding_box.1).abs();
-            let a = w * h;
-            if a < min_area { min_area = a; }
-            if a > max_area { max_area = a; }
+        let mut merged_clusters: Vec<BadgeCluster> = candidate_clusters;
+        let mut changed = true;
+        while changed {
+            changed = false;
+            let mut next_merged: Vec<BadgeCluster> = Vec::new();
+
+            for cluster in merged_clusters {
+                let mut merged = false;
+                for existing in &mut next_merged {
+                    let gap_x = (cluster.bounding_box.0 - existing.bounding_box.2)
+                        .max(existing.bounding_box.0 - cluster.bounding_box.2)
+                        .max(0.0);
+                    let gap_y = (cluster.bounding_box.1 - existing.bounding_box.3)
+                        .max(existing.bounding_box.1 - cluster.bounding_box.3)
+                        .max(0.0);
+
+                    // Prevent merging two major badge clusters (both >= 10 paths)
+                    // EXCEPT when their bounding boxes actually overlap/intersect (belonging to the same design/illustration)
+                    let boxes_overlap = cluster.bounding_box.0 < existing.bounding_box.2
+                        && cluster.bounding_box.2 > existing.bounding_box.0
+                        && cluster.bounding_box.1 < existing.bounding_box.3
+                        && cluster.bounding_box.3 > existing.bounding_box.1;
+
+                    let is_minor_merge = cluster.path_indices.len() < 10 || existing.path_indices.len() < 10 || boxes_overlap;
+                    if gap_x <= max_gap_x && gap_y <= max_gap_y && is_minor_merge {
+                        existing.path_indices.extend(cluster.path_indices.clone());
+                        existing.bounding_box.0 = existing.bounding_box.0.min(cluster.bounding_box.0);
+                        existing.bounding_box.1 = existing.bounding_box.1.min(cluster.bounding_box.1);
+                        existing.bounding_box.2 = existing.bounding_box.2.max(cluster.bounding_box.2);
+                        existing.bounding_box.3 = existing.bounding_box.3.max(cluster.bounding_box.3);
+                        merged = true;
+                        changed = true;
+                        break;
+                    }
+                }
+                if !merged {
+                    next_merged.push(cluster);
+                }
+            }
+            merged_clusters = next_merged;
         }
 
-        let area_ratio = if min_area > 0.0 { max_area / min_area } else { 999.0 };
+        // Filter clusters using multi-factor BadgeConfidenceScore
 
-        // If area ratio is > 5.0, it is a single illustration poster with text/decorations, NOT a badge grid!
-        if area_ratio > 5.0 {
+        let mut valid_badge_clusters: Vec<BadgeCluster> = Vec::new();
+
+        for cluster in &merged_clusters {
+            let score = Self::calculate_confidence_score(doc, &cluster.path_indices, cluster.bounding_box, (canvas_w, canvas_h));
+            let min_score = if cluster.path_indices.len() == 1 { 0.60 } else { 0.55 };
+
+            if score >= min_score {
+                valid_badge_clusters.push(cluster.clone());
+            }
+        }
+
+        if valid_badge_clusters.is_empty() {
             return Vec::new();
         }
 
-        // Sort clusters top-to-bottom, left-to-right
-        candidate_clusters.sort_by(|a, b| {
+        let canvas_area = canvas_w * canvas_h;
+
+        // Reject full-page illustrations if ANY cluster spans >= 50% of canvas area or >= 78% width & 70% height
+        for cluster in &valid_badge_clusters {
+            let bbox = cluster.bounding_box;
+            let w = (bbox.2 - bbox.0).abs();
+            let h = (bbox.3 - bbox.1).abs();
+            let cluster_area = w * h;
+            if canvas_area > 0.0 && (cluster_area >= 0.50 * canvas_area || (w >= 0.78 * canvas_w && h >= 0.70 * canvas_h)) {
+                return Vec::new();
+            }
+        }
+
+        // If there is only 1 candidate cluster, require high score (>= 0.65) to qualify as a Single Badge
+        if valid_badge_clusters.len() == 1 {
+            let score = Self::calculate_confidence_score(doc, &valid_badge_clusters[0].path_indices, valid_badge_clusters[0].bounding_box, (canvas_w, canvas_h));
+            if score < 0.65 {
+                return Vec::new();
+            }
+        }
+
+
+        // Sort clusters top-to-bottom, left-to-right (Tolerating staggered organic placement up to 12% canvas height)
+        valid_badge_clusters.sort_by(|a, b| {
             let y_diff = (a.bounding_box.1 - b.bounding_box.1).abs();
-            if y_diff > margin * 1.5 {
+            let tolerance = 0.12 * canvas_h;
+            if y_diff > tolerance {
                 a.bounding_box.1.partial_cmp(&b.bounding_box.1).unwrap()
             } else {
                 a.bounding_box.0.partial_cmp(&b.bounding_box.0).unwrap()
@@ -188,11 +316,129 @@ impl BadgeDetector {
         });
 
         // Assign 1-indexed badge IDs
-        for (i, cluster) in candidate_clusters.iter_mut().enumerate() {
+        for (i, cluster) in valid_badge_clusters.iter_mut().enumerate() {
             cluster.badge_id = i + 1;
         }
 
-        candidate_clusters
+        valid_badge_clusters
+    }
+
+    /// Multi-Factor Badge Confidence Scoring Engine (0.0 to 1.0)
+    /// Evaluates: Aspect Ratio, Area-Weighted Symmetry, Concentric Layering, Margin, Outer Boundary, and Typography.
+    pub fn calculate_confidence_score(
+        doc: &VectorDocument,
+        indices: &[usize],
+        bbox: (f64, f64, f64, f64),
+        canvas_dim: (f64, f64),
+    ) -> f64 {
+        let w = (bbox.2 - bbox.0).abs();
+        let h = (bbox.3 - bbox.1).abs();
+        if w <= 0.0 || h <= 0.0 {
+            return 0.0;
+        }
+
+        // 1. Aspect Ratio & Compactness (20% weight)
+        let aspect = w / h;
+        let aspect_score = if aspect >= 0.75 && aspect <= 1.33 {
+            1.0
+        } else if aspect >= 0.5 && aspect <= 2.0 {
+            0.6
+        } else {
+            0.2
+        };
+
+        // 2. Area-Weighted Bilateral Left-Right Symmetry (25% weight)
+        let cx = (bbox.0 + bbox.2) / 2.0;
+        let mut left_area = 0.0;
+        let mut right_area = 0.0;
+        let tol = 0.05 * w;
+
+        for &idx in indices {
+            let p_bbox = doc.paths[idx].bounding_box();
+            let pw = (p_bbox.2 - p_bbox.0).abs();
+            let ph = (p_bbox.3 - p_bbox.1).abs();
+            let p_area = pw * ph;
+            let p_cx = (p_bbox.0 + p_bbox.2) / 2.0;
+
+            if (p_cx - cx).abs() <= tol {
+                left_area += p_area * 0.5;
+                right_area += p_area * 0.5;
+            } else if p_cx < cx {
+                left_area += p_area;
+            } else {
+                right_area += p_area;
+            }
+        }
+        let total_area = (left_area + right_area).max(1e-5);
+        let area_diff = (left_area - right_area).abs() / total_area;
+        let symmetry_score = (1.0 - area_diff * 1.5).clamp(0.2, 1.0);
+
+        // 3. Concentric Layering & Path Density (20% weight)
+        let path_cnt = indices.len();
+        let layering_score = if path_cnt >= 3 {
+            1.0
+        } else if path_cnt == 2 {
+            0.7
+        } else {
+            0.2
+        };
+
+        // 4. Canvas Margin / Padding (15% weight)
+        let (cw, ch) = canvas_dim;
+        let margin_score = if cw > 0.0 && ch > 0.0 {
+            let pad_x = bbox.0.min((cw - bbox.2).max(0.0));
+            let pad_y = bbox.1.min((ch - bbox.3).max(0.0));
+            if pad_x >= 0.01 * cw && pad_y >= 0.01 * ch {
+                1.0
+            } else {
+                0.5
+            }
+        } else {
+            0.8
+        };
+
+        // 5. Outer Boundary Contour wrapping inner paths (20% weight)
+        let mut outer_score = 0.0;
+        for &idx in indices {
+            let p_bbox = doc.paths[idx].bounding_box();
+            let pw = (p_bbox.2 - p_bbox.0).abs();
+            let ph = (p_bbox.3 - p_bbox.1).abs();
+            if pw >= 0.75 * w && ph >= 0.75 * h {
+                outer_score = 1.0;
+                break;
+            }
+        }
+
+        // 6. Typography & Micro-Element Detection (Text, Ribbon, Stars)
+        let mut has_text_or_ribbon = false;
+        for &idx in indices {
+            let p = &doc.paths[idx];
+            if let Some(ref id) = p.id {
+                let id_lower = id.to_lowercase();
+                if id_lower.contains("text") || id_lower.contains("letter") || id_lower.contains("font") || id_lower.contains("ribbon") || id_lower.contains("banner") {
+                    has_text_or_ribbon = true;
+                    break;
+                }
+            }
+            let p_bbox = p.bounding_box();
+            let pw = (p_bbox.2 - p_bbox.0).abs();
+            let ph = (p_bbox.3 - p_bbox.1).abs();
+            if pw <= 0.35 * w && ph <= 0.35 * h && p.commands.len() >= 2 {
+                has_text_or_ribbon = true;
+            }
+        }
+
+        // MANDATORY RULE: A badge MUST have either an Outer Boundary Container OR Text/Ribbon elements.
+        // If it has NEITHER, it is a decorative pattern motif/illustration, NOT a badge!
+        if outer_score == 0.0 && !has_text_or_ribbon {
+            return 0.0;
+        }
+
+        (aspect_score * 0.20)
+            + (symmetry_score * 0.25)
+            + (layering_score * 0.20)
+            + (margin_score * 0.15)
+            + (outer_score * 0.20)
     }
 }
 
@@ -236,4 +482,31 @@ mod tests {
         assert_eq!(clusters[2].badge_id, 3);
         assert_eq!(clusters[3].badge_id, 4);
     }
+
+    #[test]
+    fn test_real_svg_inputs_badge_clustering() {
+        use vector_io::SvgParser;
+
+        // 1. Remix_Output_4 (4).svg is a single artwork illustration (non-badge) -> MUST detect 0 badge clusters
+        if let Ok(content) = std::fs::read_to_string("../../input/Remix_Output_4 (4).svg") {
+            if let Ok(doc) = SvgParser::parse_str(&content) {
+                let clusters = BadgeDetector::detect_badges(&doc, 12.0);
+                assert_eq!(clusters.len(), 0, "Single illustration artwork must detect 0 badge clusters!");
+            }
+        }
+
+        // 2. AI_Remix_Output_2 (11).svg is a 4-badge grid layout -> MUST detect EXACTLY 4 badge clusters
+        if let Ok(content) = std::fs::read_to_string("../../input/AI_Remix_Output_2 (11).svg") {
+            if let Ok(doc) = SvgParser::parse_str(&content) {
+                let clusters = BadgeDetector::detect_badges(&doc, 12.0);
+                assert_eq!(clusters.len(), 4, "4-Badge Grid artwork must detect EXACTLY 4 badge clusters!");
+                assert_eq!(clusters[0].badge_id, 1);
+                assert_eq!(clusters[1].badge_id, 2);
+                assert_eq!(clusters[2].badge_id, 3);
+                assert_eq!(clusters[3].badge_id, 4);
+            }
+        }
+    }
 }
+
+

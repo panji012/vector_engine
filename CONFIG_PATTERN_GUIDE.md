@@ -1,6 +1,6 @@
-# 📖 Panduan Lengkap Konfigurasi `config_silhouette.json`
+# 📖 Panduan Lengkap Konfigurasi `config/config.yaml`
 
-Dokumen ini berisi panduan praktis untuk mengubah nilai kontrol parameter pada file konfigurasi `config_silhouette.json`.
+Dokumen ini berisi panduan praktis untuk mengubah nilai kontrol parameter pada berkas konfigurasi terpadu `config/config.yaml` (atau berkas legacy `config_silhouette.json`).
 
 ---
 

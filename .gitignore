@@ -5,6 +5,7 @@ Cargo.lock
 # Test Outputs & Inputs
 output/
 output_test/
+output_test_*/
 output_calibration/
 output_final/
 input/*.eps

@@ -548,9 +548,13 @@ impl PatternGenerator {
 
         tiled_doc.paths.extend(clipped_paths);
 
-        Ok(tiled_doc)
+        // Combine tiled paths by color layer into clean compound paths
+        let (combined_tiled_doc, _) = crate::color_combine::ColorCombiner::combine_document(&tiled_doc)?;
+
+        Ok(combined_tiled_doc)
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -578,8 +582,9 @@ mod tests {
         // Test 3x3 grid generation
         let tiled_doc = PatternGenerator::generate_pattern(&doc, 3, 3).unwrap();
 
-        // 3x3 grid of 1 path = 1 full-canvas background + 9 tiled paths = 10 paths total
-        assert_eq!(tiled_doc.paths.len(), 10);
+        // 3x3 grid of 1 path combined by color layer = 1 full-canvas background + 1 combined artwork layer = 2 paths total
+        assert_eq!(tiled_doc.paths.len(), 2);
+
 
         // Check color preservation on all artwork tiles
         for tile in &tiled_doc.paths[1..] {

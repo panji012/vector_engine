@@ -84,71 +84,45 @@ if process_svg_outset is None:
 
 
 def run_inkscape_action_simplify(svg_path: Path, out_path: Path, simplify_tolerance: float = 0.2) -> str:
-    """Executes native C++ Inkscape Livarot path simplify engine with CLI fallback."""
+    """Executes native C++ Inkscape Livarot path simplify engine directly in RAM with graceful pass-through fallback."""
+    content = svg_path.read_text(encoding="utf-8")
     try:
-        content = svg_path.read_text()
         simplified_svg = inkscape_cpp_simplify_svg(content, simplify_tolerance)
-        out_path.write_text(simplified_svg)
-        return simplified_svg
+        if simplified_svg and len(simplified_svg) > 10:
+            out_path.write_text(simplified_svg, encoding="utf-8")
+            return simplified_svg
     except Exception as e:
-        cmd = [
-            "inkscape",
-            str(svg_path),
-            "--actions=select-all;path-simplify",
-            f"--export-filename={out_path}",
-        ]
-        try:
-            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return out_path.read_text()
-        except Exception:
-            out_path.write_bytes(svg_path.read_bytes())
-            return out_path.read_text()
+        pass
+    out_path.write_text(content, encoding="utf-8")
+    return content
 
 
 
-CPU_WORKER_COUNT = max(4, os.cpu_count() or 4)
+CPU_WORKER_COUNT = max(8, (os.cpu_count() or 4) * 2)
 PARALLEL_EXECUTOR = ThreadPoolExecutor(max_workers=CPU_WORKER_COUNT)
 
 
-def _run_inkscape_command(cmd: list[str]) -> None:
-    env = os.environ.copy()
-    num_threads = str(os.cpu_count() or 12)
-    env["OMP_NUM_THREADS"] = num_threads
-    env["OPENBLAS_NUM_THREADS"] = num_threads
-    env["MKL_NUM_THREADS"] = num_threads
-    env["VECLIB_MAXIMUM_THREADS"] = num_threads
-    env["NUMEXPR_NUM_THREADS"] = num_threads
-    subprocess.run(cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
-
-
 def _render_jpg_via_resvg(svg_content: str, jpg_path: Path) -> bool:
-    """Renders SVG string to high-resolution crisp JPG preview directly using resvg_py (in-memory) with white background composite."""
+    """Renders SVG string to high-resolution crisp JPG preview directly using resvg_py (in-memory) with fast width scaling and white background."""
     try:
         import resvg_py
         from PIL import Image
         import io
-        from vector_engine._native import scale_document_area_json
 
-        try:
-            preview_svg, _ = scale_document_area_json(svg_content, 3.0e6, 4.0e6)
-        except Exception:
-            preview_svg = svg_content
-
-        png_bytes = resvg_py.svg_to_bytes(preview_svg)
+        png_bytes = resvg_py.svg_to_bytes(
+            svg_string=svg_content,
+            width=1800,
+            background="#ffffff"
+        )
         if png_bytes:
             Image.MAX_IMAGE_PIXELS = None
             with Image.open(io.BytesIO(png_bytes)) as img:
-                if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
-                    img_rgba = img.convert("RGBA")
-                    bg = Image.new("RGB", img_rgba.size, (255, 255, 255))
-                    bg.paste(img_rgba, mask=img_rgba.split()[3])
-                    bg.save(jpg_path, "JPEG", quality=95)
-                else:
-                    img.convert("RGB").save(jpg_path, "JPEG", quality=95)
+                img.convert("RGB").save(jpg_path, "JPEG", quality=95)
             return True
     except Exception as e:
         print(f"WARNING: Native resvg_py rendering failed ({e})", file=sys.stderr)
     return False
+
 
 
 def _render_eps_via_native_rust(svg_content: str, eps_path: Path) -> bool:
@@ -851,8 +825,9 @@ def select_config_profile(config_data: dict, color_count: int) -> tuple[str, dic
     if not config_data:
         return "default", {}
     
-    low_cfg = config_data.get("low_color_bad_two", {})
-    multi_cfg = config_data.get("multi_color_bad_two", {})
+    profiles = config_data.get("profiles", config_data)
+    low_cfg = profiles.get("low_color_bad_two", {})
+    multi_cfg = profiles.get("multi_color_bad_two", {})
 
     max_colors = low_cfg.get("max_colors", 5)
     min_colors = multi_cfg.get("min_colors", 6)
@@ -932,8 +907,9 @@ def run_batch_queue(
     print("================================================================================")
     print(f" {ic_input} Input Directory  : {input_path}")
     print(f" {ic_output} Output Directory : {output_path}")
-    low_cfg = config_data.get("low_color_bad_two", {})
-    multi_cfg = config_data.get("multi_color_bad_two", {})
+    profiles = config_data.get("profiles", config_data)
+    low_cfg = profiles.get("low_color_bad_two", {})
+    multi_cfg = profiles.get("multi_color_bad_two", {})
     max_c = low_cfg.get("max_colors", 5)
     min_c = multi_cfg.get("min_colors", 6)
     print(f" {ic_prof} Adaptive Profiles: 'low_color_bad_two' (<={max_c} colors) | 'multi_color_bad_two' (>={min_c} colors)")
@@ -1009,7 +985,7 @@ def run_batch_queue(
                 print(f"  {ic_p1} Phase 1 (Outset & Combine Geometry in RAM)  : {p1_sec:>6.2f} s")
 
                 # Detect if SVG is a Badge Grid
-                is_badge_svg = '<g id="badge_' in raw_outset_svg_content or 'badge_1' in raw_outset_svg_content or '<g id="badge_' in pristine_input_svg or 'badge_1' in pristine_input_svg
+                is_badge_svg = '<g id="badge_' in raw_outset_svg_content
 
                 if is_badge_svg:
                     # 100% Pure Rust Pipeline for Badge SVGs: Bypass Inkscape CLI simplify to preserve pristine fonts & colors
@@ -1232,21 +1208,28 @@ def run_batch_queue(
                 # Phase 7: Disk Export EPS & JPG Render
                 # ------------------------------------------------------------------
                 p7_start = time.time()
+                render_futures = []
                 for scaled_svg, unscaled_svg, suffix in export_queue:
                     final_eps = output_path / f"{stem}_{suffix}.eps"
                     final_jpg = output_path / f"{stem}_{suffix}.jpg"
-                    if suffix == "single":
-                        final_svg = output_path / f"{stem}_{suffix}.svg"
-                        final_svg.write_text(unscaled_svg, encoding="utf-8")
-                        export_eps_and_jpg(scaled_svg, unscaled_svg, final_eps, final_jpg)
-                        deliverables.append(f"{suffix}.eps, {suffix}.jpg, {suffix}.svg")
-                    else:
-                        export_eps_and_jpg(scaled_svg, unscaled_svg, final_eps, final_jpg)
-                        deliverables.append(f"{suffix}.eps, {suffix}.jpg")
+                    final_svg = output_path / f"{stem}_{suffix}.svg"
+
+                    # Always export SVG alongside EPS and JPG for all deliverable suffixes
+                    final_svg.write_text(unscaled_svg, encoding="utf-8")
+                    deliverables.append(f"{suffix}.eps, {suffix}.jpg, {suffix}.svg")
+
+                    fut_eps = PARALLEL_EXECUTOR.submit(_render_eps_via_native_rust, scaled_svg, final_eps)
+                    fut_jpg = PARALLEL_EXECUTOR.submit(_render_jpg_via_resvg, unscaled_svg, final_jpg)
+                    render_futures.extend([fut_eps, fut_jpg])
+
+
+                for fut in render_futures:
+                    fut.result()
 
                 p7_sec = time.time() - p7_start
                 print(f"  {ic_p6} Phase 7 (Disk Export EPS & JPG Render)      : {p7_sec:>6.2f} s")
                 file_elapsed_sec = time.time() - file_start_time
+
 
                 # Detailed Telemetry & Bottleneck Analysis Logging
                 phase_times = [
@@ -1366,23 +1349,43 @@ def json_to_svg_string(doc_struct: dict) -> str:
     return "\n".join(lines)
 
 
-def load_config_file(config_path: Path) -> dict:
-    """Loads calibration parameters dictionary from config_silhouette.json if present (supports # comment lines)."""
-    if not config_path or not config_path.exists():
-        return {}
+def load_config_file(config_path: Path = None) -> tuple[dict, Path]:
+    """Loads configuration dictionary from YAML or JSON config file with fallback priority:
+    1. Specified config_path (if file exists)
+    2. Path("config/config.yaml") (default unified config)
+    3. Path("config_silhouette.json") (legacy fallback)
+    """
+    target_path = None
+    if config_path and config_path.exists():
+        target_path = config_path
+    elif Path("config/config.yaml").exists():
+        target_path = Path("config/config.yaml")
+    elif Path("config_silhouette.json").exists():
+        target_path = Path("config_silhouette.json")
+
+    if not target_path or not target_path.exists():
+        return {}, target_path or Path("config/config.yaml")
+
     try:
-        content = config_path.read_text()
-        clean_lines = [
-            line for line in content.splitlines()
-            if not line.strip().startswith("#") and not line.strip().startswith("//")
-        ]
-        return json.loads("\n".join(clean_lines))
+        if target_path.suffix.lower() in [".yaml", ".yml"]:
+            import yaml
+            with open(target_path, "r", encoding="utf-8") as f:
+                raw = yaml.safe_load(f) or {}
+            return raw, target_path
+        else:
+            content = target_path.read_text(encoding="utf-8")
+            clean_lines = [
+                line for line in content.splitlines()
+                if not line.strip().startswith("#") and not line.strip().startswith("//")
+            ]
+            return json.loads("\n".join(clean_lines)), target_path
     except Exception as e:
-        print(f"WARNING: Could not parse config JSON file '{config_path}': {e}", file=sys.stderr)
-        return {}
+        print(f"WARNING: Could not parse config file '{target_path}': {e}", file=sys.stderr)
+        return {}, target_path
 
 
 def main() -> None:
+    default_cfg = Path("config/config.yaml") if Path("config/config.yaml").exists() else Path("config_silhouette.json")
     parser = argparse.ArgumentParser(
         description="Vector Geometry Engine - Multi-Phase Python Batch Queue Processor"
     )
@@ -1401,8 +1404,8 @@ def main() -> None:
     parser.add_argument(
         "-c", "--config",
         type=Path,
-        default=Path("config_silhouette.json"),
-        help="Path to calibration JSON config file (default: config_silhouette.json)"
+        default=None,
+        help=f"Path to custom JSON or YAML config file (default: {default_cfg})"
     )
     parser.add_argument(
         "-d", "--distance",
@@ -1525,10 +1528,10 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Load parameters from JSON configuration file
-    full_cfg = load_config_file(args.config)
+    # Load parameters from configuration file (YAML or JSON)
+    full_cfg, used_config_path = load_config_file(args.config)
     if full_cfg:
-        print(f"Loaded Adaptive JSON Configuration from: {args.config}")
+        print(f"Loaded Adaptive Configuration from: {used_config_path}")
 
     remove_list_override = None
     if args.remove_layers is not None and args.remove_layers.strip():

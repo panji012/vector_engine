@@ -124,7 +124,20 @@ impl PatternDetector {
             + (edge_alignment_score * 0.15)
             + (coverage_score * 0.15);
 
-        let is_suitable = suitability_score >= 50.0 || is_circular_shape || is_square_shape;
+        let has_badge_paths = doc.paths.iter().any(|p| p.badge_id.is_some());
+        let badge_clusters = if !has_badge_paths {
+            crate::badge_cluster::BadgeDetector::detect_badges(doc, 12.0)
+        } else {
+            Vec::new()
+        };
+        let is_badge = has_badge_paths || !badge_clusters.is_empty();
+
+        let is_suitable = if is_badge {
+            recommendations.push("Artwork terdeteksi sebagai Badge. Pattern generation dilewati.".to_string());
+            false
+        } else {
+            suitability_score >= 50.0 || is_circular_shape || is_square_shape
+        };
 
         Ok(PatternSuitabilityReport {
             is_suitable,

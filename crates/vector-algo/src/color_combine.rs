@@ -50,8 +50,8 @@ impl ColorCombiner {
         }
 
         if enable_badge_grouping {
-            let clusters = crate::badge_cluster::BadgeDetector::detect_badges(doc, 20.0);
-            if clusters.len() >= 2 {
+            let clusters = crate::badge_cluster::BadgeDetector::detect_badges(doc, 12.0);
+            if !clusters.is_empty() {
                 let mut combined_doc = VectorDocument::new();
                 combined_doc.width = doc.width;
                 combined_doc.height = doc.height;
@@ -172,66 +172,53 @@ impl ColorCombiner {
         combined_doc.height = doc.height;
         combined_doc.view_box = doc.view_box;
 
-        let mut current_compound: Option<VectorPath> = None;
-        let mut group_details = Vec::new();
-        
-        let mut current_group_id: Option<usize> = None;
-        let mut current_color_key: Option<String> = None;
-        let mut paths_in_current_group = 0;
-        let mut num_groups = 0;
+        let mut color_order: Vec<String> = Vec::new();
+        let mut color_groups: std::collections::HashMap<String, Vec<&VectorPath>> = std::collections::HashMap::new();
 
         for path in &doc.paths {
-            let color_key = path.fill.as_deref().unwrap_or("none").trim().to_string();
-
-            if let Some(ref mut compound) = current_compound {
-                if current_group_id == Some(path.group_id) && current_color_key.as_ref() == Some(&color_key) {
-                    for cmd in &path.commands {
-                        compound.add_command(cmd.clone());
-                    }
-                    paths_in_current_group += 1;
-                    continue;
-                } else {
-                    // Finalize previous compound path
-                    combined_doc.paths.push(compound.clone());
-                    group_details.push(ColorGroupDetail {
-                        fill_color: compound.fill.clone().unwrap_or_else(|| "none".to_string()),
-                        input_paths: paths_in_current_group,
-                        output_paths: 1,
-                    });
-                }
+            let color_key = format!(
+                "fill:{}_stroke:{}_sw:{:?}",
+                path.fill.as_deref().unwrap_or("none").trim(),
+                path.stroke.as_deref().unwrap_or("none").trim(),
+                path.stroke_width
+            );
+            if !color_groups.contains_key(&color_key) {
+                color_order.push(color_key.clone());
             }
-
-            // Start a new compound path
-            current_group_id = Some(path.group_id);
-            current_color_key = Some(color_key);
-            paths_in_current_group = 1;
-            num_groups += 1;
-            
-            let mut new_path = VectorPath::new(Some(format!(
-                "group_{}",
-                num_groups
-            )));
-            new_path.fill = path.fill.clone();
-            new_path.stroke = path.stroke.clone();
-            new_path.stroke_width = path.stroke_width;
-            new_path.fill_rule = path.fill_rule.clone();
-            new_path.group_id = path.group_id;
-
-            for cmd in &path.commands {
-                new_path.add_command(cmd.clone());
-            }
-
-            current_compound = Some(new_path);
+            color_groups.entry(color_key).or_default().push(path);
         }
 
-        // Finalize the last compound path
-        if let Some(compound) = current_compound {
-            combined_doc.paths.push(compound.clone());
-            group_details.push(ColorGroupDetail {
-                fill_color: compound.fill.clone().unwrap_or_else(|| "none".to_string()),
-                input_paths: paths_in_current_group,
-                output_paths: 1,
-            });
+        let mut group_details = Vec::new();
+        let mut num_groups = 0;
+
+        for color_key in color_order {
+            if let Some(paths) = color_groups.get(&color_key) {
+                if paths.is_empty() {
+                    continue;
+                }
+                num_groups += 1;
+                let mut new_path = VectorPath::new(Some(format!("layer_{}", num_groups)));
+                new_path.fill = paths[0].fill.clone();
+                new_path.stroke = paths[0].stroke.clone();
+                new_path.stroke_width = paths[0].stroke_width;
+                new_path.fill_rule = paths[0].fill_rule.clone();
+                new_path.group_id = paths[0].group_id;
+
+                let mut input_paths_cnt = 0;
+                for p in paths {
+                    for cmd in &p.commands {
+                        new_path.add_command(cmd.clone());
+                    }
+                    input_paths_cnt += 1;
+                }
+
+                combined_doc.paths.push(new_path.clone());
+                group_details.push(ColorGroupDetail {
+                    fill_color: new_path.fill.clone().unwrap_or_else(|| "none".to_string()),
+                    input_paths: input_paths_cnt,
+                    output_paths: 1,
+                });
+            }
         }
 
         let combined_path_count = combined_doc.paths.len();
@@ -245,6 +232,7 @@ impl ColorCombiner {
         };
 
         Ok((combined_doc, report))
+
     }
 }
 

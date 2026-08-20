@@ -284,9 +284,31 @@ impl VectorDocument {
             false
         };
 
+        let mut ordered_paths: Vec<&VectorPath> = Vec::with_capacity(self.paths.len());
+        for path in &self.paths {
+            if path.badge_id.is_none() {
+                ordered_paths.push(path);
+            }
+        }
+        let mut unique_badge_ids = Vec::new();
+        for path in &self.paths {
+            if let Some(b_id) = path.badge_id {
+                if !unique_badge_ids.contains(&b_id) {
+                    unique_badge_ids.push(b_id);
+                }
+            }
+        }
+        for &b_id in &unique_badge_ids {
+            for path in &self.paths {
+                if path.badge_id == Some(b_id) {
+                    ordered_paths.push(path);
+                }
+            }
+        }
+
         let mut current_badge_group: Option<usize> = None;
 
-        for path in &self.paths {
+        for path in ordered_paths {
             if path.badge_id != current_badge_group {
                 if current_badge_group.is_some() {
                     svg.push_str("    </g>\n");
