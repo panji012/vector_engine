@@ -124,6 +124,16 @@ def _render_jpg_via_resvg(svg_content: str, jpg_path: Path) -> bool:
     return False
 
 
+def _render_jpg_via_native_rust(svg_content: str, jpg_path: Path) -> bool:
+    """Renders SVG string to high-resolution crisp JPG preview directly in Rust via vector_engine._native with resvg_py fallback."""
+    try:
+        from vector_engine._native import render_svg_to_jpg_file
+        render_svg_to_jpg_file(svg_content, str(jpg_path), 1800, 95)
+        return True
+    except Exception as e:
+        return _render_jpg_via_resvg(svg_content, jpg_path)
+
+
 
 def _render_eps_via_native_rust(svg_content: str, eps_path: Path) -> bool:
     """Exports SVG content to EPS using native Rust EpsWriter in vector_engine._native."""
@@ -1219,7 +1229,7 @@ def run_batch_queue(
                     deliverables.append(f"{suffix}.eps, {suffix}.jpg, {suffix}.svg")
 
                     fut_eps = PARALLEL_EXECUTOR.submit(_render_eps_via_native_rust, scaled_svg, final_eps)
-                    fut_jpg = PARALLEL_EXECUTOR.submit(_render_jpg_via_resvg, unscaled_svg, final_jpg)
+                    fut_jpg = PARALLEL_EXECUTOR.submit(_render_jpg_via_native_rust, unscaled_svg, final_jpg)
                     render_futures.extend([fut_eps, fut_jpg])
 
 

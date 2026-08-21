@@ -6,9 +6,10 @@ use vector_core::{Point2D, Polygon2D, VectorCoreError};
 pub struct JpgPreviewGenerator;
 
 impl JpgPreviewGenerator {
-    /// Renders an SVG XML string into a JPEG byte array natively in Rust with white background composite.
+    /// Renders an SVG XML string into a JPEG byte array natively in Rust with optional target width scaling and white background composite.
     pub fn render_svg_str_jpg(
         svg_str: &str,
+        target_width: u32,
         quality: u8,
     ) -> Result<Vec<u8>, VectorCoreError> {
         use resvg::tiny_skia::{Pixmap, Transform};
@@ -19,23 +20,29 @@ impl JpgPreviewGenerator {
             .map_err(|e| VectorCoreError::IoError(format!("USVG parse error: {}", e)))?;
 
         let size = tree.size.to_int_size();
-        let width = size.width();
-        let height = size.height();
+        let orig_w = size.width();
+        let orig_h = size.height();
 
-        if width == 0 || height == 0 {
+        if orig_w == 0 || orig_h == 0 {
             return Err(VectorCoreError::IoError("Invalid SVG dimensions for JPG rendering".to_string()));
         }
+
+        let (width, height, transform) = if target_width > 0 && target_width != orig_w {
+            let scale = target_width as f32 / orig_w as f32;
+            let calc_h = ((orig_h as f32) * scale).round() as u32;
+            let h = calc_h.max(1);
+            (target_width, h, Transform::from_scale(scale, scale))
+        } else {
+            (orig_w, orig_h, Transform::default())
+        };
 
         let mut pixmap = Pixmap::new(width, height)
             .ok_or_else(|| VectorCoreError::IoError("Failed to allocate Pixmap".to_string()))?;
 
-        resvg::render(&tree, Transform::default(), &mut pixmap.as_mut());
+        resvg::render(&tree, transform, &mut pixmap.as_mut());
 
         let mut img = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(width, height);
         let pixels = pixmap.data();
-        if pixels.len() >= 20 {
-            println!("Pixmap first 20 bytes: {:?}", &pixels[..20]);
-        }
 
         for (i, pixel) in pixels.chunks_exact(4).enumerate() {
             let r = pixel[0];

@@ -192,8 +192,31 @@ pub fn export_native_deliverable_file(
         .map_err(|e| PyValueError::new_err(format!("Failed to write EPS file '{}': {}", output_eps_path, e)))?;
 
     // 2. Export JPG natively
-    let jpg_bytes = JpgPreviewGenerator::render_svg_str_jpg(svg_str, 95)
+    let jpg_bytes = JpgPreviewGenerator::render_svg_str_jpg(svg_str, 1800, 95)
         .map_err(|e| PyValueError::new_err(format!("Native JPG Render failed: {}", e)))?;
+
+    if let Some(parent) = std::path::Path::new(output_jpg_path).parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    std::fs::write(output_jpg_path, jpg_bytes)
+        .map_err(|e| PyValueError::new_err(format!("Failed to write JPG file '{}': {}", output_jpg_path, e)))?;
+
+    Ok(())
+}
+
+/// Renders an SVG string directly to a JPG preview file natively in Rust using resvg and image codecs.
+#[pyfunction]
+pub fn render_svg_to_jpg_file(
+    svg_str: &str,
+    output_jpg_path: &str,
+    target_width: Option<u32>,
+    quality: Option<u8>,
+) -> PyResult<()> {
+    let q = quality.unwrap_or(95);
+    let w = target_width.unwrap_or(1800);
+
+    let jpg_bytes = JpgPreviewGenerator::render_svg_str_jpg(svg_str, w, q)
+        .map_err(|e| PyValueError::new_err(format!("Native Rust JPG Render failed: {}", e)))?;
 
     if let Some(parent) = std::path::Path::new(output_jpg_path).parent() {
         let _ = std::fs::create_dir_all(parent);
@@ -468,6 +491,7 @@ fn _native(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(export_eps_json, m)?)?;
     m.add_function(wrap_pyfunction!(export_svg_to_eps_json, m)?)?;
     m.add_function(wrap_pyfunction!(export_native_deliverable_file, m)?)?;
+    m.add_function(wrap_pyfunction!(render_svg_to_jpg_file, m)?)?;
     m.add_function(wrap_pyfunction!(render_jpg_preview_json, m)?)?;
     m.add_function(wrap_pyfunction!(analyze_pattern_suitability_json, m)?)?;
     m.add_function(wrap_pyfunction!(generate_pattern_svg_json, m)?)?;
