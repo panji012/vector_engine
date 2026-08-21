@@ -958,7 +958,7 @@ def process_single_file_task(task_params: dict) -> dict:
 
         if is_badge_svg:
             p2_sec = 0.0
-            log(f"  {ic_p2} Phase 2 (Livarot Simplification Bypassed) :   0.00 s (Preserving Pristine Fonts)")
+            log(f"  {ic_p2} Phase 2 (In-Memory Simplification Bypassed):   0.00 s (Preserving Pristine Fonts)")
             if raw_outset_path.exists():
                 raw_outset_path.unlink()
 
@@ -990,7 +990,7 @@ def process_single_file_task(task_params: dict) -> dict:
             simplified_path = RAM_TEMP_DIR / f"{stem}_simplified_{idx}.svg"
             raw_outset_svg_content = run_inkscape_action_simplify(raw_outset_path, simplified_path, simplify_tolerance)
             p2_sec = time.time() - p2_start
-            log(f"  {ic_p2} Phase 2 (Livarot Node Simplification)        : {p2_sec:>6.2f} s")
+            log(f"  {ic_p2} Phase 2 (In-Memory Node Simplification)     : {p2_sec:>6.2f} s")
 
             if raw_outset_path.exists():
                 raw_outset_path.unlink()
@@ -1200,7 +1200,7 @@ def process_single_file_task(task_params: dict) -> dict:
 
         phase_times = [
             (f"{ic_p1} Phase 1: Outset & Combine Geometry", p1_sec),
-            (f"{ic_p2} Phase 2: Livarot Node Simplification", p2_sec),
+            (f"{ic_p2} Phase 2: In-Memory Node Simplification", p2_sec),
             (f"{ic_p3} Phase 3: Color Isolation & Silhouette", p3_sec),
         ]
         if do_double or do_triple:
