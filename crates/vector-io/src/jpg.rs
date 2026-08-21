@@ -16,8 +16,9 @@ impl JpgPreviewGenerator {
         use resvg::usvg::{Options, Tree, TreeParsing};
 
         let opt = Options::default();
-        let tree = Tree::from_str(svg_str, &opt)
+        let mut tree = Tree::from_str(svg_str, &opt)
             .map_err(|e| VectorCoreError::IoError(format!("USVG parse error: {}", e)))?;
+        tree.calculate_bounding_boxes();
 
         let size = tree.size.to_int_size();
         let orig_w = size.width();
@@ -231,5 +232,15 @@ mod tests {
         assert_eq!(jpg_bytes[0], 0xFF);
         assert_eq!(jpg_bytes[1], 0xD8);
         assert_eq!(jpg_bytes[2], 0xFF);
+    }
+
+    #[test]
+    fn test_svg_str_jpg_rendering() {
+        let sample_svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect x="10" y="10" width="180" height="180" fill="red"/></svg>"#;
+        let bytes = JpgPreviewGenerator::render_svg_str_jpg(sample_svg, 200, 90).unwrap();
+        assert!(bytes.len() > 100);
+        assert_eq!(bytes[0], 0xFF);
+        assert_eq!(bytes[1], 0xD8);
+        assert_eq!(bytes[2], 0xFF);
     }
 }
