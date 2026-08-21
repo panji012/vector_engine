@@ -15,7 +15,8 @@ End-to-End Pipeline:
 """
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
 import shutil
@@ -860,7 +861,389 @@ def select_config_profile(config_data: dict, color_count: int) -> tuple[str, dic
     return "default", {}
 
 
-DEFAULT_SILHOUETTE_THRESHOLD = 0.50
+def process_single_file_task(task_params: dict) -> dict:
+    """Worker function to process a single SVG file through all 7 phases concurrently."""
+    idx = task_params["idx"]
+    total_files = task_params["total_files"]
+    svg_file = Path(task_params["svg_file"])
+    output_path = Path(task_params["output_path"])
+    config_data = task_params["config_data"]
+
+    distance_override = task_params.get("distance_override")
+    simplify_tolerance_override = task_params.get("simplify_tolerance_override")
+    silhouette_threshold_override = task_params.get("silhouette_threshold_override")
+    remove_layers_override = task_params.get("remove_layers_override")
+    min_nodes_override = task_params.get("min_nodes_override")
+    line_art_override = task_params.get("line_art_override")
+    bg_color_override = task_params.get("bg_color_override")
+    fg_color_override = task_params.get("fg_color_override")
+    invert_override = task_params.get("invert_override")
+    gap_override = task_params.get("gap_override")
+    min_area_override = task_params.get("min_area_override")
+    max_area_override = task_params.get("max_area_override")
+    mode_single = task_params.get("mode_single", False)
+    mode_double = task_params.get("mode_double", False)
+    mode_triple = task_params.get("mode_triple", False)
+    mode_pattern = task_params.get("mode_pattern", False)
+    style_override = task_params.get("style_override")
+    no_emoji = task_params.get("no_emoji", False)
+    enable_outset = task_params.get("enable_outset", ENABLE_OUTSET)
+    enable_simplify = task_params.get("enable_simplify", ENABLE_SIMPLIFY)
+
+    ic_file = "📄" if not no_emoji else "[FILE]"
+    ic_p1 = "🌀" if not no_emoji else "[P1]"
+    ic_p2 = "⚡" if not no_emoji else "[P2]"
+    ic_p3 = "🎨" if not no_emoji else "[P3]"
+    ic_p4 = "📐" if not no_emoji else "[P4]"
+    ic_p5 = "🖼️" if not no_emoji else "[P5]"
+    ic_p7 = "🧩" if not no_emoji else "[P7]"
+    ic_p6 = "💾" if not no_emoji else "[P6]"
+    ic_time = "⏱️" if not no_emoji else "[TIME]"
+    ic_bottleneck_tag = "🔴 [PRIMARY BOTTLENECK]" if not no_emoji else "[*] [PRIMARY BOTTLENECK]"
+    ic_success = "✅ SUCCESS" if not no_emoji else "[OK] SUCCESS"
+    ic_failed = "❌ FAILED" if not no_emoji else "[FAIL] FAILED"
+
+    rel_name = svg_file.name
+    stem = svg_file.stem
+    file_start_time = time.time()
+    log_lines = []
+
+    def log(msg: str = ""):
+        log_lines.append(msg)
+
+    # Count unique fill colors for adaptive profile selection
+    raw_input_svg = svg_file.read_text(encoding="utf-8")
+    color_count = count_unique_svg_colors(raw_input_svg)
+    prof_name, prof_cfg = select_config_profile(config_data, color_count)
+
+    distance = distance_override if distance_override is not None else prof_cfg.get("distance", 0.5)
+    simplify_tolerance = simplify_tolerance_override if simplify_tolerance_override is not None else prof_cfg.get("tolerance", 0.20)
+    silhouette_threshold = silhouette_threshold_override if silhouette_threshold_override is not None else prof_cfg.get("threshold", 0.50)
+    color_merge_threshold = prof_cfg.get("color_merge_threshold", 0.0)
+    remove_layers = remove_layers_override if remove_layers_override is not None else prof_cfg.get("remove_layers", [])
+    min_nodes = min_nodes_override if min_nodes_override is not None else prof_cfg.get("min_nodes", 0)
+    line_art = line_art_override if line_art_override is not None else prof_cfg.get("line_art", False)
+    bg_color = bg_color_override if bg_color_override is not None else prof_cfg.get("bg_color", "#FFFFFF")
+    fg_color = fg_color_override if fg_color_override is not None else prof_cfg.get("fg_color", "#000000")
+    bg_color_3 = prof_cfg.get("bg_color_3", "#D8F3DC" if prof_name == "multi_color_bad_two" else None)
+    fg_color_3 = prof_cfg.get("fg_color_3", "#1E7B34" if prof_name == "multi_color_bad_two" else None)
+    invert = invert_override if invert_override is not None else prof_cfg.get("invert", False)
+    gap = gap_override if gap_override is not None else prof_cfg.get("gap", 50.0)
+    min_area = min_area_override if min_area_override is not None else prof_cfg.get("min_area_px", MIN_CANVAS_AREA_PX)
+    max_area = max_area_override if max_area_override is not None else prof_cfg.get("max_area_px", MAX_CANVAS_AREA_PX)
+    bg_already_removed = bool(remove_layers)
+
+    log("────────────────────────────────────────────────────────────────────────────────")
+    log(f" {ic_file} [{idx}/{total_files}] Processing File: {rel_name} ({color_count} Colors | Profile: '{prof_name}')")
+    log("────────────────────────────────────────────────────────────────────────────────")
+
+    deliverables = []
+
+    try:
+        p1_start = time.time()
+        pristine_input_svg = raw_input_svg
+        raw_outset_path = RAM_TEMP_DIR / f"{stem}_outset_{idx}.svg"
+        raw_outset_svg_content = process_svg_outset(
+            str(svg_file), 
+            str(raw_outset_path), 
+            False, 
+            0.0, 
+            False, 
+            0.0
+        )
+        p1_sec = time.time() - p1_start
+        log(f"  {ic_p1} Phase 1 (Outset & Combine Geometry in RAM)  : {p1_sec:>6.2f} s")
+
+        is_badge_svg = '<g id="badge_' in raw_outset_svg_content
+
+        if is_badge_svg:
+            p2_sec = 0.0
+            log(f"  {ic_p2} Phase 2 (Livarot Simplification Bypassed) :   0.00 s (Preserving Pristine Fonts)")
+            if raw_outset_path.exists():
+                raw_outset_path.unlink()
+
+            p3_start = time.time()
+            original_svg = raw_outset_svg_content
+            sil_input_svg = original_svg
+            silhouette_svg = original_svg
+            panel3_svg = None
+            p3_sec = time.time() - p3_start
+            log(f"  {ic_p3} Phase 3 (Color Isolation & Silhouette)      : {p3_sec:>6.2f} s")
+
+            log("  [INFO] SVG Badge Grid layout detected -> Forcing Single mode export ONLY (_single.eps, _single.jpg & _single.svg)")
+            do_single = True
+            do_double = False
+            do_triple = False
+            do_pattern = False
+        else:
+            if enable_outset or enable_simplify:
+                process_svg_outset(
+                    str(svg_file), 
+                    str(raw_outset_path), 
+                    enable_outset, 
+                    distance, 
+                    enable_simplify, 
+                    simplify_tolerance
+                )
+
+            p2_start = time.time()
+            simplified_path = RAM_TEMP_DIR / f"{stem}_simplified_{idx}.svg"
+            raw_outset_svg_content = run_inkscape_action_simplify(raw_outset_path, simplified_path, simplify_tolerance)
+            p2_sec = time.time() - p2_start
+            log(f"  {ic_p2} Phase 2 (Livarot Node Simplification)        : {p2_sec:>6.2f} s")
+
+            if raw_outset_path.exists():
+                raw_outset_path.unlink()
+            if simplified_path.exists():
+                simplified_path.unlink()
+
+            p3_start = time.time()
+            original_svg = raw_outset_svg_content
+            if color_merge_threshold > 0.0:
+                original_svg = merge_similar_colors_in_svg(original_svg, color_merge_threshold)
+
+            sil_input_svg = original_svg
+            if remove_layers or min_nodes > 0:
+                sil_input_svg = remove_specific_layers_from_svg(sil_input_svg, remove_layers, min_nodes)
+
+            if prof_name == "multi_color_bad_two":
+                mid_cfg = prof_cfg.get("middle_panel", {})
+                right_cfg = prof_cfg.get("right_panel", {})
+
+                mid_min_lum = float(mid_cfg.get("min_luminance", 0.20))
+                mid_max_lum = float(mid_cfg.get("max_luminance", 0.62))
+
+                right_min_lum = float(right_cfg.get("min_luminance", 0.20))
+                right_max_lum = float(right_cfg.get("max_luminance", 0.62))
+
+                silhouette_svg = apply_multi_shade_luminance_recoloring(
+                    sil_input_svg,
+                    threshold=silhouette_threshold,
+                    mode="grey",
+                    min_luminance=mid_min_lum,
+                    max_luminance=mid_max_lum,
+                )
+                panel3_svg = apply_multi_shade_luminance_recoloring(
+                    sil_input_svg,
+                    threshold=silhouette_threshold,
+                    mode="colored",
+                    min_luminance=right_min_lum,
+                    max_luminance=right_max_lum,
+                )
+            else:
+                silhouette_svg = apply_silhouette_variant_json(
+                    sil_input_svg,
+                    silhouette_threshold,
+                    line_art,
+                    bg_color,
+                    fg_color,
+                    invert,
+                    bg_already_removed
+                )
+                panel3_svg = None
+                if bg_color_3 and fg_color_3:
+                    panel3_svg = apply_silhouette_variant_json(
+                        sil_input_svg,
+                        silhouette_threshold,
+                        line_art,
+                        bg_color_3,
+                        fg_color_3,
+                        invert,
+                        bg_already_removed
+                    )
+            p3_sec = time.time() - p3_start
+            log(f"  {ic_p3} Phase 3 (Color Isolation & Silhouette)      : {p3_sec:>6.2f} s")
+
+            mode_specified = mode_single or mode_double or mode_triple or mode_pattern
+            do_single = mode_single
+            do_double = mode_double or (not mode_specified)
+            do_triple = mode_triple
+            do_pattern = mode_pattern or (not mode_specified)
+
+        export_queue = []
+
+        # Phase 4
+        p4_sec = 0.0
+        if do_double or do_triple:
+            p4_start = time.time()
+
+            effective_gap = gap
+            if gap_override is None:
+                try:
+                    ref_doc_info = json.loads(parse_svg_string(original_svg))
+                    orig_w = float(ref_doc_info.get("width") or 0.0)
+                    orig_h = float(ref_doc_info.get("height") or 0.0)
+                    if orig_w > orig_h and orig_h > 0:
+                        aspect_ratio = orig_w / orig_h
+                        effective_gap = max(5.0, gap / aspect_ratio)
+                except Exception:
+                    effective_gap = gap
+
+            if (do_triple or panel3_svg is not None) and panel3_svg is not None:
+                duo_1_2 = create_duo_board_json(original_svg, silhouette_svg, gap=effective_gap)
+                board_raw_svg = create_duo_board_json(duo_1_2, panel3_svg, gap=effective_gap)
+                board_suffix = "bad_three"
+            else:
+                board_raw_svg = create_duo_board_json(original_svg, silhouette_svg, gap=effective_gap)
+                board_suffix = "bad_two"
+
+            board_scaled_svg, _ = scale_document_area_json(board_raw_svg, min_area, max_area)
+
+            p4_sec = time.time() - p4_start
+            log(f"  {ic_p5} Phase 4 (Bad Board Generation: {board_suffix})   : {p4_sec:>6.2f} s")
+            export_queue.append((board_scaled_svg, board_raw_svg, board_suffix))
+
+        # Phase 5
+        pattern_config = prof_cfg.get("pattern_config", {})
+        pattern_enabled_config = pattern_config.get("enable", True)
+        style_used = "none"
+        p5_sec = 0.0
+        if do_pattern and (pattern_enabled_config or mode_pattern):
+            p5_start = time.time()
+            try:
+                from vector_engine._native import analyze_pattern_suitability_json, generate_pattern_styled_json
+                report_raw = analyze_pattern_suitability_json(original_svg)
+                report = json.loads(report_raw)
+                detected_shape = report.get("detected_shape", "other")
+                allowed_shapes = pattern_config.get("allowed_shapes", ["circular", "square"])
+                detect_suitable_only = pattern_config.get("detect_suitable_only", True)
+                if mode_pattern:
+                    detect_suitable_only = False
+
+                is_approved = not detect_suitable_only or (report.get("is_suitable", False) and (detected_shape in allowed_shapes or report.get("is_circular_shape") or report.get("is_square_shape")))
+
+                if is_approved:
+                    grid_x = pattern_config.get("grid_x", 3)
+                    grid_y = pattern_config.get("grid_y", 3)
+                    style_used = style_override or pattern_config.get("style", "slanted_left")
+                    slant_ratio = pattern_config.get("slant_offset_ratio", -0.5)
+                    wraparound = pattern_config.get("wraparound_seamless", True)
+
+                    total_tiles = max(1, grid_x * grid_y)
+                    target_tile_min_area = min_area / float(total_tiles)
+                    target_tile_max_area = max_area / float(total_tiles)
+
+                    pattern_base_scaled_svg, _ = scale_document_area_json(
+                        original_svg, target_tile_min_area, target_tile_max_area
+                    )
+                    pattern_base_scaled_svg = center_svg_artwork_content(pattern_base_scaled_svg)
+
+                    pattern_svg = generate_pattern_styled_json(
+                        pattern_base_scaled_svg,
+                        grid_x=grid_x,
+                        grid_y=grid_y,
+                        style=style_used,
+                        detect_suitable_only=False,
+                        slant_offset_ratio=slant_ratio,
+                        wraparound_seamless=wraparound
+                    )
+
+                    pattern_scaled_svg, _ = scale_document_area_json(pattern_svg, min_area, max_area)
+
+                    p5_sec = time.time() - p5_start
+                    log(f"  {ic_p7} Phase 5 (Seamless Pattern: style='{style_used}')     : {p5_sec:>6.2f} s")
+                    export_queue.append((pattern_scaled_svg, pattern_svg, "pattern"))
+                else:
+                    p5_sec = time.time() - p5_start
+                    log(f"  {ic_p7} Phase 5 (Pattern Skipped: shape='{detected_shape}') : {p5_sec:>6.2f} s")
+            except Exception as pe:
+                p5_sec = time.time() - p5_start
+                log(f"  {ic_p7} Phase 5 Warning (Pattern skipped: {pe})")
+
+        # Phase 6
+        p6_start = time.time()
+        if do_single:
+            svg_for_single = raw_outset_svg_content if is_badge_svg else (pristine_input_svg if mode_single else original_svg)
+            original_scaled_raw, _ = scale_document_area_json(svg_for_single, min_area, max_area)
+            if is_badge_svg or mode_single:
+                export_queue.append((original_scaled_raw, svg_for_single, "single"))
+            else:
+                original_scaled_svg = center_svg_artwork_content(original_scaled_raw)
+                export_queue.append((original_scaled_svg, svg_for_single, "single"))
+        p6_sec = time.time() - p6_start
+        log(f"  {ic_p4} Phase 6 (Canvas Auto-Scale 1x Target)      : {p6_sec:>6.2f} s")
+
+        # Phase 7
+        p7_start = time.time()
+        export_tasks = []
+        for scaled_svg, unscaled_svg, suffix in export_queue:
+            final_eps = str(output_path / f"{stem}_{suffix}.eps")
+            final_jpg = str(output_path / f"{stem}_{suffix}.jpg")
+            final_svg = str(output_path / f"{stem}_{suffix}.svg")
+            export_tasks.append({
+                "scaled_svg": scaled_svg,
+                "unscaled_svg": unscaled_svg,
+                "eps_path": final_eps,
+                "jpg_path": final_jpg,
+                "svg_path": final_svg,
+                "title": stem,
+            })
+            deliverables.append(f"{suffix}.eps, {suffix}.jpg, {suffix}.svg")
+
+        try:
+            from vector_engine._native import export_batch_deliverables_native
+            export_batch_deliverables_native(json.dumps(export_tasks))
+        except Exception as ex:
+            log(f"WARNING: Native Rust Rayon export failed ({ex}), falling back to Python thread pool...")
+            render_futures = []
+            for task in export_tasks:
+                fut_eps = PARALLEL_EXECUTOR.submit(_render_eps_via_native_rust, task["scaled_svg"], Path(task["eps_path"]))
+                fut_jpg = PARALLEL_EXECUTOR.submit(_render_jpg_via_native_rust, task["scaled_svg"], Path(task["jpg_path"]))
+                render_futures.extend([fut_eps, fut_jpg])
+                Path(task["svg_path"]).write_text(task["scaled_svg"], encoding="utf-8")
+            for fut in render_futures:
+                fut.result()
+
+        p7_sec = time.time() - p7_start
+        log(f"  {ic_p6} Phase 7 (Disk Export EPS & JPG Render)      : {p7_sec:>6.2f} s")
+        file_elapsed_sec = time.time() - file_start_time
+
+        phase_times = [
+            (f"{ic_p1} Phase 1: Outset & Combine Geometry", p1_sec),
+            (f"{ic_p2} Phase 2: Livarot Node Simplification", p2_sec),
+            (f"{ic_p3} Phase 3: Color Isolation & Silhouette", p3_sec),
+        ]
+        if do_double or do_triple:
+            phase_times.append((f"{ic_p5} Phase 4: Bad Board Generation", p4_sec))
+        if do_pattern and p5_sec > 0:
+            phase_times.append((f"{ic_p7} Phase 5: Seamless Pattern Generation", p5_sec))
+        phase_times.append((f"{ic_p4} Phase 6: Canvas Auto-Scale 1x Target", p6_sec))
+        phase_times.append((f"{ic_p6} Phase 7: Disk Export EPS & JPG Render", p7_sec))
+
+        max_phase_name, max_phase_time = max(phase_times, key=lambda x: x[1])
+
+        log(f"\n  --------------------------------------------------------------------------------")
+        log(f"  {ic_time} PHASE TIMING & BOTTLENECK SUMMARY ({rel_name})")
+        log(f"  --------------------------------------------------------------------------------")
+        for name, t_sec in phase_times:
+            pct = (t_sec / file_elapsed_sec * 100.0) if file_elapsed_sec > 0 else 0.0
+            bottleneck_tag = f" {ic_bottleneck_tag}" if name == max_phase_name else ""
+            log(f"   {name:<44} : {t_sec:>6.2f} s  ({pct:>5.1f}%){bottleneck_tag}")
+        log(f"  --------------------------------------------------------------------------------")
+        deliv_str = ", ".join(deliverables) if deliverables else "None"
+        log(f"  Finished {rel_name} in {file_elapsed_sec:.2f} s | Bottleneck: {max_phase_name} ({max_phase_time:.2f} s)\n")
+
+        return {
+            "success": True,
+            "rel_name": rel_name,
+            "elapsed_sec": file_elapsed_sec,
+            "deliv_str": deliv_str,
+            "status_str": ic_success,
+            "log_output": "\n".join(log_lines),
+        }
+    except Exception as e:
+        file_elapsed_sec = time.time() - file_start_time
+        log(f"  {ic_failed}: Failed to process '{rel_name}' ({file_elapsed_sec:.2f} s)")
+        log(f"     Details: {e}")
+        log("  --> Safely proceeding to next file in queue...\n")
+        return {
+            "success": False,
+            "rel_name": rel_name,
+            "elapsed_sec": file_elapsed_sec,
+            "deliv_str": "None",
+            "status_str": ic_failed,
+            "log_output": "\n".join(log_lines),
+        }
 
 def run_batch_queue(
     input_path: Path, 
@@ -887,6 +1270,7 @@ def run_batch_queue(
     mode_triple: bool = False,
     mode_pattern: bool = False,
     style_override: str = None,
+    file_workers_override: int = None,
     no_emoji: bool = False,
 ) -> None:
     """Processes SVG files in a sequential fault-tolerant multi-phase pipeline with adaptive profile selection."""
@@ -905,12 +1289,8 @@ def run_batch_queue(
     ic_p4 = "📐" if not no_emoji else "[P4]"
     ic_p5 = "🖼️" if not no_emoji else "[P5]"
     ic_p7 = "🧩" if not no_emoji else "[P7]"
-    ic_p6 = "💾" if not no_emoji else "[P6]"
     ic_time = "⏱️" if not no_emoji else "[TIME]"
     ic_summary = "📊" if not no_emoji else "[SUMMARY]"
-    ic_bottleneck_tag = "🔴 [PRIMARY BOTTLENECK]" if not no_emoji else "[*] [PRIMARY BOTTLENECK]"
-    ic_success = "✅ SUCCESS" if not no_emoji else "[OK] SUCCESS"
-    ic_failed = "❌ FAILED" if not no_emoji else "[FAIL] FAILED"
 
     print("================================================================================")
     print(f" {ic_engine} Vector Geometry Engine - Multi-Phase Batch Queue Pipeline")
@@ -934,358 +1314,83 @@ def run_batch_queue(
         print(f"⚠️ WARNING: No SVG files found at input path: {input_path}")
         return
 
-    print(f" Found {len(svg_files)} SVG file(s) in queue to process...\n")
+    num_files = len(svg_files)
+    num_workers = file_workers_override if file_workers_override is not None else 1
+    num_workers = max(1, num_workers)
+
+    if num_workers > 1 and num_files > 1:
+        print(f" 🚀 Multi-File Queue Parallelism Active: Processing {num_files} file(s) concurrently across {num_workers} worker threads...\n")
+    else:
+        print(f" Found {num_files} SVG file(s) in queue to process...\n")
 
     success_count = 0
     failure_count = 0
     total_start_time = time.time()
     results_table = []
 
+    # Build task parameters list
+    task_params_list = []
+    for idx, svg_file in enumerate(svg_files, 1):
+        task_params_list.append({
+            "idx": idx,
+            "total_files": num_files,
+            "svg_file": str(svg_file),
+            "output_path": str(output_path),
+            "config_data": config_data,
+            "distance_override": distance_override,
+            "simplify_tolerance_override": simplify_tolerance_override,
+            "silhouette_threshold_override": silhouette_threshold_override,
+            "remove_layers_override": remove_layers_override,
+            "min_nodes_override": min_nodes_override,
+            "line_art_override": line_art_override,
+            "bg_color_override": bg_color_override,
+            "fg_color_override": fg_color_override,
+            "invert_override": invert_override,
+            "gap_override": gap_override,
+            "min_area_override": min_area_override,
+            "max_area_override": max_area_override,
+            "mode_single": mode_single,
+            "mode_double": mode_double,
+            "mode_triple": mode_triple,
+            "mode_pattern": mode_pattern,
+            "style_override": style_override,
+            "no_emoji": no_emoji,
+        })
+
     try:
-        for idx, svg_file in enumerate(svg_files, 1):
-            rel_name = svg_file.name
-            stem = svg_file.stem
-            file_start_time = time.time()
-
-            # Count unique fill colors for adaptive profile selection
-            raw_input_svg = svg_file.read_text()
-            color_count = count_unique_svg_colors(raw_input_svg)
-            prof_name, prof_cfg = select_config_profile(config_data, color_count)
-
-            # Resolve parameters for this specific file
-            distance = distance_override if distance_override is not None else prof_cfg.get("distance", 0.5)
-            simplify_tolerance = simplify_tolerance_override if simplify_tolerance_override is not None else prof_cfg.get("tolerance", 0.20)
-            silhouette_threshold = silhouette_threshold_override if silhouette_threshold_override is not None else prof_cfg.get("threshold", 0.50)
-            color_merge_threshold = prof_cfg.get("color_merge_threshold", 0.0)
-            remove_layers = remove_layers_override if remove_layers_override is not None else prof_cfg.get("remove_layers", [])
-            min_nodes = min_nodes_override if min_nodes_override is not None else prof_cfg.get("min_nodes", 0)
-            line_art = line_art_override if line_art_override is not None else prof_cfg.get("line_art", False)
-            bg_color = bg_color_override if bg_color_override is not None else prof_cfg.get("bg_color", "#FFFFFF")
-            fg_color = fg_color_override if fg_color_override is not None else prof_cfg.get("fg_color", "#000000")
-            bg_color_3 = prof_cfg.get("bg_color_3", "#D8F3DC" if prof_name == "multi_color_bad_two" else None)
-            fg_color_3 = prof_cfg.get("fg_color_3", "#1E7B34" if prof_name == "multi_color_bad_two" else None)
-            invert = invert_override if invert_override is not None else prof_cfg.get("invert", False)
-            gap = gap_override if gap_override is not None else prof_cfg.get("gap", 50.0)
-            min_area = min_area_override if min_area_override is not None else prof_cfg.get("min_area_px", MIN_CANVAS_AREA_PX)
-            max_area = max_area_override if max_area_override is not None else prof_cfg.get("max_area_px", MAX_CANVAS_AREA_PX)
-            bg_already_removed = bool(remove_layers)
-
-            print(f"────────────────────────────────────────────────────────────────────────────────")
-            print(f" {ic_file} [{idx}/{len(svg_files)}] Processing File: {rel_name} ({color_count} Colors | Profile: '{prof_name}')")
-            print(f"────────────────────────────────────────────────────────────────────────────────")
-
-            deliverables = []
-
-            try:
-                # ------------------------------------------------------------------
-                # Phase 1: Geometry Outset & Color Combiner (in RAM)
-                # ------------------------------------------------------------------
-                p1_start = time.time()
-                pristine_input_svg = svg_file.read_text(encoding="utf-8")
-                raw_outset_path = RAM_TEMP_DIR / f"{stem}_outset_{idx}.svg"
-                raw_outset_svg_content = process_svg_outset(
-                    str(svg_file), 
-                    str(raw_outset_path), 
-                    False, 
-                    0.0, 
-                    False, 
-                    0.0
-                )
-                p1_sec = time.time() - p1_start
-                print(f"  {ic_p1} Phase 1 (Outset & Combine Geometry in RAM)  : {p1_sec:>6.2f} s")
-
-                # Detect if SVG is a Badge Grid
-                is_badge_svg = '<g id="badge_' in raw_outset_svg_content
-
-                if is_badge_svg:
-                    # 100% Pure Rust Pipeline for Badge SVGs: Bypass Inkscape CLI simplify to preserve pristine fonts & colors
-                    p2_sec = 0.0
-                    print(f"  {ic_p2} Phase 2 (Livarot Simplification Bypassed) :   0.00 s (Preserving Pristine Fonts)")
-                    if raw_outset_path.exists():
-                        raw_outset_path.unlink()
-
-                    p3_start = time.time()
-                    original_svg = raw_outset_svg_content
-                    sil_input_svg = original_svg
-                    silhouette_svg = original_svg
-                    panel3_svg = None
-                    p3_sec = time.time() - p3_start
-                    print(f"  {ic_p3} Phase 3 (Color Isolation & Silhouette)      : {p3_sec:>6.2f} s")
-
-                    print(f"  [INFO] SVG Badge Grid layout detected -> Forcing Single mode export ONLY (_single.eps, _single.jpg & _single.svg)")
-                    do_single = True
-                    do_double = False
-                    do_triple = False
-                    do_pattern = False
+        if num_workers > 1 and num_files > 1:
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                futures = [executor.submit(process_single_file_task, params) for params in task_params_list]
+                for fut in concurrent.futures.as_completed(futures):
+                    res = fut.result()
+                    if res["log_output"]:
+                        print(res["log_output"])
+                    results_table.append((res["rel_name"], f"{res['elapsed_sec']:.2f} s", res["deliv_str"], res["status_str"]))
+                    if res["success"]:
+                        success_count += 1
+                    else:
+                        failure_count += 1
+        else:
+            for params in task_params_list:
+                res = process_single_file_task(params)
+                if res["log_output"]:
+                    print(res["log_output"])
+                results_table.append((res["rel_name"], f"{res['elapsed_sec']:.2f} s", res["deliv_str"], res["status_str"]))
+                if res["success"]:
+                    success_count += 1
                 else:
-                    # Standard Multi-Phase Pipeline for Non-Badge SVGs
-                    if enable_outset or enable_simplify:
-                        process_svg_outset(
-                            str(svg_file), 
-                            str(raw_outset_path), 
-                            enable_outset, 
-                            distance, 
-                            enable_simplify, 
-                            simplify_tolerance
-                        )
-
-                    p2_start = time.time()
-                    simplified_path = RAM_TEMP_DIR / f"{stem}_simplified_{idx}.svg"
-                    raw_outset_svg_content = run_inkscape_action_simplify(raw_outset_path, simplified_path, simplify_tolerance)
-                    p2_sec = time.time() - p2_start
-                    print(f"  {ic_p2} Phase 2 (Livarot Node Simplification)        : {p2_sec:>6.2f} s")
-
-                    if raw_outset_path.exists():
-                        raw_outset_path.unlink()
-                    if simplified_path.exists():
-                        simplified_path.unlink()
-
-                    p3_start = time.time()
-                    original_svg = raw_outset_svg_content
-                    if color_merge_threshold > 0.0:
-                        original_svg = merge_similar_colors_in_svg(original_svg, color_merge_threshold)
-
-                    sil_input_svg = original_svg
-                    if remove_layers or min_nodes > 0:
-                        sil_input_svg = remove_specific_layers_from_svg(sil_input_svg, remove_layers, min_nodes)
-
-                    if prof_name == "multi_color_bad_two":
-                        mid_cfg = prof_cfg.get("middle_panel", {})
-                        right_cfg = prof_cfg.get("right_panel", {})
-
-                        mid_min_lum = float(mid_cfg.get("min_luminance", 0.20))
-                        mid_max_lum = float(mid_cfg.get("max_luminance", 0.62))
-
-                        right_min_lum = float(right_cfg.get("min_luminance", 0.20))
-                        right_max_lum = float(right_cfg.get("max_luminance", 0.62))
-
-                        silhouette_svg = apply_multi_shade_luminance_recoloring(
-                            sil_input_svg,
-                            threshold=silhouette_threshold,
-                            mode="grey",
-                            min_luminance=mid_min_lum,
-                            max_luminance=mid_max_lum,
-                        )
-                        panel3_svg = apply_multi_shade_luminance_recoloring(
-                            sil_input_svg,
-                            threshold=silhouette_threshold,
-                            mode="colored",
-                            min_luminance=right_min_lum,
-                            max_luminance=right_max_lum,
-                        )
-                    else:
-                        silhouette_svg = apply_silhouette_variant_json(
-                            sil_input_svg,
-                            silhouette_threshold,
-                            line_art,
-                            bg_color,
-                            fg_color,
-                            invert,
-                            bg_already_removed
-                        )
-                        panel3_svg = None
-                        if bg_color_3 and fg_color_3:
-                            panel3_svg = apply_silhouette_variant_json(
-                                sil_input_svg,
-                                silhouette_threshold,
-                                line_art,
-                                bg_color_3,
-                                fg_color_3,
-                                invert,
-                                bg_already_removed
-                            )
-                    p3_sec = time.time() - p3_start
-                    print(f"  {ic_p3} Phase 3 (Color Isolation & Silhouette)      : {p3_sec:>6.2f} s")
-
-                    mode_specified = mode_single or mode_double or mode_triple or mode_pattern
-                    do_single = mode_single
-                    do_double = mode_double or (not mode_specified)
-                    do_triple = mode_triple
-                    do_pattern = mode_pattern or (not mode_specified)
-
-                export_queue = []  # List of (svg_content_str, suffix_name)
-
-                # ------------------------------------------------------------------
-                # Phase 4: Bad Board Generation (--double / --triple)
-                # ------------------------------------------------------------------
-                p4_sec = 0.0
-                if do_double or do_triple:
-                    p4_start = time.time()
-
-                    effective_gap = gap
-                    if gap_override is None:
-                        try:
-                            ref_doc_info = json.loads(parse_svg_string(original_svg))
-                            orig_w = float(ref_doc_info.get("width") or 0.0)
-                            orig_h = float(ref_doc_info.get("height") or 0.0)
-                            if orig_w > orig_h and orig_h > 0:
-                                aspect_ratio = orig_w / orig_h
-                                effective_gap = max(5.0, gap / aspect_ratio)
-                        except Exception:
-                            effective_gap = gap
-
-                    if (do_triple or panel3_svg is not None) and panel3_svg is not None:
-                        duo_1_2 = create_duo_board_json(original_svg, silhouette_svg, gap=effective_gap)
-                        board_raw_svg = create_duo_board_json(duo_1_2, panel3_svg, gap=effective_gap)
-                        board_suffix = "bad_three"
-                    else:
-                        board_raw_svg = create_duo_board_json(original_svg, silhouette_svg, gap=effective_gap)
-                        board_suffix = "bad_two"
-
-                    # Scale combined board document 1x at the end
-                    board_scaled_svg, _ = scale_document_area_json(board_raw_svg, min_area, max_area)
-
-                    p4_sec = time.time() - p4_start
-                    print(f"  {ic_p5} Phase 4 (Bad Board Generation: {board_suffix})   : {p4_sec:>6.2f} s")
-                    export_queue.append((board_scaled_svg, board_raw_svg, board_suffix))
-
-                # ------------------------------------------------------------------
-                # Phase 5: Seamless Pattern Generation & Export (--pattern)
-                # ------------------------------------------------------------------
-                pattern_config = prof_cfg.get("pattern_config", {})
-                pattern_enabled_config = pattern_config.get("enable", True)
-                style_used = "none"
-                p5_sec = 0.0
-                if do_pattern and (pattern_enabled_config or mode_pattern):
-                    p5_start = time.time()
-                    try:
-                        from vector_engine._native import analyze_pattern_suitability_json, generate_pattern_styled_json
-                        report_raw = analyze_pattern_suitability_json(original_svg)
-                        report = json.loads(report_raw)
-                        detected_shape = report.get("detected_shape", "other")
-                        allowed_shapes = pattern_config.get("allowed_shapes", ["circular", "square"])
-                        detect_suitable_only = pattern_config.get("detect_suitable_only", True)
-                        if mode_pattern:
-                            detect_suitable_only = False
-
-                        is_approved = not detect_suitable_only or (report.get("is_suitable", False) and (detected_shape in allowed_shapes or report.get("is_circular_shape") or report.get("is_square_shape")))
-
-                        if is_approved:
-                            grid_x = pattern_config.get("grid_x", 3)
-                            grid_y = pattern_config.get("grid_y", 3)
-                            style_used = style_override or pattern_config.get("style", "slanted_left")
-                            slant_ratio = pattern_config.get("slant_offset_ratio", -0.5)
-                            wraparound = pattern_config.get("wraparound_seamless", True)
-
-                            total_tiles = max(1, grid_x * grid_y)
-                            target_tile_min_area = min_area / float(total_tiles)
-                            target_tile_max_area = max_area / float(total_tiles)
-
-                            pattern_base_scaled_svg, _ = scale_document_area_json(
-                                original_svg, target_tile_min_area, target_tile_max_area
-                            )
-                            pattern_base_scaled_svg = center_svg_artwork_content(pattern_base_scaled_svg)
-
-                            pattern_svg = generate_pattern_styled_json(
-                                pattern_base_scaled_svg,
-                                grid_x=grid_x,
-                                grid_y=grid_y,
-                                style=style_used,
-                                detect_suitable_only=False,
-                                slant_offset_ratio=slant_ratio,
-                                wraparound_seamless=wraparound
-                            )
-
-                            # Auto-fit scale combined pattern canvas to target stock pixel area [min_area, max_area]
-                            pattern_scaled_svg, _ = scale_document_area_json(pattern_svg, min_area, max_area)
-
-                            p5_sec = time.time() - p5_start
-                            print(f"  {ic_p7} Phase 5 (Seamless Pattern: style='{style_used}')     : {p5_sec:>6.2f} s")
-                            export_queue.append((pattern_scaled_svg, pattern_svg, "pattern"))
-                        else:
-                            p5_sec = time.time() - p5_start
-                            print(f"  {ic_p7} Phase 5 (Pattern Skipped: shape='{detected_shape}') : {p5_sec:>6.2f} s")
-                    except Exception as pe:
-                        p5_sec = time.time() - p5_start
-                        print(f"  {ic_p7} Phase 5 Warning (Pattern skipped: {pe})")
-
-                # ------------------------------------------------------------------
-                # Phase 6: Canvas Auto-Scale 1x Target Standardisation (at the end)
-                # ------------------------------------------------------------------
-                p6_start = time.time()
-                if do_single:
-                    svg_for_single = raw_outset_svg_content if is_badge_svg else (pristine_input_svg if mode_single else original_svg)
-                    original_scaled_raw, _ = scale_document_area_json(svg_for_single, min_area, max_area)
-                    if is_badge_svg or mode_single:
-                        export_queue.append((original_scaled_raw, svg_for_single, "single"))
-                    else:
-                        original_scaled_svg = center_svg_artwork_content(original_scaled_raw)
-                        export_queue.append((original_scaled_svg, svg_for_single, "single"))
-                p6_sec = time.time() - p6_start
-                print(f"  {ic_p4} Phase 6 (Canvas Auto-Scale 1x Target)      : {p6_sec:>6.2f} s")
-
-                # ------------------------------------------------------------------
-                # Phase 7: Disk Export EPS & JPG Render
-                # ------------------------------------------------------------------
-                p7_start = time.time()
-                render_futures = []
-                for scaled_svg, unscaled_svg, suffix in export_queue:
-                    final_eps = output_path / f"{stem}_{suffix}.eps"
-                    final_jpg = output_path / f"{stem}_{suffix}.jpg"
-                    final_svg = output_path / f"{stem}_{suffix}.svg"
-
-                    # Always export SVG alongside EPS and JPG for all deliverable suffixes using 1:1 unified scaled SVG stock dimensions
-                    final_svg.write_text(scaled_svg, encoding="utf-8")
-                    deliverables.append(f"{suffix}.eps, {suffix}.jpg, {suffix}.svg")
-
-                    fut_eps = PARALLEL_EXECUTOR.submit(_render_eps_via_native_rust, scaled_svg, final_eps)
-                    fut_jpg = PARALLEL_EXECUTOR.submit(_render_jpg_via_native_rust, scaled_svg, final_jpg)
-                    render_futures.extend([fut_eps, fut_jpg])
-
-
-                for fut in render_futures:
-                    fut.result()
-
-                p7_sec = time.time() - p7_start
-                print(f"  {ic_p6} Phase 7 (Disk Export EPS & JPG Render)      : {p7_sec:>6.2f} s")
-                file_elapsed_sec = time.time() - file_start_time
-
-
-                # Detailed Telemetry & Bottleneck Analysis Logging
-                phase_times = [
-                    (f"{ic_p1} Phase 1: Outset & Combine Geometry", p1_sec),
-                    (f"{ic_p2} Phase 2: Livarot Node Simplification", p2_sec),
-                    (f"{ic_p3} Phase 3: Color Isolation & Silhouette", p3_sec),
-                ]
-                if do_double or do_triple:
-                    phase_times.append((f"{ic_p5} Phase 4: Bad Board Generation", p4_sec))
-                if do_pattern and p5_sec > 0:
-                    phase_times.append((f"{ic_p7} Phase 5: Seamless Pattern Generation", p5_sec))
-                phase_times.append((f"{ic_p4} Phase 6: Canvas Auto-Scale 1x Target", p6_sec))
-                phase_times.append((f"{ic_p6} Phase 7: Disk Export EPS & JPG Render", p7_sec))
-
-                max_phase_name, max_phase_time = max(phase_times, key=lambda x: x[1])
-
-                print(f"\n  --------------------------------------------------------------------------------")
-                print(f"  {ic_time} PHASE TIMING & BOTTLENECK SUMMARY ({rel_name})")
-                print(f"  --------------------------------------------------------------------------------")
-                for name, t_sec in phase_times:
-                    pct = (t_sec / file_elapsed_sec * 100.0) if file_elapsed_sec > 0 else 0.0
-                    bottleneck_tag = f" {ic_bottleneck_tag}" if name == max_phase_name else ""
-                    print(f"   {name:<44} : {t_sec:>6.2f} s  ({pct:>5.1f}%){bottleneck_tag}")
-                print(f"  --------------------------------------------------------------------------------")
-                deliv_str = ", ".join(deliverables) if deliverables else "None"
-                print(f"  Finished {rel_name} in {file_elapsed_sec:.2f} s | Bottleneck: {max_phase_name} ({max_phase_time:.2f} s)\n")
-                results_table.append((rel_name, f"{file_elapsed_sec:.2f} s", deliv_str, ic_success))
-                success_count += 1
-
-            except Exception as e:
-                file_elapsed_sec = time.time() - file_start_time
-                print(f"  {ic_failed}: Failed to process '{rel_name}' ({file_elapsed_sec:.2f} s)", file=sys.stderr)
-                print(f"     Details: {e}", file=sys.stderr)
-                results_table.append((rel_name, f"{file_elapsed_sec:.2f} s", "None", ic_failed))
-                failure_count += 1
-                print("  --> Safely proceeding to next file in queue...\n")
-                continue
+                    failure_count += 1
     finally:
-        # Automatic cleanup of RAM disk work directory
         if RAM_TEMP_DIR.exists():
             try:
                 shutil.rmtree(RAM_TEMP_DIR)
-            except Exception as e:
+            except Exception:
                 pass
 
     total_elapsed = time.time() - total_start_time
+
+    # Sort results table by original file name for consistent presentation
+    results_table.sort(key=lambda x: x[0])
 
     print("\n================================================================================")
     print(f" {ic_summary} BATCH QUEUE SUMMARY REPORT")
@@ -1296,8 +1401,8 @@ def run_batch_queue(
         print(f" {fname:<32} | {ftime:>9} | {fouts:<26} | {fstatus}")
     print("-" * 85)
     print(f" {ic_time} Total Queue Time : {total_elapsed:.2f} s")
-    print(f" Total Processed   : {len(svg_files)} File(s) ({success_count} Successful, {failure_count} Failed)")
-    print("================================================================================\n")
+    print(f" Total Processed   : {num_files} File(s) ({success_count} Successful, {failure_count} Failed)")
+    print("================================================================ drop_me \n".replace(" drop_me ", ""))
 
 
 def json_to_svg_string(doc_struct: dict) -> str:
@@ -1529,6 +1634,13 @@ def main() -> None:
         help="Override pattern layout style (e.g. half_drop_vertical, brick_wall, diamond_stagger, checker_pinwheel, scale_rhythm, wave_sine_offset, kaleidoscope_mirror, slanted_left)"
     )
     parser.add_argument(
+        "-w", "--workers", "--file-workers",
+        type=int,
+        dest="workers",
+        default=None,
+        help="Number of concurrent worker threads for multi-file queue parallelism (default: auto)"
+    )
+    parser.add_argument(
         "--no-emoji", "--clean",
         action="store_true",
         dest="no_emoji",
@@ -1571,6 +1683,7 @@ def main() -> None:
         mode_triple=args.triple,
         mode_pattern=args.pattern,
         style_override=args.style,
+        file_workers_override=args.workers,
         no_emoji=args.no_emoji,
     )
 
