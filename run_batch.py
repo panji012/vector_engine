@@ -1188,7 +1188,7 @@ def process_single_file_task(task_params: dict) -> dict:
             render_futures = []
             for task in export_tasks:
                 fut_eps = PARALLEL_EXECUTOR.submit(_render_eps_via_native_rust, task["scaled_svg"], Path(task["eps_path"]))
-                fut_jpg = PARALLEL_EXECUTOR.submit(_render_jpg_via_native_rust, task["scaled_svg"], Path(task["jpg_path"]))
+                fut_jpg = PARALLEL_EXECUTOR.submit(_render_jpg_via_resvg, task["scaled_svg"], Path(task["jpg_path"]))
                 render_futures.extend([fut_eps, fut_jpg])
                 Path(task["svg_path"]).write_text(task["scaled_svg"], encoding="utf-8")
             for fut in render_futures:

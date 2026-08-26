@@ -242,68 +242,70 @@ pub struct ExportTaskSpec {
 /// Executes Phase 7 Disk Export (SVG writing, EPS generation, and JPG 20.5 MP rendering)
 /// completely in native Rust with Rayon multi-threading across all CPU cores.
 #[pyfunction]
-pub fn export_batch_deliverables_native(tasks_json: &str) -> PyResult<Vec<String>> {
+pub fn export_batch_deliverables_native(py: Python<'_>, tasks_json: &str) -> PyResult<Vec<String>> {
     let tasks: Vec<ExportTaskSpec> = serde_json::from_str(tasks_json)
         .map_err(|e| PyValueError::new_err(format!("Failed to parse export tasks JSON: {}", e)))?;
 
-    let results: Vec<Result<String, String>> = tasks
-        .into_par_iter()
-        .map(|task| {
-            // 1. Write SVG file asynchronously/in parallel
-            let svg_path = task.svg_path.clone();
-            let scaled_svg = task.scaled_svg;
-            let eps_path = task.eps_path.clone();
-            let jpg_path = task.jpg_path.clone();
-            let title_str = task.title.as_deref().unwrap_or("Vector Engine Export").to_string();
+    let results: Vec<Result<String, String>> = py.allow_threads(|| {
+        tasks
+            .into_par_iter()
+            .map(|task| {
+                // 1. Write SVG file asynchronously/in parallel
+                let svg_path = task.svg_path.clone();
+                let scaled_svg = task.scaled_svg;
+                let eps_path = task.eps_path.clone();
+                let jpg_path = task.jpg_path.clone();
+                let title_str = task.title.as_deref().unwrap_or("Vector Engine Export").to_string();
 
-            let svg_content_to_write = if !scaled_svg.is_empty() {
-                &scaled_svg
-            } else if let Some(ref u) = task.unscaled_svg {
-                u
-            } else {
-                return Err(format!("No SVG content provided for '{}'", svg_path));
-            };
+                let svg_content_to_write = if !scaled_svg.is_empty() {
+                    &scaled_svg
+                } else if let Some(ref u) = task.unscaled_svg {
+                    u
+                } else {
+                    return Err(format!("No SVG content provided for '{}'", svg_path));
+                };
 
-            if let Some(parent) = std::path::Path::new(&svg_path).parent() {
-                let _ = std::fs::create_dir_all(parent);
-            }
-            std::fs::write(&svg_path, svg_content_to_write)
-                .map_err(|e| format!("Failed to write SVG file '{}': {}", svg_path, e))?;
+                if let Some(parent) = std::path::Path::new(&svg_path).parent() {
+                    let _ = std::fs::create_dir_all(parent);
+                }
+                std::fs::write(&svg_path, svg_content_to_write)
+                    .map_err(|e| format!("Failed to write SVG file '{}': {}", svg_path, e))?;
 
-            // 2. Concurrently generate EPS and render 20.5 MP JPG on separate CPU threads via rayon::join
-            let (eps_res, jpg_res) = rayon::join(
-                || -> Result<(), String> {
-                    let doc = SvgParser::parse_str(&scaled_svg)
-                        .map_err(|e| format!("Failed to parse SVG for EPS export: {}", e))?;
-                    let eps_content = EpsWriter::write_document(&doc, &title_str)
-                        .map_err(|e| format!("Native EPS Export failed: {}", e))?;
+                // 2. Concurrently generate EPS and render 20.5 MP JPG on separate CPU threads via rayon::join
+                let (eps_res, jpg_res) = rayon::join(
+                    || -> Result<(), String> {
+                        let doc = SvgParser::parse_str(&scaled_svg)
+                            .map_err(|e| format!("Failed to parse SVG for EPS export: {}", e))?;
+                        let eps_content = EpsWriter::write_document(&doc, &title_str)
+                            .map_err(|e| format!("Native EPS Export failed: {}", e))?;
 
-                    if let Some(parent) = std::path::Path::new(&eps_path).parent() {
-                        let _ = std::fs::create_dir_all(parent);
-                    }
-                    std::fs::write(&eps_path, eps_content)
-                        .map_err(|e| format!("Failed to write EPS file '{}': {}", eps_path, e))?;
-                    Ok(())
-                },
-                || -> Result<(), String> {
-                    let jpg_bytes = JpgPreviewGenerator::render_svg_str_jpg(&scaled_svg, 0, 95)
-                        .map_err(|e| format!("Native JPG Render failed: {}", e))?;
+                        if let Some(parent) = std::path::Path::new(&eps_path).parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+                        std::fs::write(&eps_path, eps_content)
+                            .map_err(|e| format!("Failed to write EPS file '{}': {}", eps_path, e))?;
+                        Ok(())
+                    },
+                    || -> Result<(), String> {
+                        let jpg_bytes = JpgPreviewGenerator::render_svg_str_jpg(&scaled_svg, 0, 95)
+                            .map_err(|e| format!("Native JPG Render failed: {}", e))?;
 
-                    if let Some(parent) = std::path::Path::new(&jpg_path).parent() {
-                        let _ = std::fs::create_dir_all(parent);
-                    }
-                    std::fs::write(&jpg_path, jpg_bytes)
-                        .map_err(|e| format!("Failed to write JPG file '{}': {}", jpg_path, e))?;
-                    Ok(())
-                },
-            );
+                        if let Some(parent) = std::path::Path::new(&jpg_path).parent() {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+                        std::fs::write(&jpg_path, jpg_bytes)
+                            .map_err(|e| format!("Failed to write JPG file '{}': {}", jpg_path, e))?;
+                        Ok(())
+                    },
+                );
 
-            eps_res?;
-            jpg_res?;
+                eps_res?;
+                jpg_res?;
 
-            Ok(svg_path)
-        })
-        .collect();
+                Ok(svg_path)
+            })
+            .collect()
+    });
 
     let mut deliverables = Vec::new();
     for res in results {

@@ -240,13 +240,18 @@ impl BadgeDetector {
                         .max(0.0);
 
                     // Prevent merging two major badge clusters (both >= 10 paths)
-                    // EXCEPT when their bounding boxes actually overlap/intersect (belonging to the same design/illustration)
-                    let boxes_overlap = cluster.bounding_box.0 < existing.bounding_box.2
-                        && cluster.bounding_box.2 > existing.bounding_box.0
-                        && cluster.bounding_box.1 < existing.bounding_box.3
-                        && cluster.bounding_box.3 > existing.bounding_box.1;
+                    // EXCEPT when their bounding boxes overlap significantly (>= 15% area ratio of the smaller cluster)
+                    let intersection_w = (cluster.bounding_box.2.min(existing.bounding_box.2) - cluster.bounding_box.0.max(existing.bounding_box.0)).max(0.0);
+                    let intersection_h = (cluster.bounding_box.3.min(existing.bounding_box.3) - cluster.bounding_box.1.max(existing.bounding_box.1)).max(0.0);
+                    let intersection_area = intersection_w * intersection_h;
 
-                    let is_minor_merge = cluster.path_indices.len() < 10 || existing.path_indices.len() < 10 || boxes_overlap;
+                    let area1 = (cluster.bounding_box.2 - cluster.bounding_box.0).abs() * (cluster.bounding_box.3 - cluster.bounding_box.1).abs();
+                    let area2 = (existing.bounding_box.2 - existing.bounding_box.0).abs() * (existing.bounding_box.3 - existing.bounding_box.1).abs();
+                    let min_area = area1.min(area2);
+
+                    let significant_overlap = min_area > 0.0 && (intersection_area / min_area) >= 0.15;
+
+                    let is_minor_merge = cluster.path_indices.len() < 10 || existing.path_indices.len() < 10 || significant_overlap;
                     if gap_x <= max_gap_x && gap_y <= max_gap_y && is_minor_merge {
                         existing.path_indices.extend(cluster.path_indices.clone());
                         existing.bounding_box.0 = existing.bounding_box.0.min(cluster.bounding_box.0);
@@ -272,7 +277,6 @@ impl BadgeDetector {
         for cluster in &merged_clusters {
             let score = Self::calculate_confidence_score(doc, &cluster.path_indices, cluster.bounding_box, (canvas_w, canvas_h));
             let min_score = if cluster.path_indices.len() == 1 { 0.60 } else { 0.55 };
-
             if score >= min_score {
                 valid_badge_clusters.push(cluster.clone());
             }

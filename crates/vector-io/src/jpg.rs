@@ -42,23 +42,39 @@ impl JpgPreviewGenerator {
 
         resvg::render(&tree, transform, &mut pixmap.as_mut());
 
-        let mut img = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(width, height);
-        let pixels = pixmap.data();
+        use rayon::prelude::*;
 
-        for (i, pixel) in pixels.chunks_exact(4).enumerate() {
-            let r = pixel[0];
-            let g = pixel[1];
-            let b = pixel[2];
-            let a = pixel[3] as f32 / 255.0;
+        let raw_rgba = pixmap.data();
+        let mut rgb_pixels = vec![0u8; (width as usize * height as usize * 3)];
 
-            let final_r = (r as f32 * a + 255.0 * (1.0 - a)).round() as u8;
-            let final_g = (g as f32 * a + 255.0 * (1.0 - a)).round() as u8;
-            let final_b = (b as f32 * a + 255.0 * (1.0 - a)).round() as u8;
+        rgb_pixels
+            .par_chunks_exact_mut(3)
+            .zip(raw_rgba.par_chunks_exact(4))
+            .for_each(|(out, pixel)| {
+                let r = pixel[0];
+                let g = pixel[1];
+                let b = pixel[2];
+                let a = pixel[3];
 
-            let x = (i as u32) % width;
-            let y = (i as u32) / width;
-            img.put_pixel(x, y, Rgb([final_r, final_g, final_b]));
-        }
+                if a == 255 {
+                    out[0] = r;
+                    out[1] = g;
+                    out[2] = b;
+                } else if a == 0 {
+                    out[0] = 255;
+                    out[1] = 255;
+                    out[2] = 255;
+                } else {
+                    let alpha = a as u32;
+                    let inv_alpha = 255 - alpha;
+                    out[0] = ((r as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+                    out[1] = ((g as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+                    out[2] = ((b as u32 * alpha + 255 * inv_alpha) / 255) as u8;
+                }
+            });
+
+        let img = ImageBuffer::<Rgb<u8>, Vec<u8>>::from_raw(width, height, rgb_pixels)
+            .ok_or_else(|| VectorCoreError::IoError("Failed to construct ImageBuffer from raw RGB slice".to_string()))?;
 
         let mut buffer = Vec::new();
         let mut cursor = Cursor::new(&mut buffer);
