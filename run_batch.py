@@ -560,6 +560,36 @@ def merge_similar_colors_in_svg(svg_content: str, threshold: float = 0.15) -> st
     return "\n".join(lines)
 
 
+def get_path_bbox(path: dict) -> tuple[float, float, float, float]:
+    min_x, min_y = float('inf'), float('inf')
+    max_x, max_y = float('-inf'), float('-inf')
+    cmds = path.get("commands", [])
+    if not cmds:
+        return (0.0, 0.0, 0.0, 0.0)
+    for cmd in cmds:
+        pts = []
+        if 'MoveTo' in cmd:
+            pts.append(cmd['MoveTo'])
+        elif 'LineTo' in cmd:
+            pts.append(cmd['LineTo'])
+        elif 'QuadTo' in cmd:
+            pts.append(cmd['QuadTo']['control'])
+            pts.append(cmd['QuadTo']['end'])
+        elif 'CubicTo' in cmd:
+            pts.append(cmd['CubicTo']['control1'])
+            pts.append(cmd['CubicTo']['control2'])
+            pts.append(cmd['CubicTo']['end'])
+        for pt in pts:
+            x, y = pt['x'], pt['y']
+            if x < min_x: min_x = x
+            if y < min_y: min_y = y
+            if x > max_x: max_x = x
+            if y > max_y: max_y = y
+    if min_x == float('inf'):
+        return (0.0, 0.0, 0.0, 0.0)
+    return (min_x, min_y, max_x, max_y)
+
+
 def remove_specific_layers_from_svg(svg_content: str, remove_indexes: list[int], min_nodes: int) -> str:
     """Filters out paths belonging to specified color layer indexes or below min_nodes."""
     if not remove_indexes and min_nodes <= 0:
@@ -587,16 +617,43 @@ def remove_specific_layers_from_svg(svg_content: str, remove_indexes: list[int],
         if 0 <= idx < len(sorted_fills)
     }
 
+    width = doc.get("width") or 1000.0
+    height = doc.get("height") or 1000.0
+
     filtered_paths = []
+    detected_bg_color = None
+
     for p in paths:
         fill = p.get("fill")
         cmd_count = len(p.get("commands", []))
         lum = color_lums.get(fill, 1.0)
         if fill in removed_fills:
-            continue
+            bbox = get_path_bbox(p)
+            w = bbox[2] - bbox[0]
+            h = bbox[3] - bbox[1]
+            if w >= 0.95 * width and h >= 0.95 * height:
+                if detected_bg_color is None:
+                    detected_bg_color = fill
+                continue
         if min_nodes > 0 and cmd_count < min_nodes and lum >= 0.15:
             continue
         filtered_paths.append(p)
+
+    if detected_bg_color:
+        bg_path = {
+            "id": "bg_canvas_restored",
+            "fill": detected_bg_color,
+            "stroke": "none",
+            "stroke_width": 1.0,
+            "commands": [
+                {"MoveTo": {"x": 0.0, "y": 0.0}},
+                {"LineTo": {"x": width, "y": 0.0}},
+                {"LineTo": {"x": width, "y": height}},
+                {"LineTo": {"x": 0.0, "y": height}},
+                "Close"
+            ]
+        }
+        filtered_paths.insert(0, bg_path)
 
     doc["paths"] = filtered_paths
 
