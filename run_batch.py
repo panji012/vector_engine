@@ -1315,11 +1315,11 @@ def run_batch_queue(
         return
 
     num_files = len(svg_files)
-    num_workers = file_workers_override if file_workers_override is not None else 1
+    num_workers = file_workers_override if file_workers_override is not None else min(4, os.cpu_count() or 2)
     num_workers = max(1, num_workers)
 
     if num_workers > 1 and num_files > 1:
-        print(f" 🚀 Multi-File Queue Parallelism Active: Processing {num_files} file(s) concurrently across {num_workers} worker threads...\n")
+        print(f" 🚀 Multi-File Queue Parallelism Active: Processing {num_files} file(s) concurrently across {num_workers} worker processes...\n")
     else:
         print(f" Found {num_files} SVG file(s) in queue to process...\n")
 
@@ -1359,9 +1359,10 @@ def run_batch_queue(
 
     try:
         if num_workers > 1 and num_files > 1:
-            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+            from concurrent.futures import ProcessPoolExecutor
+            with ProcessPoolExecutor(max_workers=num_workers) as executor:
                 futures = [executor.submit(process_single_file_task, params) for params in task_params_list]
-                for fut in concurrent.futures.as_completed(futures):
+                for fut in as_completed(futures):
                     res = fut.result()
                     if res["log_output"]:
                         print(res["log_output"])
