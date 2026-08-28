@@ -81,6 +81,23 @@ pub fn parse_svg_string(svg_content: &str) -> PyResult<String> {
         .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))
 }
 
+/// Configures global Rayon threadpool worker thread count in the current process.
+#[pyfunction]
+pub fn init_rayon_threads(num_threads: usize) -> PyResult<()> {
+    let _ = rayon::ThreadPoolBuilder::new()
+        .num_threads(num_threads)
+        .build_global();
+    Ok(())
+}
+
+/// Parses an SVG string and returns (width, height) directly.
+#[pyfunction]
+pub fn get_svg_dimensions(svg_content: &str) -> PyResult<(f64, f64)> {
+    let doc = SvgParser::parse_str(svg_content)
+        .map_err(|e| PyValueError::new_err(format!("SVG parse error: {}", e)))?;
+    Ok((doc.width.unwrap_or(0.0), doc.height.unwrap_or(0.0)))
+}
+
 /// Computes the Union of two JSON-encoded 2D polygons.
 #[pyfunction]
 pub fn union_polygons_json(poly1_json: &str, poly2_json: &str) -> PyResult<String> {
@@ -557,6 +574,8 @@ pub fn apply_silhouette_variant_json(
 #[pymodule]
 fn _native(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(logging::init_tracing, m)?)?;
+    m.add_function(wrap_pyfunction!(init_rayon_threads, m)?)?;
+    m.add_function(wrap_pyfunction!(get_svg_dimensions, m)?)?;
     m.add_function(wrap_pyfunction!(process_svg_outset, m)?)?;
     m.add_function(wrap_pyfunction!(parse_svg_string, m)?)?;
 

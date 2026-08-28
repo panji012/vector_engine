@@ -52,6 +52,8 @@ try:
     from vector_engine._native import (
         process_svg_outset,
         parse_svg_string,
+        init_rayon_threads,
+        get_svg_dimensions,
         apply_design1_variant_json,
         apply_design2_variant_json,
         apply_silhouette_variant_json,
@@ -65,6 +67,8 @@ except ImportError:
         from vector_engine import (
             process_svg_outset,
             parse_svg_string,
+            init_rayon_threads,
+            get_svg_dimensions,
             apply_design1_variant_json,
             apply_design2_variant_json,
             apply_silhouette_variant_json,
@@ -911,6 +915,16 @@ def process_single_file_task(task_params: dict) -> dict:
     output_path = Path(task_params["output_path"])
     config_data = task_params["config_data"]
 
+    # Configure Rayon threads in child process to avoid CPU oversubscription
+    try:
+        import os
+        num_workers = task_params.get("num_workers", 1)
+        cpu_count = os.cpu_count() or 4
+        rayon_threads = max(1, cpu_count // num_workers)
+        init_rayon_threads(rayon_threads)
+    except Exception:
+        pass
+
     distance_override = task_params.get("distance_override")
     simplify_tolerance_override = task_params.get("simplify_tolerance_override")
     silhouette_threshold_override = task_params.get("silhouette_threshold_override")
@@ -1110,9 +1124,7 @@ def process_single_file_task(task_params: dict) -> dict:
             effective_gap = gap
             if gap_override is None:
                 try:
-                    ref_doc_info = json.loads(parse_svg_string(original_svg))
-                    orig_w = float(ref_doc_info.get("width") or 0.0)
-                    orig_h = float(ref_doc_info.get("height") or 0.0)
+                    orig_w, orig_h = get_svg_dimensions(original_svg)
                     if orig_w > orig_h and orig_h > 0:
                         aspect_ratio = orig_w / orig_h
                         effective_gap = max(5.0, gap / aspect_ratio)
@@ -1395,6 +1407,7 @@ def run_batch_queue(
             "mode_pattern": mode_pattern,
             "style_override": style_override,
             "no_emoji": no_emoji,
+            "num_workers": num_workers,
         })
 
     try:
