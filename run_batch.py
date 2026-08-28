@@ -51,7 +51,6 @@ sys.path.insert(0, str(Path(__file__).parent / "python"))
 try:
     from vector_engine._native import (
         process_svg_outset,
-        inkscape_cpp_simplify_svg,
         parse_svg_string,
         apply_design1_variant_json,
         apply_design2_variant_json,
@@ -65,7 +64,6 @@ except ImportError:
     try:
         from vector_engine import (
             process_svg_outset,
-            inkscape_cpp_simplify_svg,
             parse_svg_string,
             apply_design1_variant_json,
             apply_design2_variant_json,
@@ -83,19 +81,6 @@ if process_svg_outset is None:
     print("Please ensure the project is compiled with 'maturin develop --release'.", file=sys.stderr)
     sys.exit(1)
 
-
-def run_inkscape_action_simplify(svg_path: Path, out_path: Path, simplify_tolerance: float = 0.2) -> str:
-    """Executes native C++ Inkscape Livarot path simplify engine directly in RAM with graceful pass-through fallback."""
-    content = svg_path.read_text(encoding="utf-8")
-    try:
-        simplified_svg = inkscape_cpp_simplify_svg(content, simplify_tolerance)
-        if simplified_svg and len(simplified_svg) > 10:
-            out_path.write_text(simplified_svg, encoding="utf-8")
-            return simplified_svg
-    except Exception as e:
-        pass
-    out_path.write_text(content, encoding="utf-8")
-    return content
 
 
 
@@ -1034,7 +1019,7 @@ def process_single_file_task(task_params: dict) -> dict:
             do_pattern = False
         else:
             if enable_outset or enable_simplify:
-                process_svg_outset(
+                raw_outset_svg_content = process_svg_outset(
                     str(svg_file), 
                     str(raw_outset_path), 
                     enable_outset, 
@@ -1044,15 +1029,13 @@ def process_single_file_task(task_params: dict) -> dict:
                 )
 
             p2_start = time.time()
-            simplified_path = RAM_TEMP_DIR / f"{stem}_simplified_{idx}.svg"
-            raw_outset_svg_content = run_inkscape_action_simplify(raw_outset_path, simplified_path, simplify_tolerance)
+            # Bypassed C++ Inkscape simplification.
+            # Node simplification is now done natively in Rust (via RDP & Bézier fitting in process_svg_outset)
             p2_sec = time.time() - p2_start
-            log(f"  {ic_p2} Phase 2 (In-Memory Node Simplification)     : {p2_sec:>6.2f} s")
+            log(f"  {ic_p2} Phase 2 (In-Memory Node Simplification)     : {p2_sec:>6.2f} s [NATIVE RUST]")
 
             if raw_outset_path.exists():
                 raw_outset_path.unlink()
-            if simplified_path.exists():
-                simplified_path.unlink()
 
             p3_start = time.time()
             original_svg = raw_outset_svg_content

@@ -7,22 +7,7 @@ use vector_algo::{CanvasScaler, ColorCombiner, ColorVariantEngine, GeometryOutse
 use vector_core::Polygon2D;
 use vector_io::{EpsWriter, JpgPreviewGenerator, SvgParser};
 
-pub mod inkscape_bridge;
 pub mod logging;
-
-pub use inkscape_bridge::{inkscape_cpp_simplify_document, inkscape_cpp_simplify_path};
-
-/// Native C++ Inkscape Livarot Path Simplify function accessible via PyO3 FFI.
-#[pyfunction]
-pub fn inkscape_cpp_simplify_svg(svg_content: &str, tolerance: f64) -> PyResult<String> {
-    let doc = SvgParser::parse_str(svg_content)
-        .map_err(|e| PyValueError::new_err(format!("SVG parse error: {}", e)))?;
-
-    let simplified_doc = inkscape_cpp_simplify_document(&doc, tolerance)
-        .map_err(|e| PyValueError::new_err(format!("Inkscape C++ simplify failed: {}", e)))?;
-
-    Ok(simplified_doc.to_svg_string())
-}
 
 
 /// Reads an SVG file from `input_path`, combines paths by color group, applies outset by `distance`,
@@ -465,11 +450,12 @@ pub fn apply_outset_json(
     let (outset_doc, report) = GeometryOutset::outset_document(&combined_doc, enable_outset, outset_distance, enable_simplify, simplify_tolerance)
         .map_err(|e| PyValueError::new_err(format!("Outset operation failed: {}", e)))?;
 
-    let doc_svg = outset_doc.to_svg_string();
+    let doc_json = serde_json::to_string(&outset_doc)
+        .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))?;
     let report_json = serde_json::to_string(&report)
         .map_err(|e| PyValueError::new_err(format!("Serialization error: {}", e)))?;
 
-    Ok((doc_svg, report_json))
+    Ok((doc_json, report_json))
 }
 
 /// Applies Design 1 Variant (Blue palette, 80% bg luminance).
@@ -571,7 +557,6 @@ pub fn apply_silhouette_variant_json(
 #[pymodule]
 fn _native(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(logging::init_tracing, m)?)?;
-    m.add_function(wrap_pyfunction!(inkscape_cpp_simplify_svg, m)?)?;
     m.add_function(wrap_pyfunction!(process_svg_outset, m)?)?;
     m.add_function(wrap_pyfunction!(parse_svg_string, m)?)?;
 

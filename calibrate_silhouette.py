@@ -33,7 +33,6 @@ sys.path.insert(0, str(Path(__file__).parent / "python"))
 try:
     from vector_engine._native import (
         process_svg_outset,
-        inkscape_cpp_simplify_svg,
         parse_svg_string,
         apply_silhouette_variant_json,
         scale_document_area_json,
@@ -803,14 +802,11 @@ def run_calibration(
         # Step 1: Outset & Combine (in RAM)
         t1 = time.time()
         outset_temp = RAM_TEMP_DIR / f"{stem}_outset_temp.svg"
-        process_svg_outset(str(input_file), str(outset_temp), True, distance, True, tolerance)
+        raw_content = process_svg_outset(str(input_file), str(outset_temp), True, distance, True, tolerance)
         sec1 = time.time() - t1
 
-        # Step 2: Inkscape Simplify (in RAM)
+        # Step 2: Inkscape Simplify (in RAM) - Bypassed (Done natively in Rust)
         t2 = time.time()
-        simplified_temp = RAM_TEMP_DIR / f"{stem}_simp_temp.svg"
-        raw_content = inkscape_cpp_simplify_svg(outset_temp.read_text(), tolerance)
-        simplified_temp.write_text(raw_content)
         sec2 = time.time() - t2
 
         # Clean per-step temp files in RAM

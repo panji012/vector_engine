@@ -43,7 +43,7 @@ def outset(
 
     try:
         from vector_engine import _native
-        doc_json, report_json = _native.apply_outset_json(content, float(distance))
+        doc_json, report_json = _native.apply_outset_json(content, True, float(distance), False, 0.0)
         outset_doc = json.loads(doc_json)
         report = json.loads(report_json)
 

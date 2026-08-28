@@ -181,13 +181,22 @@ fn calculate_document_bounds(doc: &VectorDocument) -> (f64, f64, f64, f64) {
     let mut max_y = f64::NEG_INFINITY;
 
     for path in &doc.paths {
+        let mut subpath_cmds: Vec<Vec<PathCommand>> = Vec::new();
+        let mut current_subpath: Vec<PathCommand> = Vec::new();
+
         for cmd in &path.commands {
-            let pts = match cmd {
-                PathCommand::MoveTo(p) | PathCommand::LineTo(p) => vec![*p],
-                PathCommand::QuadTo { control, end } => vec![*control, *end],
-                PathCommand::CubicTo { control1, control2, end } => vec![*control1, *control2, *end],
-                PathCommand::Close => vec![],
-            };
+            if matches!(cmd, PathCommand::MoveTo(_)) && !current_subpath.is_empty() {
+                subpath_cmds.push(current_subpath);
+                current_subpath = Vec::new();
+            }
+            current_subpath.push(cmd.clone());
+        }
+        if !current_subpath.is_empty() {
+            subpath_cmds.push(current_subpath);
+        }
+
+        for cmds in subpath_cmds {
+            let pts = CurveFlattener::flatten_subpath(&cmds, 0.1);
             for p in pts {
                 if p.x < min_x { min_x = p.x; }
                 if p.y < min_y { min_y = p.y; }
