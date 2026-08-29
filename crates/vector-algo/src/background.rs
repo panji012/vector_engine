@@ -41,37 +41,33 @@ impl BackgroundProcessor {
             return false;
         }
 
-        // 2. Check if the first path actually covers >= 80% of the canvas area.
-        // Only normalize background if path 0 is a simple 4-point rectangle (commands.len() <= 5)
-        if doc.paths[0].commands.len() > 5 {
-            return false;
-        }
+        // 2. Find the path with the largest area in the document.
+        let mut max_area = 0.0;
+        let mut bg_index = None;
 
-        let first_poly = doc.paths[0].to_polygon();
-        let first_area = first_poly.area();
-        if first_area < canvas_area * 0.80 {
-            return false;
-        }
-
-        let bg_group_id = doc.paths[0].group_id;
-        let bg_color = doc.paths[0].fill.clone();
-        
-        // Delete paths belonging ONLY to the background group if it's an isolated bg group, or just the background path itself
-        let mut removed = false;
-        doc.paths.retain(|p| {
-            if !removed && p.group_id == bg_group_id {
-                let p_area = p.to_polygon().area();
-                if p_area >= canvas_area * 0.80 {
-                    removed = true;
-                    return false;
-                }
+        for (i, p) in doc.paths.iter().enumerate() {
+            let p_poly = p.to_polygon();
+            let p_area = p_poly.area();
+            if p_area > max_area {
+                max_area = p_area;
+                bg_index = Some(i);
             }
-            true
-        });
+        }
 
-        if !removed {
+        let bg_index = match bg_index {
+            Some(idx) => idx,
+            None => return false,
+        };
+
+        // Ensure the largest path covers at least 70% of the canvas area.
+        if max_area < canvas_area * 0.70 {
             return false;
         }
+
+        let bg_color = doc.paths[bg_index].fill.clone();
+
+        // Remove the detected background path from the document.
+        doc.paths.remove(bg_index);
 
         // 3. Create a clean rectangle
         let mut clean_bg = VectorPath::new(Some("normalized_background".to_string()));
