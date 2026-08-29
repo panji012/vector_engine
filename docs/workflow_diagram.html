@@ -93,11 +93,18 @@
             background-color: rgba(0,0,0,0.2);
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 1.5rem;
             margin-bottom: 3rem;
-            overflow-x: auto;
+            height: 650px;
+            position: relative;
+            overflow: hidden;
             display: flex;
             justify-content: center;
+            align-items: center;
+        }
+
+        #my-diagram {
+            width: 100%;
+            height: 100%;
         }
 
         h2 {
@@ -153,10 +160,11 @@
             text-decoration: underline;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
         mermaid.initialize({
-            startOnLoad: true,
+            startOnLoad: false,
             theme: 'dark',
             themeVariables: {
                 background: '#161b22',
@@ -165,34 +173,8 @@
                 lineColor: '#30363d'
             }
         });
-    </script>
-</head>
-<body>
-    <div class="container">
-        <h1>Vector Geometry Engine</h1>
-        <p class="subtitle">Visualisasi Alur Kerja & Arsitektur Sistem (Python & Rust)</p>
 
-        <div class="legend">
-            <div class="legend-item">
-                <div class="legend-color color-python"></div>
-                <span>Python 🐍 (Orkestrasi / CLI)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color color-rust"></div>
-                <span>Rust 🦀 (Mesin Komputasi Geometri)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color color-hybrid"></div>
-                <span>Hybrid ⚖️ (Python calling Rust FFI)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color color-bridge"></div>
-                <span>Bridge (PyO3 Binding)</span>
-            </div>
-        </div>
-
-        <div class="diagram-box">
-            <pre class="mermaid">
+        const graphDefinition = `
 graph TD
     %% Python Entrypoints & Wrappers
     CLI[run_batch.py <br> Orkestrator Utama]
@@ -239,7 +221,63 @@ graph TD
     style Algo_RS fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
     style Io_RS fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
     style Core_RS fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
-            </pre>
+`;
+
+        window.addEventListener('load', async () => {
+            const container = document.getElementById('my-diagram');
+            try {
+                const { svg } = await mermaid.render('mermaid-svg-render', graphDefinition);
+                container.innerHTML = svg;
+
+                const svgElement = container.querySelector('svg');
+                svgElement.setAttribute('width', '100%');
+                svgElement.setAttribute('height', '100%');
+                svgElement.style.maxWidth = '100%';
+                svgElement.style.maxHeight = '100%';
+
+                // Initialize svg-pan-zoom
+                svgPanZoom(svgElement, {
+                    zoomEnabled: true,
+                    controlIconsEnabled: true,
+                    fit: true,
+                    center: true,
+                    minZoom: 0.2,
+                    maxZoom: 10.0,
+                    zoomScaleSensitivity: 0.3
+                });
+            } catch (e) {
+                console.error("Mermaid render error:", e);
+                container.innerHTML = `<p style="color:red; padding:1rem;">Gagal memproses diagram: ${e.message}</p>`;
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Vector Geometry Engine</h1>
+        <p class="subtitle">Visualisasi Alur Kerja & Arsitektur Sistem (Python & Rust)</p>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color color-python"></div>
+                <span>Python 🐍 (Orkestrasi / CLI)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color color-rust"></div>
+                <span>Rust 🦀 (Mesin Komputasi Geometri)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color color-hybrid"></div>
+                <span>Hybrid ⚖️ (Python calling Rust FFI)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color color-bridge"></div>
+                <span>Bridge (PyO3 Binding)</span>
+            </div>
+        </div>
+
+        <div class="diagram-box">
+            <div id="my-diagram"></div>
         </div>
 
         <h2>Alur Fase Pemrosesan (Phase 0 s.d. 7)</h2>
