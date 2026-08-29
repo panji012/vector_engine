@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vector Geometry Engine - Full Rust Workflow Diagram</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #fbfaf7;
+            --container-bg: #f9f6f0;
+            --border-color: #e6dfd3;
+            --text-color: #3f3a36;
+            --text-bright: #1b1816;
+            --accent-color: #cc5a37;
+            --accent-glow: rgba(204, 90, 55, 0.1);
+            --rust-color: #c53030;
+            --python-color: #2b6cb0;
+            --hybrid-color: #234e52;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2.5rem;
+            box-shadow: 0 4px 20px rgba(27, 24, 22, 0.05);
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 700;
+            color: var(--text-bright);
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #cc5a37, #2b6cb0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            font-size: 1.1rem;
+            color: #797167;
+            margin-bottom: 2.5rem;
+        }
+
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: #f4f0e6;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+
+        .color-python { background-color: #2b6cb0; }
+        .color-rust { background-color: #c53030; }
+        .color-hybrid { background-color: #234e52; }
+        .color-bridge { background-color: #5e35b1; }
+
+        .diagram-box {
+            background-color: #faf8f5;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 3rem;
+            height: 650px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #my-diagram {
+            width: 100%;
+            height: 100%;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--text-bright);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1.25rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2rem;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f4f0e6;
+            color: var(--text-bright);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: rgba(0,0,0,0.01);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-python { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+        .badge-rust { background-color: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+        .badge-hybrid { background-color: #e6fffa; color: #234e52; border: 1px solid #b2f5ea; }
+
+        .file-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-family: monospace;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'neutral',
+            themeVariables: {
+                background: '#faf8f5',
+                primaryColor: '#f4f0e6',
+                primaryTextColor: '#1b1816',
+                lineColor: '#b4afa0',
+                nodeBorder: '#e6dfd3',
+                mainBkg: '#f9f6f0'
+            }
+        });
+
+        const graphDefinition = `
+graph TD
+    %% Entrypoint
+    CLI[run_batch.py / CLI Binary <br> Inisialisasi & Input Argumen]
+    
+    %% FFI Bridge
+    FFI[vector_engine_cli FFI / Bindings]
+
+    %% Pure Rust Monolithic Pipeline
+    subgraph "Rust Computational Core (Single Memory Space)"
+        Orkestrator[Rust Pipeline Controller <br> Mengatur Loop, Bypass, & State]
+        
+        P1[Phase 1: Outset & Color Combine <br> background.rs, color_combine.rs]
+        P2[Phase 2: Simplification <br> reconstruct.rs]
+        P3[Phase 3: Color & Silhouette <br> luminance.rs, color.rs]
+        P4[Phase 4: Bad Board Generation <br> duo_board.rs]
+        P5[Phase 5: Seamless Pattern <br> pattern_gen.rs]
+        P6[Phase 6: Canvas Auto-Scale <br> scale.rs]
+        P7[Phase 7: Parallel Disk Export <br> eps.rs, jpg.rs]
+    end
+
+    %% Relations
+    CLI --> FFI
+    FFI --> Orkestrator
+    
+    %% Internal Rust Pipeline Dataflow (Zero Copy RAM)
+    Orkestrator --> P1
+    P1 --> P2
+    P2 --> P3
+    P3 --> P4
+    P4 --> P5
+    P5 --> P6
+    P6 --> P7
+
+    %% Styles
+    style CLI fill:#ECEFF1,stroke:#37474F,stroke-width:2px,color:#263238
+    style FFI fill:#EDE7F6,stroke:#5E35B1,stroke-width:2px,color:#311B92
+    style Orkestrator fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
+    style P1 fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
+    style P2 fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
+    style P3 fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
+    style P4 fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
+    style P5 fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
+    style P6 fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
+    style P7 fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#e65100
+`;
+
+        window.addEventListener('load', async () => {
+            const container = document.getElementById('my-diagram');
+            try {
+                const { svg } = await mermaid.render('mermaid-svg-render-full-rust', graphDefinition);
+                container.innerHTML = svg;
+
+                const svgElement = container.querySelector('svg');
+                svgElement.setAttribute('width', '100%');
+                svgElement.setAttribute('height', '100%');
+                svgElement.style.maxWidth = '100%';
+                svgElement.style.maxHeight = '100%';
+
+                // Initialize svg-pan-zoom
+                svgPanZoom(svgElement, {
+                    zoomEnabled: true,
+                    controlIconsEnabled: true,
+                    fit: true,
+                    center: true,
+                    minZoom: 0.2,
+                    maxZoom: 10.0,
+                    zoomScaleSensitivity: 0.3
+                });
+            } catch (e) {
+                console.error("Mermaid render error:", e);
+                container.innerHTML = `<p style="color:red; padding:1rem;">Gagal memproses diagram: ${e.message}</p>`;
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Vector Geometry Engine (Full Rust Concept)</h1>
+        <p class="subtitle">Visualisasi Konsep Alur Kerja Geometri 100% Berjalan di Rust (Zero-Copy RAM)</p>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color color-python"></div>
+                <span>Python 🐍 (Inisialisasi CLI)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color color-rust"></div>
+                <span>Rust 🦀 (Pipeline Orkestrasi & Geometri)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color color-bridge"></div>
+                <span>Bridge (PyO3 Binding / CLI FFI)</span>
+            </div>
+        </div>
+
+        <div class="diagram-box">
+            <div id="my-diagram"></div>
+        </div>
+
+        <h2>Alur Fase Pemrosesan (Phase 0 s.d. 7) - Konsep Full Rust</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fase</th>
+                    <th>Nama Fase</th>
+                    <th>Teknologi</th>
+                    <th>Berkas Eksekusi Utama</th>
+                    <th>Deskripsi Tugas & Aliran Memori (Zero-Copy)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0</td>
+                    <td>Initialization</td>
+                    <td><span class="badge badge-python">Python / Rust</span></td>
+                    <td><a class="file-link" href="../run_batch.py">run_batch.py</a> / cli.rs</td>
+                    <td>Membaca konfigurasi profil, mencari file SVG input. Menyiapkan parameter awal.</td>
+                </tr>
+                <tr>
+                    <td>1</td>
+                    <td>Outset & Combine</td>
+                    <td><span class="badge badge-rust">Rust 🦀</span></td>
+                    <td>color_combine.rs, background.rs, badge_cluster.rs</td>
+                    <td><strong>Transform Baking</strong> langsung dibakar ke koordinat absolut. Mendeteksi Badge via <code>badge_cluster.rs</code>. Jika badge terdeteksi, set flag bypass langsung di memori Rust.</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>Simplification</td>
+                    <td><span class="badge badge-rust">Rust 🦀</span></td>
+                    <td>reconstruct.rs</td>
+                    <td>Penyederhanaan koordinat RDP dan Bezier curve fitting murni Rust (dilewati otomatis jika flag bypass lencana aktif).</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>Color & Silhouette</td>
+                    <td><span class="badge badge-rust">Rust 🦀</span></td>
+                    <td>luminance.rs, color.rs</td>
+                    <td>Isolasi warna HSL, color merge, dan pembuatan varian siluet (dilewati otomatis jika flag bypass lencana aktif).</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>Bad Board Generation</td>
+                    <td><span class="badge badge-rust">Rust 🦀</span></td>
+                    <td>duo_board.rs</td>
+                    <td>Menggabungkan gambar asli dan siluet secara bersisian (dilewati jika flag bypass lencana aktif).</td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>Seamless Pattern</td>
+                    <td><span class="badge badge-rust">Rust 🦀</span></td>
+                    <td>pattern_gen.rs</td>
+                    <td>Menyusun motif ubin pattern dengan sub-pixel snapping 0.05px bebas celah (dilewati jika flag bypass lencana aktif).</td>
+                </tr>
+                <tr>
+                    <td>6</td>
+                    <td>Canvas Auto-Scale</td>
+                    <td><span class="badge badge-rust">Rust 🦀</span></td>
+                    <td>scale.rs</td>
+                    <td>Menskalakan dimensi gambar secara proporsional ke standar target area 19 Megapixel.</td>
+                </tr>
+                <tr>
+                    <td>7</td>
+                    <td>Disk Export & Render</td>
+                    <td><span class="badge badge-rust">Rust 🦀</span></td>
+                    <td>eps.rs, jpg.rs</td>
+                    <td>Menulis SVG, menulis EPS kustom, dan merender JPG (via resvg) secara paralel menggunakan threadpool Rayon langsung dari memori Rust ke Disk.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

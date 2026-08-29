@@ -42,7 +42,7 @@ graph TD
     subgraph Rust Computational Core crates/
         FFI_RS[vector-ffi/src/lib.rs <br> Entrypoint FFI]:::bridge
         Offset_RS[vector-offset/src/reconstruct.rs <br> RDP & Bezier Fitting]:::rust
-        Algo_RS[vector-algo/src/background.rs, outset.rs, pattern_gen.rs...]:::rust
+        Algo_RS[vector-algo/src/background.rs, outset.rs, pattern_gen.rs, badge_cluster.rs...]:::rust
         Io_RS[vector-io/src/svg.rs, eps.rs, jpg.rs <br> File Exporters]:::rust
         Core_RS[vector-core/src/primitives.rs <br> Struct Geometri]:::rust
     end
@@ -63,16 +63,16 @@ graph TD
 
 ### Alur Fase Pemrosesan (Phase 0 s.d. 7)
 
-| Fase | Nama Fase | Tipe Teknologi | Berkas yang Berperan Utama |
-| :---: | :--- | :---: | :--- |
-| **0** | **Initialization** | **Python 🐍** | `run_batch.py` |
-| **1** | **Outset & Combine** | **Hybrid ⚖️** | `crates/vector-algo/src/background.rs` & `color_combine.rs` |
-| **2** | **Simplification** | **Rust 🦀** | `crates/vector-offset/src/reconstruct.rs` |
-| **3** | **Color Isolation & Silhouette** | **Hybrid ⚖️** | `crates/vector-algo/src/luminance.rs` & `color.rs` |
-| **4** | **Bad Board Generation** | **Hybrid ⚖️** | `crates/vector-algo/src/duo_board.rs` |
-| **5** | **Seamless Pattern** | **Hybrid ⚖️** | `crates/vector-algo/src/pattern_gen.rs` & `pattern_detect.rs` |
-| **6** | **Canvas Auto-Scale** | **Hybrid ⚖️** | `crates/vector-algo/src/scale.rs` |
-| **7** | **Disk Export & JPG Render** | **Hybrid ⚖️** | `crates/vector-io/src/eps.rs` & `jpg.rs` |
+| Fase | Nama Fase | Tipe Teknologi | Berkas yang Berperan Utama | Detail Fitur Spesifik |
+| :---: | :--- | :---: | :--- | :--- |
+| **0** | **Initialization** | **Python 🐍** | `run_batch.py` | Membaca profil JSON, mencari file SVG. Memanggil FFI `init_rayon_threads` di child process. |
+| **1** | **Outset & Combine** | **Hybrid ⚖️** | `crates/vector-algo/src/background.rs`, `color_combine.rs` & `badge_cluster.rs` | **Transform Baking**: Membakar transform langsung ke koordinat absolut.<br>**Badge Spatial Clustering**: Mengelompokkan lencana dengan Union-Find (jika badge terdeteksi: *Bypass Phase 2 & 3, serta memaksa ekspor berkas single saja*). |
+| **2** | **Simplification** | **Rust 🦀** | `crates/vector-offset/src/reconstruct.rs` | Penyederhanaan koordinat RDP dan Bezier curve fitting murni Rust (dilewati otomatis jika berkas berupa Badge). |
+| **3** | **Color Isolation & Silhouette** | **Hybrid ⚖️** | `crates/vector-algo/src/luminance.rs` & `color.rs` | Isolasi warna HSL, color merge, dan pembuatan varian siluet / tema warna (dilewati otomatis jika berkas berupa Badge). |
+| **4** | **Bad Board Generation** | **Hybrid ⚖️** | `crates/vector-algo/src/duo_board.rs` | Mengambil dimensi asli via FFI `get_svg_dimensions` (bebas JSON overhead) dan menggabungkan gambar asli dan siluet secara bersisian (dilewati jika Badge). |
+| **5** | **Seamless Pattern** | **Hybrid ⚖️** | `crates/vector-algo/src/pattern_gen.rs` & `pattern_detect.rs` | Menyusun motif ubin pattern dengan sub-pixel snapping $0.05\text{ px}$ bebas celah (dilewati jika Badge). |
+| **6** | **Canvas Auto-Scale** | **Hybrid ⚖️** | `crates/vector-algo/src/scale.rs` | Menskalakan dimensi gambar secara proporsional ke standar target area 19 Megapixel. |
+| **7** | **Disk Export & JPG Render** | **Hybrid ⚖️** | `crates/vector-io/src/eps.rs` & `jpg.rs` | Menulis SVG, menulis EPS kustom, dan merender JPG secara paralel menggunakan threadpool Rayon. |
 
 ---
 

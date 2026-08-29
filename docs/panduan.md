@@ -65,36 +65,38 @@ Tampilan log di terminal akan menjadi **100% bersih, rapi, tanpa kotak glyph**:
  Found 5 SVG file(s) in queue to process...
 
 ────────────────────────────────────────────────────────────────────────────────
- [FILE] [1/5] Processing File: Design_003.svg (8 Colors | Profile: 'multi_color_bad_two')
+ [FILE] [6/6] Processing File: Design_027.svg (3 Colors | Profile: 'low_color_bad_two')
 ────────────────────────────────────────────────────────────────────────────────
-  [P1] Phase 1 (Outset & Combine Geometry in RAM)  :   0.12 s
-  [P2] Phase 2 (Livarot Node Simplification)        :   0.09 s
-  [P3] Phase 3 (Color Isolation & Silhouette)      :   0.17 s
-  [P4] Phase 4 (Canvas Auto-Scale & Sync)          :   0.63 s
-  [P7] Phase 7 (Seamless Pattern: style='half_drop_vertical')     :   7.40 s
-  [P6] Phase 6 (Disk Export EPS & JPG Render)      :   7.40 s
+  [P1] Phase 1 (Outset & Combine Geometry in RAM)  :   0.02 s
+  [P2] Phase 2 (In-Memory Node Simplification)     :   0.00 s [NATIVE RUST]
+  [P3] Phase 3 (Color Isolation & Silhouette)      :   0.07 s
+  [P5] Phase 4 (Bad Board Generation: bad_two)     :   0.03 s
+  [P7] Phase 5 (Seamless Pattern: style='brick_wall')     :   0.63 s
+  [P4] Phase 6 (Canvas Auto-Scale 1x Target)      :   0.00 s
+  [P6] Phase 7 (Disk Export EPS & JPG Render)      :   1.51 s
 
   --------------------------------------------------------------------------------
-  [TIME] PHASE TIMING & BOTTLENECK SUMMARY (Design_003.svg)
+  [TIME] PHASE TIMING & BOTTLENECK SUMMARY (Design_027.svg)
   --------------------------------------------------------------------------------
-   [P1] Phase 1: Outset & Combine Geometry      :   0.12 s  (  1.5%)
-   [P2] Phase 2: Livarot Node Simplification    :   0.09 s  (  1.0%)
-   [P3] Phase 3: Color Isolation & Silhouette   :   0.17 s  (  2.0%)
-   [P4] Phase 4: Canvas Auto-Scale & Sync       :   0.63 s  (  7.4%)
-   [P7] Phase 7: Seamless Pattern Generation    :   7.40 s  ( 87.0%)
-   [P6] Phase 6: Disk Export EPS & JPG Render   :   7.40 s  ( 87.0%) [*] [PRIMARY BOTTLENECK]
+   [P1] Phase 1: Outset & Combine Geometry      :   0.02 s  (  0.8%)
+   [P2] Phase 2: In-Memory Node Simplification  :   0.00 s  (  0.0%)
+   [P3] Phase 3: Color Isolation & Silhouette   :   0.07 s  (  3.2%)
+   [P5] Phase 4: Bad Board Generation           :   0.03 s  (  1.6%)
+   [P7] Phase 5: Seamless Pattern Generation    :   0.63 s  ( 27.2%)
+   [P4] Phase 6: Canvas Auto-Scale 1x Target    :   0.00 s  (  0.0%)
+   [P6] Phase 7: Disk Export EPS & JPG Render   :   1.51 s  ( 63.8%) [*] [PRIMARY BOTTLENECK]
   --------------------------------------------------------------------------------
-  Finished Design_003.svg in 8.50 s | Bottleneck: [P6] Phase 6: Disk Export EPS & JPG Render (7.40 s)
+  Finished Design_027.svg in 2.35 s | Bottleneck: [P6] Phase 7: Disk Export EPS & JPG Render (1.51 s)
 
 ================================================================================
  [SUMMARY] BATCH QUEUE SUMMARY REPORT
 ================================================================================
  File Name                        | Time (s)  | Output Deliverables        | Status
 -------------------------------------------------------------------------------------
- Design_003.svg                   |    8.50 s | pattern.eps, pattern.jpg   | [OK] SUCCESS
+ Design_027.svg                   |    2.35 s | bad_two.eps, pattern.eps   | [OK] SUCCESS
 -------------------------------------------------------------------------------------
- [TIME] Total Queue Time : 8.50 s
- Total Processed   : 1 File(s) (1 Successful, 0 Failed)
+ [TIME] Total Queue Time : 3.49 s
+ Total Processed   : 6 File(s) (6 Successful, 0 Failed)
 ================================================================================
 ```
 
