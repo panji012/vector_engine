@@ -212,7 +212,7 @@ impl ColorCombiner {
                             new_path.fill = effective_fill;
                             new_path.stroke = path.stroke.clone();
                             new_path.stroke_width = path.stroke_width;
-                            new_path.fill_rule = path.fill_rule.clone();
+                            new_path.fill_rule = path.fill_rule.clone().or_else(|| Some("evenodd".to_string()));
                             new_path.group_id = path.group_id;
                             new_path.badge_id = Some(cluster.badge_id);
                             for cmd in &path.commands {
@@ -224,6 +224,9 @@ impl ColorCombiner {
 
                     for (color_idx, color_key) in color_order.iter().enumerate() {
                         if let Some(mut combined_path) = color_map.remove(color_key) {
+                            if combined_path.fill_rule.is_none() {
+                                combined_path.fill_rule = Some("evenodd".to_string());
+                            }
                             combined_path.id =
                                 Some(format!("badge_{}_color_{}", cluster.badge_id, color_idx + 1));
                             combined_doc.paths.push(combined_path);

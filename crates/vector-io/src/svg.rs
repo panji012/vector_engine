@@ -8,6 +8,7 @@ pub struct InheritedStyle {
     pub fill: Option<String>,
     pub stroke: Option<String>,
     pub stroke_width: Option<f64>,
+    pub fill_rule: Option<String>,
 }
 
 pub struct SvgParser;
@@ -503,13 +504,14 @@ fn apply_style_to_path(path: &mut VectorPath, style: &InheritedStyle) {
     path.fill = style.fill.clone();
     path.stroke = style.stroke.clone();
     path.stroke_width = style.stroke_width;
+    path.fill_rule = style.fill_rule.clone();
 }
 
 fn resolve_node_style(node: &Node, parent_style: &InheritedStyle) -> InheritedStyle {
-    let (style_fill, style_stroke, style_sw) = node
+    let (style_fill, style_stroke, style_sw, style_fr) = node
         .attribute("style")
         .map(parse_style_attribute)
-        .unwrap_or((None, None, None));
+        .unwrap_or((None, None, None, None));
 
     let fill = match node.attribute("fill") {
         Some("inherit") => parent_style.fill.clone(),
@@ -537,17 +539,25 @@ fn resolve_node_style(node: &Node, parent_style: &InheritedStyle) -> InheritedSt
         .or(style_sw)
         .or(parent_style.stroke_width);
 
+    let fill_rule = node
+        .attribute("fill-rule")
+        .map(String::from)
+        .or(style_fr)
+        .or_else(|| parent_style.fill_rule.clone());
+
     InheritedStyle {
         fill,
         stroke,
         stroke_width,
+        fill_rule,
     }
 }
 
-fn parse_style_attribute(style_str: &str) -> (Option<String>, Option<String>, Option<f64>) {
+fn parse_style_attribute(style_str: &str) -> (Option<String>, Option<String>, Option<f64>, Option<String>) {
     let mut fill = None;
     let mut stroke = None;
     let mut stroke_width = None;
+    let mut fill_rule = None;
 
     for declaration in style_str.split(';') {
         let mut parts = declaration.splitn(2, ':');
@@ -558,11 +568,12 @@ fn parse_style_attribute(style_str: &str) -> (Option<String>, Option<String>, Op
                 "fill" => fill = Some(normalize_color_string(val)),
                 "stroke" => stroke = Some(normalize_color_string(val)),
                 "stroke-width" => stroke_width = parse_length(val),
+                "fill-rule" => fill_rule = Some(val.to_string()),
                 _ => {}
             }
         }
     }
-    (fill, stroke, stroke_width)
+    (fill, stroke, stroke_width, fill_rule)
 }
 
 /// Normalizes all common SVG color representations (#RGB, #RRGGBB, rgb(r,g,b), named colors) to standard HEX string or 'none'.
