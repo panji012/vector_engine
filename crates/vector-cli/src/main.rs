@@ -482,8 +482,7 @@ fn process_file(
                 let target_tile_min_area = min_area / total_tiles;
                 let target_tile_max_area = max_area / total_tiles;
 
-                let (mut pattern_base, _) = CanvasScaler::scale_document_to_pixel_area(&outset_doc, target_tile_min_area, target_tile_max_area)?;
-                center_document_artwork(&mut pattern_base, 20.0);
+                let (pattern_base, _) = CanvasScaler::scale_document_to_pixel_area(&outset_doc, target_tile_min_area, target_tile_max_area)?;
 
                 let pattern_doc = PatternGenerator::generate_pattern_full_config(
                     &pattern_base,
@@ -877,21 +876,33 @@ fn merge_similar_colors_in_doc(doc: &mut VectorDocument, threshold: f64) {
         return;
     }
 
-    let mut color_counts = std::collections::HashMap::new();
+    let mut color_areas: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
     for p in &doc.paths {
         if let Some(ref fill) = p.fill {
             if fill != "none" {
-                *color_counts.entry(fill.clone()).or_insert(0) += 1;
+                let bbox = p.bounding_box();
+                let w = (bbox.2 - bbox.0).abs();
+                let h = (bbox.3 - bbox.1).abs();
+                let area = (w * h).max(1.0);
+                *color_areas.entry(fill.clone()).or_insert(0.0) += area;
             }
         }
     }
 
-    if color_counts.is_empty() {
+    if color_areas.is_empty() {
         return;
     }
 
-    let mut sorted_colors: Vec<String> = color_counts.keys().cloned().collect();
-    sorted_colors.sort_by(|a, b| color_counts[b].cmp(&color_counts[a]));
+    let mut sorted_colors: Vec<String> = color_areas.keys().cloned().collect();
+    sorted_colors.sort_by(|a, b| {
+        color_areas[b]
+            .partial_cmp(&color_areas[a])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    let max_h = 5.0 * (threshold / 0.15).clamp(0.2, 1.0);
+    let max_l = 0.05 * (threshold / 0.15).clamp(0.2, 1.0);
+    let max_s = 0.10 * (threshold / 0.15).clamp(0.2, 1.0);
 
     let mut clusters: Vec<String> = Vec::new();
     let mut color_map = std::collections::HashMap::new();
@@ -899,7 +910,7 @@ fn merge_similar_colors_in_doc(doc: &mut VectorDocument, threshold: f64) {
     for c in sorted_colors {
         let mut assigned = false;
         for head in &clusters {
-            if are_colors_similar_hsl(&c, head, 20.0, 0.20, 0.40) {
+            if are_colors_similar_hsl(&c, head, max_h, max_l, max_s) {
                 color_map.insert(c.clone(), head.clone());
                 assigned = true;
                 break;
@@ -1123,14 +1134,20 @@ fn center_document_artwork(doc: &mut VectorDocument, padding: f64) {
         return;
     }
 
-    let mut bg_idx = None;
+    let bg_idx_opt = BackgroundProcessor::find_background(doc, canvas_w, canvas_h).map(|(idx, _)| idx);
+
+    let mut bg_indices = Vec::new();
     let mut fg_indices = Vec::new();
 
     for (idx, p) in doc.paths.iter().enumerate() {
-        if p.group_id == usize::MAX {
-            if bg_idx.is_none() {
-                bg_idx = Some(idx);
-            }
+        let pid = p.id.as_deref().unwrap_or("").to_lowercase();
+        let is_bg_shape = p.group_id == usize::MAX
+            || pid.contains("background")
+            || pid.contains("canvas_bg")
+            || Some(idx) == bg_idx_opt;
+
+        if is_bg_shape {
+            bg_indices.push(idx);
         } else {
             fg_indices.push(idx);
         }
@@ -1197,7 +1214,7 @@ fn center_document_artwork(doc: &mut VectorDocument, padding: f64) {
         }
     }
 
-    if let Some(idx) = bg_idx {
+    for &idx in &bg_indices {
         let bg_path = &mut doc.paths[idx];
         bg_path.commands.clear();
         bg_path.add_command(PathCommand::MoveTo(Point2D::new(0.0, 0.0)));

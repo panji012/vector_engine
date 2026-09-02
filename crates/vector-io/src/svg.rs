@@ -875,4 +875,26 @@ mod tests {
         assert_eq!(doc.paths[1].fill.as_deref(), Some("#FF0000"));
         assert_eq!(doc.paths[2].fill.as_deref(), Some("#008000"));
     }
+
+    #[test]
+    fn test_multi_transform() {
+        let s = "translate(898.09,412.38) rotate(-133.1)";
+        let res = s.parse::<Transform>();
+        println!("RESULT OF PARSING {:?}: {:?}", s, res);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn trace_bottom_right_badge() {
+        if let Ok(content) = std::fs::read_to_string("../../input/AI_Remix_Output_2 (5).svg") {
+            let doc = SvgParser::parse_str(&content).unwrap();
+            println!("Parsed doc path count: {}", doc.paths.len());
+            for (idx, p) in doc.paths.iter().enumerate() {
+                let bbox = p.bounding_box();
+                if bbox.0 >= 500.0 && bbox.1 >= 500.0 {
+                    println!("BR PATH [{}]: fill={:?} bbox=({:.1}, {:.1}, {:.1}, {:.1})", idx, p.fill, bbox.0, bbox.1, bbox.2, bbox.3);
+                }
+            }
+        }
+    }
 }

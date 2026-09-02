@@ -27,6 +27,8 @@ backup/
 output_test/
 output_calibration/
 output_final/
+output_debug/
+output_preview/
 
 # Agent and IDE configuration
 .agents/

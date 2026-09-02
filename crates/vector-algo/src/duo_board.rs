@@ -61,98 +61,106 @@ impl DuoBoardGenerator {
         duo_doc.view_box = Some((0.0, 0.0, total_w, max_h));
 
         // 1. Add Left side artwork (Design 1)
+        let left_bg_info = crate::background::BackgroundProcessor::find_background(left_doc, left_w, left_h);
+        let left_bg_idx = left_bg_info.as_ref().map(|(idx, _)| *idx);
+        let left_bg_color = left_bg_info.map(|(_, col)| col).unwrap_or_else(|| "#FFFFFF".to_string());
+
+        let mut left_bg = VectorPath::new(Some("left_full_panel_bg".to_string()));
+        left_bg.fill = Some(left_bg_color);
+        left_bg.stroke = None;
+        left_bg.group_id = usize::MAX;
+        left_bg.add_command(PathCommand::MoveTo(Point2D::new(0.0, 0.0)));
+        left_bg.add_command(PathCommand::LineTo(Point2D::new(left_w, 0.0)));
+        left_bg.add_command(PathCommand::LineTo(Point2D::new(left_w, max_h)));
+        left_bg.add_command(PathCommand::LineTo(Point2D::new(0.0, max_h)));
+        left_bg.add_command(PathCommand::Close);
+        duo_doc.paths.push(left_bg);
+
         for (idx, path) in left_doc.paths.iter().enumerate() {
-            let (min_x, min_y, max_x, max_y) = path.bounding_box();
-            let is_bg_rect = (idx == 0 || path.group_id == usize::MAX)
-                && (max_x - min_x).abs() >= left_w * 0.50
-                && (max_y - min_y).abs() >= left_h * 0.50;
+            let pid = path.id.as_deref().unwrap_or("").to_lowercase();
+            let is_explicit_bg = path.group_id == usize::MAX || pid.contains("background") || pid.contains("canvas_bg");
 
-            if is_bg_rect {
-                let mut left_bg = VectorPath::new(Some(format!("left_{}", path.id.as_deref().unwrap_or("bg"))));
-                left_bg.fill = path.fill.clone();
-                left_bg.stroke = None;
-                left_bg.group_id = path.group_id;
-                left_bg.add_command(PathCommand::MoveTo(Point2D::new(0.0, 0.0)));
-                left_bg.add_command(PathCommand::LineTo(Point2D::new(left_w, 0.0)));
-                left_bg.add_command(PathCommand::LineTo(Point2D::new(left_w, max_h)));
-                left_bg.add_command(PathCommand::LineTo(Point2D::new(0.0, max_h)));
-                left_bg.add_command(PathCommand::Close);
-                duo_doc.paths.push(left_bg);
-            } else {
-                let mut left_path = VectorPath::new(Some(format!("left_{}", path.id.as_deref().unwrap_or("path"))));
-                left_path.fill = path.fill.clone();
-                left_path.stroke = path.stroke.clone();
-                left_path.stroke_width = path.stroke_width;
-                left_path.group_id = path.group_id;
-
-                for cmd in &path.commands {
-                    let translated_cmd = match cmd {
-                        PathCommand::MoveTo(p) => PathCommand::MoveTo(Point2D::new(p.x, p.y + left_y_offset)),
-                        PathCommand::LineTo(p) => PathCommand::LineTo(Point2D::new(p.x, p.y + left_y_offset)),
-                        PathCommand::QuadTo { control, end } => PathCommand::QuadTo {
-                            control: Point2D::new(control.x, control.y + left_y_offset),
-                            end: Point2D::new(end.x, end.y + left_y_offset),
-                        },
-                        PathCommand::CubicTo { control1, control2, end } => PathCommand::CubicTo {
-                            control1: Point2D::new(control1.x, control1.y + left_y_offset),
-                            control2: Point2D::new(control2.x, control2.y + left_y_offset),
-                            end: Point2D::new(end.x, end.y + left_y_offset),
-                        },
-                        PathCommand::Close => PathCommand::Close,
-                    };
-                    left_path.add_command(translated_cmd);
-                }
-                duo_doc.paths.push(left_path);
+            if Some(idx) == left_bg_idx || is_explicit_bg {
+                continue;
             }
+
+            let mut left_path = VectorPath::new(Some(format!("left_{}", path.id.as_deref().unwrap_or("path"))));
+            left_path.fill = path.fill.clone();
+            left_path.stroke = path.stroke.clone();
+            left_path.stroke_width = path.stroke_width;
+            left_path.group_id = path.group_id;
+
+            for cmd in &path.commands {
+                let translated_cmd = match cmd {
+                    PathCommand::MoveTo(p) => PathCommand::MoveTo(Point2D::new(p.x, p.y + left_y_offset)),
+                    PathCommand::LineTo(p) => PathCommand::LineTo(Point2D::new(p.x, p.y + left_y_offset)),
+                    PathCommand::QuadTo { control, end } => PathCommand::QuadTo {
+                        control: Point2D::new(control.x, control.y + left_y_offset),
+                        end: Point2D::new(end.x, end.y + left_y_offset),
+                    },
+                    PathCommand::CubicTo { control1, control2, end } => PathCommand::CubicTo {
+                        control1: Point2D::new(control1.x, control1.y + left_y_offset),
+                        control2: Point2D::new(control2.x, control2.y + left_y_offset),
+                        end: Point2D::new(end.x, end.y + left_y_offset),
+                    },
+                    PathCommand::Close => PathCommand::Close,
+                };
+                left_path.add_command(translated_cmd);
+            }
+            duo_doc.paths.push(left_path);
         }
 
         // 2. Add Right side artwork (Design 2)
+        let right_bg_info = crate::background::BackgroundProcessor::find_background(right_doc, right_w, right_h);
+        let right_bg_idx = right_bg_info.as_ref().map(|(idx, _)| *idx);
+        let right_bg_color = right_bg_info.map(|(_, col)| col).unwrap_or_else(|| "#FFFFFF".to_string());
+
+        let mut right_bg = VectorPath::new(Some("right_full_panel_bg".to_string()));
+        right_bg.fill = Some(right_bg_color);
+        right_bg.stroke = None;
+        right_bg.group_id = usize::MAX;
+        right_bg.add_command(PathCommand::MoveTo(Point2D::new(offset_x, 0.0)));
+        right_bg.add_command(PathCommand::LineTo(Point2D::new(offset_x + right_w, 0.0)));
+        right_bg.add_command(PathCommand::LineTo(Point2D::new(offset_x + right_w, max_h)));
+        right_bg.add_command(PathCommand::LineTo(Point2D::new(offset_x, max_h)));
+        right_bg.add_command(PathCommand::Close);
+        duo_doc.paths.push(right_bg);
+
         for (idx, path) in right_doc.paths.iter().enumerate() {
-            let (min_x, min_y, max_x, max_y) = path.bounding_box();
-            let is_bg_rect = (idx == 0 || path.group_id == usize::MAX)
-                && (max_x - min_x).abs() >= right_w * 0.50
-                && (max_y - min_y).abs() >= right_h * 0.50;
+            let pid = path.id.as_deref().unwrap_or("").to_lowercase();
+            let is_explicit_bg = path.group_id == usize::MAX || pid.contains("background") || pid.contains("canvas_bg");
 
-            if is_bg_rect {
-                let mut right_bg = VectorPath::new(Some(format!("right_{}", path.id.as_deref().unwrap_or("bg"))));
-                right_bg.fill = path.fill.clone();
-                right_bg.stroke = None;
-                right_bg.group_id = path.group_id;
-                right_bg.add_command(PathCommand::MoveTo(Point2D::new(offset_x, 0.0)));
-                right_bg.add_command(PathCommand::LineTo(Point2D::new(offset_x + right_w, 0.0)));
-                right_bg.add_command(PathCommand::LineTo(Point2D::new(offset_x + right_w, max_h)));
-                right_bg.add_command(PathCommand::LineTo(Point2D::new(offset_x, max_h)));
-                right_bg.add_command(PathCommand::Close);
-                duo_doc.paths.push(right_bg);
-            } else {
-                let mut right_path = VectorPath::new(Some(format!(
-                    "right_{}",
-                    path.id.as_deref().unwrap_or("path")
-                )));
-                right_path.fill = path.fill.clone();
-                right_path.stroke = path.stroke.clone();
-                right_path.stroke_width = path.stroke_width;
-                right_path.group_id = path.group_id;
-
-                for cmd in &path.commands {
-                    let translated_cmd = match cmd {
-                        PathCommand::MoveTo(p) => PathCommand::MoveTo(Point2D::new(p.x + offset_x, p.y + right_y_offset)),
-                        PathCommand::LineTo(p) => PathCommand::LineTo(Point2D::new(p.x + offset_x, p.y + right_y_offset)),
-                        PathCommand::QuadTo { control, end } => PathCommand::QuadTo {
-                            control: Point2D::new(control.x + offset_x, control.y + right_y_offset),
-                            end: Point2D::new(end.x + offset_x, end.y + right_y_offset),
-                        },
-                        PathCommand::CubicTo { control1, control2, end } => PathCommand::CubicTo {
-                            control1: Point2D::new(control1.x + offset_x, control1.y + right_y_offset),
-                            control2: Point2D::new(control2.x + offset_x, control2.y + right_y_offset),
-                            end: Point2D::new(end.x + offset_x, end.y + right_y_offset),
-                        },
-                        PathCommand::Close => PathCommand::Close,
-                    };
-                    right_path.add_command(translated_cmd);
-                }
-                duo_doc.paths.push(right_path);
+            if Some(idx) == right_bg_idx || is_explicit_bg {
+                continue;
             }
+
+            let mut right_path = VectorPath::new(Some(format!(
+                "right_{}",
+                path.id.as_deref().unwrap_or("path")
+            )));
+            right_path.fill = path.fill.clone();
+            right_path.stroke = path.stroke.clone();
+            right_path.stroke_width = path.stroke_width;
+            right_path.group_id = path.group_id;
+
+            for cmd in &path.commands {
+                let translated_cmd = match cmd {
+                    PathCommand::MoveTo(p) => PathCommand::MoveTo(Point2D::new(p.x + offset_x, p.y + right_y_offset)),
+                    PathCommand::LineTo(p) => PathCommand::LineTo(Point2D::new(p.x + offset_x, p.y + right_y_offset)),
+                    PathCommand::QuadTo { control, end } => PathCommand::QuadTo {
+                        control: Point2D::new(control.x + offset_x, control.y + right_y_offset),
+                        end: Point2D::new(end.x + offset_x, end.y + right_y_offset),
+                    },
+                    PathCommand::CubicTo { control1, control2, end } => PathCommand::CubicTo {
+                        control1: Point2D::new(control1.x + offset_x, control1.y + right_y_offset),
+                        control2: Point2D::new(control2.x + offset_x, control2.y + right_y_offset),
+                        end: Point2D::new(end.x + offset_x, end.y + right_y_offset),
+                    },
+                    PathCommand::Close => PathCommand::Close,
+                };
+                right_path.add_command(translated_cmd);
+            }
+            duo_doc.paths.push(right_path);
         }
 
         Ok(duo_doc)

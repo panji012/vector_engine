@@ -299,12 +299,9 @@ impl BadgeDetector {
             }
         }
 
-        // If there is only 1 candidate cluster, require high score (>= 0.65) to qualify as a Single Badge
-        if valid_badge_clusters.len() == 1 {
-            let score = Self::calculate_confidence_score(doc, &valid_badge_clusters[0].path_indices, valid_badge_clusters[0].bounding_box, (canvas_w, canvas_h));
-            if score < 0.65 {
-                return Vec::new();
-            }
+        // Require >= 2 candidate clusters to qualify as a multi-badge grid layout
+        if valid_badge_clusters.len() < 2 {
+            return Vec::new();
         }
 
 
@@ -322,6 +319,49 @@ impl BadgeDetector {
         // Assign 1-indexed badge IDs
         for (i, cluster) in valid_badge_clusters.iter_mut().enumerate() {
             cluster.badge_id = i + 1;
+        }
+
+        // Include any unassigned foreground path whose center lies within a badge bounding box
+        let assigned_set: std::collections::HashSet<usize> = valid_badge_clusters
+            .iter()
+            .flat_map(|c| c.path_indices.iter().cloned())
+            .collect();
+
+        for &idx in &fg_indices {
+            if assigned_set.contains(&idx) {
+                continue;
+            }
+            let bbox = doc.paths[idx].bounding_box();
+            let cx = (bbox.0 + bbox.2) * 0.5;
+            let cy = (bbox.1 + bbox.3) * 0.5;
+
+            // Find best matching containing badge
+            let mut best_cluster_idx: Option<usize> = None;
+            let mut min_dist_to_center = f64::INFINITY;
+
+            for (c_idx, cluster) in valid_badge_clusters.iter().enumerate() {
+                let c_bbox = cluster.bounding_box;
+                let pad_x = (c_bbox.2 - c_bbox.0).abs() * 0.05;
+                let pad_y = (c_bbox.3 - c_bbox.1).abs() * 0.05;
+
+                if cx >= (c_bbox.0 - pad_x)
+                    && cx <= (c_bbox.2 + pad_x)
+                    && cy >= (c_bbox.1 - pad_y)
+                    && cy <= (c_bbox.3 + pad_y)
+                {
+                    let c_cx = (c_bbox.0 + c_bbox.2) * 0.5;
+                    let c_cy = (c_bbox.1 + c_bbox.3) * 0.5;
+                    let dist = (cx - c_cx).hypot(cy - c_cy);
+                    if dist < min_dist_to_center {
+                        min_dist_to_center = dist;
+                        best_cluster_idx = Some(c_idx);
+                    }
+                }
+            }
+
+            if let Some(target_idx) = best_cluster_idx {
+                valid_badge_clusters[target_idx].path_indices.push(idx);
+            }
         }
 
         valid_badge_clusters

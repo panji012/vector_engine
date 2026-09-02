@@ -16,7 +16,6 @@ impl PathReconstructor {
         new_path.fill = original_path.fill.clone();
         new_path.stroke = original_path.stroke.clone();
         new_path.stroke_width = original_path.stroke_width;
-        new_path.fill_rule = Some("evenodd".to_string());
 
         for (ring, role) in contours {
             if ring.vertices.is_empty() {
@@ -109,7 +108,6 @@ impl PathReconstructor {
 
         let mut compound_path = VectorPath::new(Some(path_id));
         compound_path.fill = color;
-        compound_path.fill_rule = Some("evenodd".to_string());
         compound_path.badge_id = badge_id;
 
         for (ring, role) in contours {

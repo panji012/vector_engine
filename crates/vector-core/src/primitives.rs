@@ -321,7 +321,10 @@ impl VectorDocument {
 
             let indent = if current_badge_group.is_some() { "      " } else { "    " };
             let id_attr = path.id.as_deref().map(|id| format!(" id=\"{}\"", id)).unwrap_or_default();
-            let fill_attr = path.fill.as_deref().map(|f| format!(" fill=\"{}\"", f)).unwrap_or_default();
+            let fill_attr = match path.fill.as_deref() {
+                Some(f) => format!(" fill=\"{}\"", f),
+                None => " fill=\"none\"".to_string(),
+            };
             let stroke_attr = path.stroke.as_deref().map(|s| format!(" stroke=\"{}\"", s)).unwrap_or_default();
             let sw_attr = path.stroke_width.map(|sw| format!(" stroke-width=\"{}\"", sw)).unwrap_or_default();
             let fr_attr = path.fill_rule.as_deref().map(|fr| format!(" fill-rule=\"{}\"", fr)).unwrap_or_default();

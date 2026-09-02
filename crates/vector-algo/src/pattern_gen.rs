@@ -56,6 +56,32 @@ fn split_subpaths(commands: &[PathCommand]) -> Vec<Vec<PathCommand>> {
     subpaths
 }
 
+fn subpath_bbox(cmds: &[PathCommand]) -> (f64, f64, f64, f64) {
+    let mut min_x = f64::INFINITY;
+    let mut min_y = f64::INFINITY;
+    let mut max_x = f64::NEG_INFINITY;
+    let mut max_y = f64::NEG_INFINITY;
+
+    for cmd in cmds {
+        let pt = match cmd {
+            PathCommand::MoveTo(p) | PathCommand::LineTo(p) => *p,
+            PathCommand::QuadTo { end, .. } => *end,
+            PathCommand::CubicTo { end, .. } => *end,
+            PathCommand::Close => continue,
+        };
+        if pt.x < min_x { min_x = pt.x; }
+        if pt.y < min_y { min_y = pt.y; }
+        if pt.x > max_x { max_x = pt.x; }
+        if pt.y > max_y { max_y = pt.y; }
+    }
+
+    if min_x.is_infinite() {
+        (0.0, 0.0, 0.0, 0.0)
+    } else {
+        (min_x, min_y, max_x, max_y)
+    }
+}
+
 fn snap_point_to_rect_boundary(p: Point2D, min_x: f64, min_y: f64, max_x: f64, max_y: f64) -> Point2D {
     let snap_tol = 0.05; // 0.05px sub-pixel edge snapping tolerance for zero gap seam fitting
     let mut x = p.x;
@@ -289,55 +315,66 @@ impl PatternGenerator {
 
         // 1. Detect background color & filter out tile-level base background rectangles
         let mut detected_bg_color: Option<String> = None;
+        if let Some((_, bg_col)) = crate::background::BackgroundProcessor::find_background(doc, base_w, base_h) {
+            detected_bg_color = Some(bg_col);
+        }
+
         let mut cleaned_doc_paths: Vec<VectorPath> = Vec::new();
 
-        for (idx, path) in doc.paths.iter().enumerate() {
-            let subpaths = split_subpaths(&path.commands);
-            let mut artwork_subpaths: Vec<Vec<PathCommand>> = Vec::new();
-            let is_bottom = idx == 0;
+        for path in &doc.paths {
+            let pid = path.id.as_deref().unwrap_or("").to_lowercase();
+            if detected_bg_color.is_none() && path.fill.is_some() && path.fill.as_deref() != Some("#000000") && path.fill.as_deref() != Some("#000") && path.fill.as_deref() != Some("none") {
+                if path.group_id == usize::MAX || pid.contains("background") || pid.contains("canvas_bg") {
+                    detected_bg_color = path.fill.clone();
+                }
+            }
 
-            for subpath in subpaths {
-                if is_base_background_rect(&subpath, base_w, base_h, is_bottom) {
-                    if detected_bg_color.is_none() && path.fill.is_some() {
+            let subpaths = split_subpaths(&path.commands);
+            let mut valid_cmds = Vec::new();
+
+            for sp in subpaths {
+                let (s_min_x, s_min_y, s_max_x, s_max_y) = subpath_bbox(&sp);
+                let sw = (s_max_x - s_min_x).abs();
+                let sh = (s_max_y - s_min_y).abs();
+
+                let is_subpath_bg = base_w > 0.0 && base_h > 0.0 && (
+                    (sw >= 0.90 * base_w && sh >= 0.90 * base_h)
+                );
+                let touches_edge = s_min_x <= 25.0 || s_min_y <= 25.0 || s_max_x >= (base_w - 25.0) || s_max_y >= (base_h - 25.0);
+                let is_subpath_edge = base_w > 0.0 && base_h > 0.0 && touches_edge && (
+                    (sw >= 0.80 * base_w && sh <= 0.10 * base_h) ||
+                    (sh >= 0.80 * base_h && sw <= 0.10 * base_w)
+                );
+
+                if is_subpath_bg || is_subpath_edge {
+                    if is_subpath_bg && detected_bg_color.is_none() && path.fill.is_some() && path.fill.as_deref() != Some("#000000") && path.fill.as_deref() != Some("#000") && path.fill.as_deref() != Some("none") {
                         detected_bg_color = path.fill.clone();
                     }
-                } else {
-                    artwork_subpaths.push(subpath);
+                    continue; // Strip outer background box / boundary strip subpaths
                 }
+
+                valid_cmds.extend(sp);
             }
 
-            if !artwork_subpaths.is_empty() {
-                let mut clean_path = path.clone();
-                clean_path.commands = artwork_subpaths.into_iter().flatten().collect();
-                cleaned_doc_paths.push(clean_path);
-            }
-        }
-
-        if detected_bg_color.is_none() && !doc.paths.is_empty() {
-            if let Some(ref first_fill) = doc.paths[0].fill {
-                if first_fill != "none" {
-                    detected_bg_color = Some(first_fill.clone());
-                    let p0_bounds = doc.paths[0].bounding_box();
-                    let p0_w = p0_bounds.2 - p0_bounds.0;
-                    let p0_h = p0_bounds.3 - p0_bounds.1;
-                    if p0_w >= base_w * 0.95 && p0_h >= base_h * 0.95 && !cleaned_doc_paths.is_empty() {
-                        cleaned_doc_paths.remove(0);
-                    }
-                }
+            if !valid_cmds.is_empty() {
+                let mut new_path = path.clone();
+                new_path.commands = valid_cmds;
+                cleaned_doc_paths.push(new_path);
             }
         }
 
-        // 2. Insert Layer 1 Full-Canvas Background Rectangle at the bottom (index 0) if a background color was detected
-        if let Some(ref bg_color) = detected_bg_color {
-            let mut full_bg_path = VectorPath::new(Some("pattern_background_layer_1".to_string()));
-            full_bg_path.fill = Some(bg_color.clone());
-            full_bg_path.add_command(PathCommand::MoveTo(Point2D::new(0.0, 0.0)));
-            full_bg_path.add_command(PathCommand::LineTo(Point2D::new(total_w, 0.0)));
-            full_bg_path.add_command(PathCommand::LineTo(Point2D::new(total_w, total_h)));
-            full_bg_path.add_command(PathCommand::LineTo(Point2D::new(0.0, total_h)));
-            full_bg_path.add_command(PathCommand::Close);
-            tiled_doc.paths.push(full_bg_path);
-        }
+        let final_pattern_bg = detected_bg_color.unwrap_or_else(|| "#FFFFFF".to_string());
+
+        // 2. Insert Layer 1 Full-Canvas Background Rectangle covering 100% of pattern canvas (0, 0, total_w, total_h)
+        let mut full_bg_path = VectorPath::new(Some("pattern_background_layer_1".to_string()));
+        full_bg_path.fill = Some(final_pattern_bg);
+        full_bg_path.group_id = usize::MAX;
+        full_bg_path.add_command(PathCommand::MoveTo(Point2D::new(0.0, 0.0)));
+        full_bg_path.add_command(PathCommand::LineTo(Point2D::new(total_w, 0.0)));
+        full_bg_path.add_command(PathCommand::LineTo(Point2D::new(total_w, total_h)));
+        full_bg_path.add_command(PathCommand::LineTo(Point2D::new(0.0, total_h)));
+        full_bg_path.add_command(PathCommand::Close);
+        tiled_doc.paths.push(full_bg_path);
 
         let style_lower = style.to_lowercase();
         
