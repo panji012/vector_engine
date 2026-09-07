@@ -27,11 +27,16 @@ backup/
 output_test/
 output_calibration/
 output_final/
-output_debug/
-output_preview/
-
-# Agent and IDE configuration
-.agents/
+# Runtime Logs & Catalogs
+absen_sukses.txt
+master_katalog.csv
+manifest.json
+temp_csv/
+error_logs/
+vectorizer_svg/
+input_processed/
+input_failed/
+input/*.svg
 
 # OS specific
 .DS_Store

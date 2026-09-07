@@ -15,8 +15,8 @@
     "low_color_bad_two": {
         "_comment_profile": "Profil otomatis untuk gambar dengan jumlah warna <= 5",
         "max_colors": 5,
-        "threshold": 0.50,
-        "tolerance": 0.20,
+        "threshold": 0.5,
+        "tolerance": 0.2,
         "distance": 0.5,
         "color_merge_threshold": 0.15,
         "remove_layers": [],
@@ -55,7 +55,7 @@
         "_comment_profile": "Profil otomatis untuk gambar dengan jumlah warna >= 6",
         "min_colors": 6,
         "threshold": 0.95,
-        "tolerance": 0.30,
+        "tolerance": 0.3,
         "distance": 0.75,
         "color_merge_threshold": 0.15,
         "remove_layers": [],
@@ -73,7 +73,7 @@
                 "square"
             ],
             "_comment_allowed_shapes": "Bentuk gambar yang diizinkan untuk pola pattern ('circular', 'square')",
-            "style": "slanted_left",
+            "style": "brick_wall",
             "_comment_style": "Pilihan style: 'slanted_left', 'slanted_right', 'half_drop_vertical', 'brick_wall', 'diamond_stagger', 'checker_pinwheel', 'scale_rhythm', 'wave_sine_offset', 'kaleidoscope_mirror', 'grid', 'alternating'",
             "slant_offset_ratio": -0.5,
             "_comment_slant_offset_ratio": "Rasio pergeseran miring untuk style slanted (-0.5 = geser 50% ke kiri, 0.5 = geser 50% ke kanan)",
@@ -87,12 +87,12 @@
         },
         "middle_panel": {
             "type": "greyscale",
-            "min_luminance": 0.20,
+            "min_luminance": 0.2,
             "max_luminance": 0.62
         },
         "right_panel": {
             "type": "dominant_color",
-            "min_luminance": 0.20,
+            "min_luminance": 0.2,
             "max_luminance": 0.62,
             "exclude_background": true
         }

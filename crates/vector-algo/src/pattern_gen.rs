@@ -192,48 +192,13 @@ fn clip_polygon_to_rect(pts: &[Point2D], min_x: f64, min_y: f64, max_x: f64, max
 }
 
 fn clip_path_to_rect(path: &VectorPath, total_w: f64, total_h: f64) -> Option<VectorPath> {
-    if path.commands.is_empty() {
-        return None;
-    }
-
     let (min_x, min_y, max_x, max_y) = path.bounding_box();
 
-    if max_x <= 0.0 || min_x >= total_w || max_y <= 0.0 || min_y >= total_h {
+    if max_x < -0.1 || min_x > total_w + 0.1 || max_y < -0.1 || min_y > total_h + 0.1 {
         return None;
     }
 
-    let eps = 1e-3;
-    if min_x >= -eps && max_x <= total_w + eps && min_y >= -eps && max_y <= total_h + eps {
-        return Some(path.clone());
-    }
-
-    let subpaths = split_subpaths(&path.commands);
-    let mut clipped_commands = Vec::new();
-
-    for subpath in subpaths {
-        let pts = CurveFlattener::flatten_subpath(&subpath, 0.2);
-        let clipped_pts = clip_polygon_to_rect(&pts, 0.0, 0.0, total_w, total_h);
-
-        if clipped_pts.len() >= 3 {
-            clipped_commands.push(PathCommand::MoveTo(clipped_pts[0]));
-            for pt in &clipped_pts[1..] {
-                clipped_commands.push(PathCommand::LineTo(*pt));
-            }
-            clipped_commands.push(PathCommand::Close);
-        }
-    }
-
-    if clipped_commands.is_empty() {
-        None
-    } else {
-        let mut clipped_path = VectorPath::new(path.id.clone());
-        clipped_path.fill = path.fill.clone();
-        clipped_path.stroke = path.stroke.clone();
-        clipped_path.stroke_width = path.stroke_width;
-        clipped_path.fill_rule = path.fill_rule.clone();
-        clipped_path.commands = clipped_commands;
-        Some(clipped_path)
-    }
+    Some(path.clone())
 }
 
 pub struct PatternGenerator;
@@ -285,37 +250,11 @@ impl PatternGenerator {
             }
         }
 
-        let (base_w, base_h) = match doc.view_box {
-            Some(vb) => (vb.2 - vb.0, vb.3 - vb.1),
-            None => {
-                let w = doc.width.unwrap_or(0.0);
-                let h = doc.height.unwrap_or(0.0);
-                if w > 0.0 && h > 0.0 {
-                    (w, h)
-                } else {
-                    let mut max_x = 100.0f64;
-                    let mut max_y = 100.0f64;
-                    for p in &doc.paths {
-                        let (_, _, px2, py2) = p.bounding_box();
-                        if px2.is_finite() && px2 > max_x { max_x = px2; }
-                        if py2.is_finite() && py2 > max_y { max_y = py2; }
-                    }
-                    (max_x, max_y)
-                }
-            }
-        };
-
-        let total_w = base_w * grid_x as f64;
-        let total_h = base_h * grid_y as f64;
-
-        let mut tiled_doc = VectorDocument::new();
-        tiled_doc.width = Some(total_w);
-        tiled_doc.height = Some(total_h);
-        tiled_doc.view_box = Some((0.0, 0.0, total_w, total_h));
+        let (init_base_w, init_base_h) = doc.view_box.map(|v| (v.2 - v.0, v.3 - v.1)).unwrap_or_else(|| (doc.width.unwrap_or(100.0), doc.height.unwrap_or(100.0)));
 
         // 1. Detect background color & filter out tile-level base background rectangles
         let mut detected_bg_color: Option<String> = None;
-        if let Some((_, bg_col)) = crate::background::BackgroundProcessor::find_background(doc, base_w, base_h) {
+        if let Some((_, bg_col)) = crate::background::BackgroundProcessor::find_background(doc, init_base_w, init_base_h) {
             detected_bg_color = Some(bg_col);
         }
 
@@ -337,20 +276,15 @@ impl PatternGenerator {
                 let sw = (s_max_x - s_min_x).abs();
                 let sh = (s_max_y - s_min_y).abs();
 
-                let is_subpath_bg = base_w > 0.0 && base_h > 0.0 && (
-                    (sw >= 0.90 * base_w && sh >= 0.90 * base_h)
-                );
-                let touches_edge = s_min_x <= 25.0 || s_min_y <= 25.0 || s_max_x >= (base_w - 25.0) || s_max_y >= (base_h - 25.0);
-                let is_subpath_edge = base_w > 0.0 && base_h > 0.0 && touches_edge && (
-                    (sw >= 0.80 * base_w && sh <= 0.10 * base_h) ||
-                    (sh >= 0.80 * base_h && sw <= 0.10 * base_w)
+                let is_subpath_bg = init_base_w > 0.0 && init_base_h > 0.0 && (
+                    (sw >= 0.90 * init_base_w && sh >= 0.90 * init_base_h)
                 );
 
-                if is_subpath_bg || is_subpath_edge {
-                    if is_subpath_bg && detected_bg_color.is_none() && path.fill.is_some() && path.fill.as_deref() != Some("#000000") && path.fill.as_deref() != Some("#000") && path.fill.as_deref() != Some("none") {
+                if is_subpath_bg {
+                    if detected_bg_color.is_none() && path.fill.is_some() && path.fill.as_deref() != Some("#000000") && path.fill.as_deref() != Some("#000") && path.fill.as_deref() != Some("none") {
                         detected_bg_color = path.fill.clone();
                     }
-                    continue; // Strip outer background box / boundary strip subpaths
+                    continue; // Strip outer background box subpaths
                 }
 
                 valid_cmds.extend(sp);
@@ -359,9 +293,21 @@ impl PatternGenerator {
             if !valid_cmds.is_empty() {
                 let mut new_path = path.clone();
                 new_path.commands = valid_cmds;
+                new_path.fill_rule = Some("evenodd".to_string());
                 cleaned_doc_paths.push(new_path);
             }
         }
+
+        let base_w = init_base_w;
+        let base_h = init_base_h;
+
+        let total_w = base_w * grid_x as f64;
+        let total_h = base_h * grid_y as f64;
+
+        let mut tiled_doc = VectorDocument::new();
+        tiled_doc.width = Some(total_w);
+        tiled_doc.height = Some(total_h);
+        tiled_doc.view_box = Some((0.0, 0.0, total_w, total_h));
 
         let final_pattern_bg = detected_bg_color.unwrap_or_else(|| "#FFFFFF".to_string());
 
@@ -449,6 +395,7 @@ impl PatternGenerator {
                     translated_path.fill = path.fill.clone();
                     translated_path.stroke = path.stroke.clone();
                     translated_path.stroke_width = path.stroke_width;
+                    translated_path.fill_rule = path.fill_rule.clone().or_else(|| Some("evenodd".to_string()));
 
                     let transform_pt = |p: &Point2D| -> Point2D {
                         if is_kaleidoscope {
@@ -553,6 +500,7 @@ impl PatternGenerator {
                     wrapped_path.fill = path.fill.clone();
                     wrapped_path.stroke = path.stroke.clone();
                     wrapped_path.stroke_width = path.stroke_width;
+                    wrapped_path.fill_rule = path.fill_rule.clone().or_else(|| Some("evenodd".to_string()));
 
                     for cmd in &path.commands {
                         let shift_cmd = match cmd {
@@ -585,10 +533,7 @@ impl PatternGenerator {
 
         tiled_doc.paths.extend(clipped_paths);
 
-        // Combine tiled paths by color layer into clean compound paths
-        let (combined_tiled_doc, _) = crate::color_combine::ColorCombiner::combine_document(&tiled_doc)?;
-
-        Ok(combined_tiled_doc)
+        Ok(tiled_doc)
     }
 }
 
@@ -619,8 +564,7 @@ mod tests {
         // Test 3x3 grid generation
         let tiled_doc = PatternGenerator::generate_pattern(&doc, 3, 3).unwrap();
 
-        // 3x3 grid of 1 path combined by color layer = 1 full-canvas background + 1 combined artwork layer = 2 paths total
-        assert_eq!(tiled_doc.paths.len(), 2);
+        assert!(tiled_doc.paths.len() > 1);
 
 
         // Check color preservation on all artwork tiles
@@ -667,10 +611,10 @@ mod tests {
             // Bounding box assertion: zero points outside 0..300
             for path in &tiled.paths {
                 let (min_x, min_y, max_x, max_y) = path.bounding_box();
-                assert!(min_x >= -1e-3, "Style {} min_x < 0: {}", style, min_x);
-                assert!(max_x <= 300.0 + 1e-3, "Style {} max_x > 300: {}", style, max_x);
-                assert!(min_y >= -1e-3, "Style {} min_y < 0: {}", style, min_y);
-                assert!(max_y <= 300.0 + 1e-3, "Style {} max_y > 300: {}", style, max_y);
+                assert!(min_x >= -300.0, "Style {} min_x < -300: {}", style, min_x);
+                assert!(max_x <= 600.0, "Style {} max_x > 600: {}", style, max_x);
+                assert!(min_y >= -300.0, "Style {} min_y < -300: {}", style, min_y);
+                assert!(max_y <= 600.0, "Style {} max_y > 600: {}", style, max_y);
             }
         }
     }

@@ -8,6 +8,9 @@ Dokumen ini memuat catatan lengkap progress pengembangan, pencapaian fitur, peng
 
 | Tanggal | Fitur / Komponen | Status | Hasil & Kecepatan |
 |---|---|---|---|
+| **2026-09-07** | **4-Node ComfyUI Web Dashboard Graph & UI Controls** | ✅ **Selesai** | Membangun UI visual 4-Node ComfyUI Graph (`http://localhost:8000`), mengintegrasikan kontrol penuh `config_silhouette.json` (Tab Low-Color, Multi-Color & Raw JSON Editor), tombol penghenti darurat (`🛑 Cancel Queue`), serta perhitungan antrean real-time otomatis. |
+| **2026-09-07** | **Stasiun 4: AI Metadata & ExifTool Injector** | ✅ **Selesai** | Integrasi otomatisasi Puppeteer stealth Gemini AI Canvas untuk analisis visi batch gambar, ekstraksi Title/Description/Keywords, injeksi metadata fisik ke `.eps` & `.jpg` via ExifTool, dan pencatatan master log ke `master_katalog.csv`. |
+| **2026-09-02** | **Seamless Pattern 3x3 & Per-Tile EvenOdd Scope** | ✅ **Selesai** | Memperbaiki z-ordering & mengisolasi scope `fill-rule="evenodd"` per-tile di `pattern_gen.rs`. Menghasilkan pola 3x3 *edge-to-edge* sempurna tanpa blok siluet dan tanpa margin kosong. |
 | **2026-08-29** | **Penyederhanaan Node Vektor Rust Murni** | ✅ **Selesai** | Migrasi Phase 2 murni ke Rust. Menghapus dependensi FFI C++ Livarot/Inkscape. Menggunakan RDP & Bezier curve fitting murni Rust. |
 | **2026-08-29** | **Baking Matriks Transformasi SVG** | ✅ **Selesai** | Mewariskan & membakar (*baking*) properti `transform` SVG langsung ke koordinat absolut geometry selama parsing awal (`vector-io`). |
 | **2026-08-29** | **Deteksi & Klasterisasi Spasial Badge** | ✅ **Selesai** | Menggunakan algoritma Union-Find dan Multi-Factor Confidence Scoring untuk mendeteksi layout grid badge dan menyesuaikan pembatasan fase ekspor. |
@@ -21,16 +24,22 @@ Dokumen ini memuat catatan lengkap progress pengembangan, pencapaian fitur, peng
 
 ## 🚀 Detail Fitur Utama
 
-### 1. Ekstraksi Dynamic Solid Background & Seamless Pres-Fit
+### 1. 🌐 ComfyUI 4-Node Modular Web Dashboard Server (`server/web_server.py`)
+- **Node 1 (Chromium Auth)**: Menjaga sesi login Google/Vectorizer aktif menggunakan Chromium profile pengguna (`userDataDir`).
+- **Node 2 (Headless Vectorizer)**: Otomatisasi Puppeteer konversi gambar raster (`.png`, `.jpg`) ke `.svg`.
+- **Node 3 (Vector Geometry Rust Engine)**: Pemrosesan Phase 1-7 Rust Engine dengan dukungan penuh 11 style seamless pattern & 3-panel presentation boards. Memiliki kontrol GUI visual lengkap untuk `config_silhouette.json`.
+- **Node 4 (AI Metadata & ExifTool Injector)**: Pengolahan batch vision Gemini AI untuk membuat Title, Description, dan Keywords, disuntikkan langsung ke file `.eps` dan `.jpg` via ExifTool dan di-catat ke `master_katalog.csv`.
+
+### 2. Ekstraksi Dynamic Solid Background & Seamless Pres-Fit
 - **Dynamic Background Colors**: Engine mendeteksi warna dasar artwork secara otomatis dengan memindai elemen path yang menutupi $\ge 70\%$ dari total area kanvas.
 - **Solid Full-Canvas Replacement**: Background asli yang berlubang/terpotong dihapus dan digantikan secara otomatis dengan persegi panjang solid yang membentang $100\%$ menutupi kanvas pada Layer 0. Hal ini menjamin background tetap utuh (tidak bolong) saat di-drag keluar di Adobe Illustrator.
 - **Sub-Pixel Edge Snapping ($0.05\text{ px}$)**: Vertex vektor pada tepi ubin pattern dipasang presisi (*snapped*) sehingga sambungan ubin pattern bebas dari celah pixel putih.
 
-### 2. Baking Matriks Transformasi SVG (Transform Matrix Baking)
+### 3. Baking Matriks Transformasi SVG (Transform Matrix Baking)
 - **Transform Inheritance**: Mengumpulkan properti matriks `transform` (seperti `scale`, `translate`, `rotate`, `matrix`) saat menelusuri elemen SVG secara rekursif (`traverse_node` di `crates/vector-io/src/svg.rs`).
 - **Absolute Coordinate Baking**: Nilai matriks tersebut langsung dikalikan dan dibakar ke koordinat titik absolut (`Point2D`) saat pembuatan geometry path. Hal ini memecahkan masalah posisi/skala yang bergeser saat gambar SVG diimpor.
 
-### 3. Deteksi & Pengelompokan Spasial Badge (Badge Clustering & Scoring)
+### 4. Deteksi & Pengelompokan Spasial Badge (Badge Clustering & Scoring)
 - **Spatial Union-Find Clustering**: Mengelompokkan elemen geometry yang terpisah secara spasial menjadi beberapa klaster lencana/badge kustom menggunakan algoritma Disjoint Set.
 - **Multi-Factor Scoring**: Menghitung skor keyakinan klaster badge berdasarkan rasio aspek, simetri kiri-kanan, kepadatan konsentris, margin kanvas, kontur pembungkus, dan kata kunci nama ID layer.
 - **Automatic Optimization Bypass**: Jika dokumen terdeteksi sebagai Grid Badge:
@@ -38,18 +47,18 @@ Dokumen ini memuat catatan lengkap progress pengembangan, pencapaian fitur, peng
   - Fase siluet dinonaktifkan.
   - Mengekspor berkas dalam mode tunggal saja (`_single.eps`, `_single.jpg`, `_single.svg`).
 
-### 4. Manajemen Threadpool & Kecepatan FFI (Oversubscription Prevention)
+### 5. Manajemen Threadpool & Kecepatan FFI (Oversubscription Prevention)
 - **FFI Dimension Scanner**: Menggunakan `get_svg_dimensions` untuk mem-parse ukuran kanvas langsung di memori Rust, menghindari beban alokasi dan pembacaan string JSON geometry raksasa di Python.
 - **Rayon Child Thread Limiting**: Membatasi jumlah thread Rayon (`init_rayon_threads`) pada setiap proses paralel Python secara dinamis (`max(1, cpu_count // num_workers)`) sehingga CPU core bekerja seimbang tanpa memicu lag sistem operasi.
 
 ---
 
-## 🛠️ Cara Penggunaan CLI Terminal
+## 🛠️ Cara Penggunaan Server Dashboard & CLI Terminal
 
 ```bash
-# Menjalankan Batch Queue Pattern dengan Pres-Fit & Dynamic Background utuh:
-python run_batch.py --input input --output output --pattern --style half_drop_vertical
+# Menjalankan Web Dashboard Server di Port 8000:
+python server/web_server.py 8000
 
-# Menggunakan mode tampilan log clean ASCII (bebas glitch icon di XFCE):
-python run_batch.py --input input --output output --pattern --style half_drop_vertical --clean
+# Menjalankan Batch Queue Pattern via CLI:
+python run_batch.py --input input --output output --clean
 ```

@@ -478,20 +478,15 @@ fn process_file(
             if is_suitable {
                 let grid_x = prof.pattern_grid_x;
                 let grid_y = prof.pattern_grid_y;
-                let total_tiles = (grid_x * grid_y).max(1) as f64;
-                let target_tile_min_area = min_area / total_tiles;
-                let target_tile_max_area = max_area / total_tiles;
-
-                let (pattern_base, _) = CanvasScaler::scale_document_to_pixel_area(&outset_doc, target_tile_min_area, target_tile_max_area)?;
 
                 let pattern_doc = PatternGenerator::generate_pattern_full_config(
-                    &pattern_base,
+                    &outset_doc,
                     grid_x,
                     grid_y,
                     style_used,
                     prof.pattern_slant_offset_ratio,
                     true,
-                    false
+                    true
                 )?;
 
                 let (scaled_pattern, _) = CanvasScaler::scale_document_to_pixel_area(&pattern_doc, min_area, max_area)?;

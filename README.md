@@ -7,84 +7,58 @@ A modular, high-performance **Vector Geometry Engine** written in **Rust** with 
 The codebase is organized as a Cargo Workspace (Rust computational core) combined with a Python package (Orchestration & Workflow engine):
 
 - **`crates/vector-core`**: Core math, geometric primitives, traits, and domain error taxonomy.
-- **`crates/vector-algo`**: Computational geometry algorithms (intersections, clipping, boolean union, simplification, canvas scaling).
+- **`crates/vector-algo`**: Computational geometry algorithms (intersections, clipping, boolean union, simplification, canvas scaling, 11 seamless pattern styles).
 - **`crates/vector-spatial`**: Fast spatial indexing structures (R*-Tree, BVH).
 - **`crates/vector-io`**: Serialization & export formats (WKT, WKB, GeoJSON, SVG, EPS, JPG Preview).
 - **`crates/vector-ffi`**: PyO3 cross-language bindings and logging subscriber bridge.
 - **`crates/vector-cli`**: High-performance command line binary application.
 - **`python/vector_engine`**: Python API, configuration system, structlog integration, and workflow DAG runner.
+- **`server/web_server.py`**: Integrated 4-Node ComfyUI Web Dashboard server (`http://localhost:8000`).
+- **`scripts/metadata_engine.js`**: Node 4 AI Metadata Generator & ExifTool Injector engine.
 
-### ⏱️ Workflow & System Diagram (Alur Kerja)
+### ⏱️ Workflow & System Diagram (4-Node ComfyUI Graph Pipeline)
 
-Diagram berikut menggambarkan bagaimana file Python (sebagai pengatur/mandor) memanggil modul jembatan PyO3 untuk mengeksekusi perhitungan geometri berat di dalam Core Engine Rust:
+Diagram berikut menggambarkan arsitektur grafis 4-Node otomatisasi **Vector Engine**:
 
 ```mermaid
-graph TD
+graph LR
     %% Style Definitions
-    classDef python fill:#ECEFF1,stroke:#37474F,stroke-width:2px;
-    classDef rust fill:#FFF3E0,stroke:#E65100,stroke-width:2px;
-    classDef hybrid fill:#E1F5FE,stroke:#0288D1,stroke-width:2px;
-    classDef bridge fill:#EDE7F6,stroke:#5E35B1,stroke-width:2px;
+    classDef node1 fill:#0f172a,stroke:#c084fc,stroke-width:2px;
+    classDef node2 fill:#0f172a,stroke:#38bdf8,stroke-width:2px;
+    classDef node3 fill:#0f172a,stroke:#4ade80,stroke-width:2px;
+    classDef node4 fill:#0f172a,stroke:#f59e0b,stroke-width:2px;
 
-    %% Python Entrypoints & Wrappers
-    CLI[run_batch.py <br> Orkestrator Utama]:::python
-    Calib[calibrate_silhouette.py <br> Kalibrasi Siluet]:::python
-    
-    subgraph Python Wrappers python/vector_engine/
-        CorePy[core/outset.py, simplify.py, color.py...]:::python
-        IoPy[io/svg.py, eps.py, jpg.py]:::python
-    end
+    N1["🔑 NODE 1: CHROMIUM AUTH <br> User Profile Auth & Session"]:::node1
+    N2["🖼️ NODE 2: VECTORIZER HEADLESS <br> Raster PNG/JPG ➔ SVG"]:::node2
+    N3["⚡ NODE 3: RUST VECTOR ENGINE <br> Phase 1-7 Geometry & 11 Patterns"]:::node3
+    N4["🏷️ NODE 4: AI METADATA & EXIFTOOL <br> Gemini AI ➔ ExifTool Injected EPS/JPG"]:::node4
 
-    %% PyO3 FFI Bridge Layer
-    FFI[vector_engine._native <br> PyO3 Shared Object Library]:::bridge
-
-    %% Rust Core Engine
-    subgraph Rust Computational Core crates/
-        FFI_RS[vector-ffi/src/lib.rs <br> Entrypoint FFI]:::bridge
-        Offset_RS[vector-offset/src/reconstruct.rs <br> RDP & Bezier Fitting]:::rust
-        Algo_RS[vector-algo/src/background.rs, outset.rs, pattern_gen.rs, badge_cluster.rs...]:::rust
-        Io_RS[vector-io/src/svg.rs, eps.rs, jpg.rs <br> File Exporters]:::rust
-        Core_RS[vector-core/src/primitives.rs <br> Struct Geometri]:::rust
-    end
-
-    %% Relations
-    CLI --> CorePy
-    Calib --> CorePy
-    CorePy --> FFI
-    IoPy --> FFI
-    FFI --> FFI_RS
-    FFI_RS --> Offset_RS
-    FFI_RS --> Algo_RS
-    FFI_RS --> Io_RS
-    Offset_RS --> Core_RS
-    Algo_RS --> Core_RS
-    Io_RS --> Core_RS
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
 ```
 
-### Alur Fase Pemrosesan (Phase 0 s.d. 7)
+### Alur Fase Pemrosesan (Phase 0 s.d. 7 & Node 4 AI Metadata)
 
-| Fase | Nama Fase | Tipe Teknologi | Berkas yang Berperan Utama | Detail Fitur Spesifik |
+| Fase / Node | Nama Komponen | Tipe Teknologi | Berkas Utama | Detail Fitur |
 | :---: | :--- | :---: | :--- | :--- |
-| **0** | **Initialization** | **Python 🐍** | `run_batch.py` | Membaca profil JSON, mencari file SVG. Memanggil FFI `init_rayon_threads` di child process. |
-| **1** | **Outset & Combine** | **Hybrid ⚖️** | `crates/vector-algo/src/background.rs`, `color_combine.rs` & `badge_cluster.rs` | **Transform Baking**: Membakar transform langsung ke koordinat absolut.<br>**Badge Spatial Clustering**: Mengelompokkan lencana dengan Union-Find (jika badge terdeteksi: *Bypass Phase 2 & 3, serta memaksa ekspor berkas single saja*). |
-| **2** | **Simplification** | **Rust 🦀** | `crates/vector-offset/src/reconstruct.rs` | Penyederhanaan koordinat RDP dan Bezier curve fitting murni Rust (dilewati otomatis jika berkas berupa Badge). |
-| **3** | **Color Isolation & Silhouette** | **Hybrid ⚖️** | `crates/vector-algo/src/luminance.rs` & `color.rs` | Isolasi warna HSL, color merge, dan pembuatan varian siluet / tema warna (dilewati otomatis jika berkas berupa Badge). |
-| **4** | **Bad Board Generation** | **Hybrid ⚖️** | `crates/vector-algo/src/duo_board.rs` | Mengambil dimensi asli via FFI `get_svg_dimensions` (bebas JSON overhead) dan menggabungkan gambar asli dan siluet secara bersisian (dilewati jika Badge). |
-| **5** | **Seamless Pattern** | **Hybrid ⚖️** | `crates/vector-algo/src/pattern_gen.rs` & `pattern_detect.rs` | Menyusun motif ubin pattern dengan sub-pixel snapping $0.05\text{ px}$ bebas celah (dilewati jika Badge). |
-| **6** | **Canvas Auto-Scale** | **Hybrid ⚖️** | `crates/vector-algo/src/scale.rs` | Menskalakan dimensi gambar secara proporsional ke standar target area 19 Megapixel. |
-| **7** | **Disk Export & JPG Render** | **Hybrid ⚖️** | `crates/vector-io/src/eps.rs` & `jpg.rs` | Menulis SVG, menulis EPS kustom, dan merender JPG secara paralel menggunakan threadpool Rayon. |
+| **Node 1** | **Chromium Auth** | **Node.js / Chromium** | `server/web_server.py` | Mengelola sesi login terautentikasi pengguna secara konsisten. |
+| **Node 2** | **Vectorizer Headless** | **Puppeteer Stealth** | `scripts/vectorizer_headless.js` | Mengonversi gambar raster ke SVG via Vectorizer.ai secara otomatis. |
+| **Node 3 (Phase 0-7)** | **Rust Geometry Engine** | **Rust 🦀 / Python** | `crates/vector-cli`, `run_batch.py` | Transform Baking, RDP Curve Fitting, HSL Color Isolator, 3-Panel Board, dan 11 Seamless Pattern Styles. |
+| **Node 4** | **AI Metadata & ExifTool** | **Puppeteer / ExifTool** | `scripts/metadata_engine.js` | Analisis batch Gemini AI Canvas Vision, ekstraksi Title/Desc/Keywords, injeksi fisik `.eps`/`.jpg`, dan pembuatan `master_katalog.csv`. |
 
 ---
 
 ## Features & Capabilities
 
+- **ComfyUI 4-Node Web Dashboard Server**: Live SSE streaming, visual cable connections, real-time status indicators, and emergency stop control at `http://localhost:8000`.
+- **Full Profile GUI Configuration**: Interactive controls for `config_silhouette.json` supporting dual profiles (`low_color_bad_two` ≤ 5 colors & `multi_color_bad_two` ≥ 6 colors) and raw JSON editor.
 - **Robust SVG Parser**: Accepts standard SVG files exported from Adobe Illustrator, Inkscape, Affinity Designer, and Sketch. Includes automated XML DOCTYPE/DTD pre-processing to safely neutralize XXE attack vectors while preserving 100% of graphic elements, geometry, and styling metadata.
 - **Polygon Union & Boolean Geometry**: High-precision polygon clipping, bounding box rejection, ray-casting point-in-polygon tests, and SVG path data union (`union_svg_d_strings`).
 - **Path Simplification**: Ramer-Douglas-Peucker (RDP) shape-preserving vertex reduction with configurable tolerance.
 - **Canvas Scaling**: Uniform bounding box geometry scaler operating only when canvas dimensions fall below target thresholds.
-- **Seamless Pattern Analyzer & Generator**: 0-100 mathematical pattern suitability score detector and gated tile grid generator preserving original color fills and strokes.
-- **Color & Luminance Variant Engines**: Custom HEX palettes, preset palettes (`pastel`, `cyberpunk`, `monochrome`, `earth`), and bi-directional HSL luminance scaling.
-- **Export Formats**: PostScript 3.0 EPS serializer (AI / Inkscape DSC compliant) and scanline JPEG preview rendering.
+- **Seamless Pattern Analyzer & Generator**: 11 tile pattern styles (`brick_wall`, `slanted_left`, `half_drop_vertical`, `diamond_stagger`, `kaleidoscope_mirror`, etc.) with sub-pixel edge snapping $0.05\text{ px}$.
+- **ExifTool Metadata Injection**: Automates Gemini AI vision analysis and injects IPTC/XMP/EXIF metadata directly into PostScript `.eps` and `.jpg` preview files.
 
 ---
 

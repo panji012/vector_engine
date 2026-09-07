@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vector Engine - 3-Station Modular Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0b0f19;
+      --bg-card: #151d2a;
+      --bg-card-hover: #1e293b;
+      --border-color: #273549;
+      --accent-blue: #38bdf8;
+      --accent-green: #4ade80;
+      --accent-red: #f87171;
+      --accent-yellow: #fbbf24;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      padding: 24px;
+      line-height: 1.5;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Header */
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--bg-card); padding: 18px 24px; border-radius: 16px;
+      border: 1px solid var(--border-color);
+    }
+    .header-title h1 { font-size: 1.4rem; font-weight: 800; color: var(--accent-blue); }
+    .header-title p { font-size: 0.82rem; color: var(--text-muted); }
+
+    /* Button styles */
+    .btn {
+      background: var(--accent-blue); color: #000; font-weight: 700; font-size: 0.85rem;
+      padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer;
+      transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+    }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-green { background: var(--accent-green); color: #000; }
+    .btn-purple { background: #a855f7; color: #fff; }
+    .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
+    .btn-outline:hover { background: var(--bg-card-hover); }
+
+    /* Top Chained Action Bar */
+    .chained-bar {
+      background: linear-gradient(135deg, #1e1b4b, #311b92);
+      border: 1px solid #6366f1; border-radius: 16px; padding: 16px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .chained-bar div h3 { font-size: 1.05rem; font-weight: 700; color: #c084fc; }
+    .chained-bar div p { font-size: 0.82rem; color: #e9d5ff; }
+
+    /* Box 1: Login Station */
+    .box-login {
+      background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color);
+      padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .session-indicator { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; }
+    .status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
+    .status-dot.offline { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
+
+    /* 2 Main Station Columns */
+    .stations-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    
+    .station-box {
+      background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color);
+      padding: 24px; display: flex; flex-direction: column; gap: 16px; position: relative;
+    }
+    .station-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); pb: 14px; }
+    .station-header h2 { font-size: 1.15rem; font-weight: 700; color: var(--accent-blue); }
+    .station-header span { font-size: 0.8rem; color: var(--text-muted); }
+
+    /* Live Counters Grid */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .stat-card {
+      background: #0d131f; border: 1px solid var(--border-color); border-radius: 12px;
+      padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-card .val { font-size: 1.4rem; font-weight: 800; }
+    .stat-card .lbl { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
+
+    .val-queue { color: var(--accent-blue); }
+    .val-success { color: var(--accent-green); }
+    .val-failed { color: var(--accent-red); }
+
+    /* Dropzone */
+    .dropzone {
+      border: 2px dashed var(--border-color); border-radius: 12px; padding: 24px;
+      text-align: center; background: #090d16; cursor: pointer; transition: border 0.2s ease;
+    }
+    .dropzone:hover { border-color: var(--accent-blue); }
+
+    /* File List & Log */
+    .file-queue-box {
+      background: #090d16; border: 1px solid var(--border-color); border-radius: 10px;
+      padding: 12px; max-height: 140px; overflow-y: auto; font-size: 0.82rem;
+    }
+    .file-item { display: flex; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #1e293b; }
+    .file-item:last-child { border-bottom: none; }
+
+    .log-box {
+      background: #05080e; border: 1px solid var(--border-color); border-radius: 10px;
+      padding: 12px; font-family: monospace; font-size: 0.78rem; color: var(--accent-green);
+      height: 120px; overflow-y: auto; white-space: pre-wrap;
+    }
+
+    /* Output Deliverables */
+    .output-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-height: 200px; overflow-y: auto; }
+    .output-card {
+      background: #090d16; border: 1px solid var(--border-color); border-radius: 10px;
+      padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem;
+    }
+    .output-card img { width: 100%; height: 90px; object-fit: contain; border-radius: 6px; background: #fff; }
+
+    select {
+      background: #090d16; border: 1px solid var(--border-color); color: var(--text-main);
+      padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; outline: none; width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="header-title">
+        <h1>Vector Engine 3-Station Modular Dashboard</h1>
+        <p>Dynamic Multi-Station Pipeline: Vectorizer Headless & Rust Engine Phase 1–7</p>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        🌐 Local Server: <strong style="color: var(--accent-blue);">http://localhost:8000</strong>
+      </div>
+    </header>
+
+    <!-- Top Chained Pipeline Action Bar -->
+    <div class="chained-bar">
+      <div>
+        <h3>🚀 JALANKAN PIPELINE OTOMATIS BERURUTAN (FULL CHAINED PIPELINE)</h3>
+        <p>Mengonversi file raster PNG/JPG via Vectorizer Headless (Kotak 2) ➔ Otomatis dioper ke Rust Engine Phase 1-7 (Kotak 3)</p>
+    <!-- TOP ACTION BAR (COMFYUI FLOW CONTROLLER) -->
+    <div class="chained-bar" style="background: linear-gradient(135deg, #111827, #1e1b4b); border: 1px solid #4f46e5; border-radius: 16px; padding: 18px 24px;">
+      <div>
+        <h3 style="color: #a855f7; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+          <span>🚀 COMFY-NODE FLOW EXECUTOR</span>
+          <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 0.75rem; padding: 2px 10px; border-radius: 20px;">NODE 1 ➔ NODE 2 ➔ NODE 3</span>
+        </h3>
+        <p style="font-size: 0.82rem; color: #e9d5ff; margin-top: 2px;">Eksekusi otomatis berurutan dari Autentikasi Sesi ➔ Headless Vectorizer ➔ Geometry Rust Engine</p>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-purple" style="box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);" onclick="runChainedPipeline()">⚡ RUN FULL COMFY FLOW</button>
+        <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 CANCEL QUEUE</button>
+      </div>
+    </div>
+
+    <!-- STATIONS GRID: COMFYUI 3-NODE GRAPH -->
+    <div style="position: relative; margin-top: 10px;">
+      
+      <!-- SVG Connecting Cables (ComfyUI Cable Spline Wires) -->
+      <svg id="comfyWiresSvg" style="position: absolute; top: -10px; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible;">
+        <defs>
+          <linearGradient id="wireGradRunning" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#4ade80"/>
+            <stop offset="50%" stop-color="#38bdf8"/>
+            <stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+          <linearGradient id="wireGradIdle" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#f87171" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#475569" stop-opacity="0.4"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        
+        <!-- Cable Wire 1: Node 1 Output Pin -> Node 2 Input Pin -->
+        <path id="wire1Path" d="M 23.5% 45 C 25.5% 45, 25.5% 45, 26.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
+        <!-- Cable Wire 2: Node 2 Output Pin -> Node 3 Input Pin -->
+        <path id="wire2Path" d="M 48.5% 45 C 50.5% 45, 50.5% 45, 51.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
+        <!-- Cable Wire 3: Node 3 Output Pin -> Node 4 Input Pin -->
+        <path id="wire3Path" d="M 73.5% 45 C 75.5% 45, 75.5% 45, 76.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
+      </svg>
+
+      <div class="stations-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; position: relative; z-index: 3;">
+
+        <!-- NODE 1: CHROMIUM SESSION AUTH -->
+        <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- Out Pin -->
+          <div style="position: absolute; right: -9px; top: 38px; width: 18px; height: 18px; background: #c084fc; border-radius: 50%; box-shadow: 0 0 12px #c084fc; border: 3px solid #0f172a; z-index: 4;" title="Output: Authenticated Session"></div>
+          
+          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+            <div>
+              <h2 style="color: #c084fc; font-size: 1.05rem; font-weight: 800;">🔑 NODE 1: CHROMIUM AUTH</h2>
+              <span style="font-size: 0.75rem; color: #94a3b8;">Session Profile: System Chromium</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Status Lamp Box -->
+          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div id="sessionDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
+                <span id="sessionText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: OFFLINE</span>
+              </div>
+            </div>
+            <p style="font-size: 0.72rem; color: var(--text-muted); word-break: break-all;"><code>/home/panjikali/snap/chromium/common/chromium</code></p>
+          </div>
+
+          <button class="btn btn-purple" style="font-size: 0.85rem; padding: 12px 18px; width: 100%; border-radius: 10px; font-weight: 800;" onclick="triggerLoginSession()">🔑 Sesi Login</button>
+
+          <!-- Console Log Node 1 -->
+          <div class="log-box" id="st1Log" style="height: 110px; color: #c084fc; border-color: #334155;">[NODE 1] Chromium Auth Node Ready.</div>
+        </div>
+
+        <!-- NODE 2: VECTORIZER HEADLESS CONVERTER -->
+        <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- In Pin & Out Pin -->
+          <div style="position: absolute; left: -9px; top: 38px; width: 18px; height: 18px; background: #38bdf8; border-radius: 50%; box-shadow: 0 0 12px #38bdf8; border: 3px solid #0f172a; z-index: 4;" title="Input: Session Auth"></div>
+          <div style="position: absolute; right: -9px; top: 38px; width: 18px; height: 18px; background: #38bdf8; border-radius: 50%; box-shadow: 0 0 12px #38bdf8; border: 3px solid #0f172a; z-index: 4;" title="Output: SVG Files"></div>
+
+          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+            <div>
+              <h2 style="color: #38bdf8; font-size: 1.05rem; font-weight: 800;">🖼️ NODE 2: VECTORIZER HEADLESS</h2>
+              <span style="font-size: 0.75rem; color: #94a3b8;">Raster PNG/JPG ➔ SVG Converter</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Status Lamp Box -->
+          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div id="node2StatusDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
+              <span id="node2StatusText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: IDLE / OFF</span>
+            </div>
+          </div>
+
+          <!-- Live Counters -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="val val-queue" id="st2Queue">0</span>
+              <span class="lbl">📥 ANTREAN</span>
+            </div>
+            <div class="stat-card">
+              <span class="val val-success" id="st2Success">0</span>
+              <span class="lbl">✅ SELESAI</span>
+            </div>
+            <div class="stat-card">
+              <span class="val val-failed" id="st2Failed">0</span>
+              <span class="lbl">❌ GAGAL</span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn" style="flex: 1; font-weight: 800;" onclick="runStation2()">🚀 Jalankan Stasiun 2</button>
+            <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 Stop</button>
+          </div>
+
+          <!-- CAPTCHA Alert Box -->
+          <div id="captchaAlertBox" style="display: none; background: #451a03; border: 1px solid #f59e0b; border-radius: 12px; padding: 14px; margin-top: 10px;">
+            <h4 style="color: #fbbf24; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+              <span>🤖 TERDETEKSI CAPTCHA / CLOUDFLARE!</span>
+            </h4>
+            <p style="font-size: 0.8rem; color: #fef3c7; margin-top: 4px;">Sistem menjeda pemrosesan otomatis. Silakan klik tombol di bawah untuk membuka browser GUI dan menyelesaikan tantangan CAPTCHA.</p>
+            
+            <div style="margin-top: 10px; text-align: center;">
+              <img id="captchaPreviewImg" src="/captcha_screenshot.png" style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 1px solid #f59e0b; background: #000;" alt="Captcha Screenshot Preview">
+            </div>
+
+            <div style="margin-top: 10px; display: flex; gap: 8px;">
+              <button class="btn" style="background: #f59e0b; color: #000; font-weight: 700; font-size: 0.8rem;" onclick="triggerLoginSession()">🔑 Sesi Login & Selesaikan CAPTCHA</button>
+              <button class="btn btn-green" style="font-size: 0.8rem;" onclick="runStation2()">▶️ Resume Stasiun 2</button>
+            </div>
+          </div>
+
+          <!-- Console Log Node 2 -->
+          <div class="log-box" id="st2Log" style="height: 110px; border-color: #334155;">[NODE 2] Headless Converter Ready.</div>
+        </div>
+
+        <!-- NODE 3: VECTOR GEOMETRY RUST ENGINE -->
+        <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- In Pin & Out Pin -->
+          <div style="position: absolute; left: -9px; top: 38px; width: 18px; height: 18px; background: #4ade80; border-radius: 50%; box-shadow: 0 0 12px #4ade80; border: 3px solid #0f172a; z-index: 4;" title="Input: Vector SVG"></div>
+          <div style="position: absolute; right: -9px; top: 38px; width: 18px; height: 18px; background: #4ade80; border-radius: 50%; box-shadow: 0 0 12px #4ade80; border: 3px solid #0f172a; z-index: 4;" title="Output: EPS & JPG Deliverables"></div>
+
+          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+            <div>
+              <h2 style="color: #4ade80; font-size: 1.05rem; font-weight: 800;">⚡ NODE 3: VECTOR GEOMETRY ENGINE</h2>
+              <span style="font-size: 0.75rem; color: #94a3b8;">Rust Simplify ➔ Pattern ➔ EPS & JPG</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Status Lamp Box -->
+          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div id="node3StatusDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
+              <span id="node3StatusText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: IDLE / OFF</span>
+            </div>
+          </div>
+
+          <!-- Live Counters -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="val val-queue" id="st3Queue">0</span>
+              <span class="lbl">📄 ANTREAN</span>
+            </div>
+            <div class="stat-card">
+              <span class="val val-success" id="st3Success">0</span>
+              <span class="lbl">✅ SELESAI</span>
+            </div>
+            <div class="stat-card">
+              <span class="val val-failed" id="st3Failed">0</span>
+              <span class="lbl">❌ GAGAL</span>
+            </div>
+          </div>
+
+          <!-- Export Mode Selector -->
+          <div style="margin-bottom: 8px;">
+            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 4px;">Mode Ekspor Deliverables:</label>
+            <select id="exportModeSelect" style="width: 100%; background: #090d16; color: #4ade80; border: 1px solid #334155; padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 8px;">
+              <option value="auto" selected>🤖 Auto Profile (config_silhouette.json: Pattern & 3-Panel)</option>
+              <option value="pattern">🎨 Seamless Pattern Only (--pattern)</option>
+              <option value="double">📊 Stock Presentation Board Only (2/3 Panel bad_two)</option>
+              <option value="single">🖼️ Single Output Only (--single)</option>
+            </select>
+          </div>
+
+          <!-- Option Pattern Style -->
+          <div>
+            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 4px;">Pilih Style Seamless Pattern (Phase 5):</label>
+            <select id="patternStyleSelect" style="width: 100%; background: #090d16; color: #f8fafc; border: 1px solid #334155; padding: 8px; border-radius: 8px; font-weight: 600; margin-bottom: 8px;">
+              <option value="brick_wall" selected>brick_wall (Susunan Bata Horizontal)</option>
+              <option value="slanted_left">slanted_left (Miring Kiri -50%)</option>
+              <option value="slanted_right">slanted_right (Miring Kanan +50%)</option>
+              <option value="half_drop_vertical">half_drop_vertical (Half-drop Kolom Vertikal)</option>
+              <option value="diamond_stagger">diamond_stagger (Matriks Belah Ketupat)</option>
+              <option value="checker_pinwheel">checker_pinwheel (Rotasi Kincir 90°)</option>
+              <option value="scale_rhythm">scale_rhythm (Irama Skala Ganda 100% & 75%)</option>
+              <option value="wave_sine_offset">wave_sine_offset (Gelombang Sinus)</option>
+              <option value="kaleidoscope_mirror">kaleidoscope_mirror (Simetri Cermin 4 Arah)</option>
+              <option value="grid">grid (Grid Lurus Sejajar NxM)</option>
+              <option value="alternating">alternating (Cermin Selang-Seling)</option>
+            </select>
+          </div>
+
+          <!-- Advanced Engine & Pattern Config Box -->
+          <details open style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+            <summary style="font-size: 0.85rem; font-weight: 800; color: #4ade80; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;">
+              <span>⚙️ Konfigurasi Lengkap Profil (config_silhouette.json)</span>
+              <span style="font-size: 0.72rem; color: #94a3b8;">Klik untuk lipat/buka</span>
+            </summary>
+
+            <!-- Navigation Sub-Tabs -->
+            <div style="display: flex; gap: 4px; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 6px;">
+              <button type="button" class="cfg-tab active" id="tabBtnLow" onclick="switchCfgTab('low')" style="background: #1e293b; color: #4ade80; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">🎨 Low-Color (≤ 5)</button>
+              <button type="button" class="cfg-tab" id="tabBtnMulti" onclick="switchCfgTab('multi')" style="background: #0f172a; color: #94a3b8; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">📊 Multi-Color (≥ 6)</button>
+              <button type="button" class="cfg-tab" id="tabBtnJson" onclick="switchCfgTab('json')" style="background: #0f172a; color: #94a3b8; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">📝 Raw JSON Editor</button>
+            </div>
+
+            <!-- TAB 1: LOW-COLOR PROFILE (<= 5 colors) -->
+            <div id="cfgPanelLow" style="display: flex; flex-direction: column; gap: 8px; font-size: 0.75rem; color: #cbd5e1;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="flex: 1;">Max Colors (Warna ≤):</span>
+                <input type="number" id="lowMaxColorsInput" value="5" min="1" max="100" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+                <span style="flex: 1;">Edge Threshold:</span>
+                <input type="number" id="lowThresholdInput" value="0.50" step="0.05" min="0" max="1" style="width: 55px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+              </div>
+
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="lineArtCheck" style="accent-color: #4ade80;">
+                <span><strong>Mode Line Art / Silhouette Only</strong></span>
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="lowPatternEnableCheck" checked style="accent-color: #4ade80;">
+                <span><strong>Enable Pattern Export</strong> (Ubin Seamless)</span>
+              </label>
+
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1;">Grid Repeat (Kolom × Baris):</span>
+                <input type="number" id="gridXInput" value="3" min="1" max="10" style="width: 45px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+                <span>×</span>
+                <input type="number" id="gridYInput" value="3" min="1" max="10" style="width: 45px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+              </div>
+
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="wraparoundCheck" checked style="accent-color: #4ade80;">
+                <span>Wraparound Seamless (Tepi Melingkar Canvas)</span>
+              </label>
+
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1;">Tile Gap Margin (px):</span>
+                <input type="number" id="gapInput" value="50.0" step="5" style="width: 65px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="flex: 1;">Background Color:</span>
+                <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 32px; height: 24px; border: none; background: none; cursor: pointer;">
+                <input type="text" id="bgColorText" value="#FFFFFF" style="width: 65px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+              </div>
+            </div>
+
+            <!-- TAB 2: MULTI-COLOR PROFILE (>= 6 colors) -->
+            <div id="cfgPanelMulti" style="display: none; flex-direction: column; gap: 8px; font-size: 0.75rem; color: #cbd5e1;">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="flex: 1;">Min Colors (Warna ≥):</span>
+                <input type="number" id="multiMinColorsInput" value="6" min="1" max="100" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+                <span style="flex: 1;">Simplify Threshold:</span>
+                <input type="number" id="multiThresholdInput" value="0.95" step="0.05" min="0" max="1" style="width: 55px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+              </div>
+
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="multiPatternEnableCheck" style="accent-color: #4ade80;">
+                <span><strong>Enable Pattern Export for Multi-Color</strong></span>
+              </label>
+
+              <div style="border-top: 1px dashed #334155; padding-top: 6px; margin-top: 4px;">
+                <strong style="color: #38bdf8;">Board Panel 2 (Middle - Greyscale):</strong>
+                <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                  <span>Min Lum:</span>
+                  <input type="number" id="midMinLumInput" value="0.20" step="0.05" min="0" max="1" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+                  <span>Max Lum:</span>
+                  <input type="number" id="midMaxLumInput" value="0.62" step="0.05" min="0" max="1" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+                </div>
+              </div>
+
+              <div style="border-top: 1px dashed #334155; padding-top: 6px; margin-top: 4px;">
+                <strong style="color: #fbbf24;">Board Panel 3 (Right - Dominant Color):</strong>
+                <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                  <span>Min Lum:</span>
+                  <input type="number" id="rightMinLumInput" value="0.20" step="0.05" min="0" max="1" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+                  <span>Max Lum:</span>
+                  <input type="number" id="rightMaxLumInput" value="0.62" step="0.05" min="0" max="1" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
+                </div>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 4px;">
+                  <input type="checkbox" id="rightExcludeBgCheck" checked style="accent-color: #fbbf24;">
+                  <span>Exclude Background Color</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- TAB 3: RAW JSON EDITOR -->
+            <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 6px;">
+              <textarea id="rawJsonArea" style="width: 100%; height: 160px; background: #05080e; border: 1px solid #334155; color: #38bdf8; font-family: monospace; font-size: 0.72rem; padding: 8px; border-radius: 6px; resize: vertical;"></textarea>
+              <button type="button" class="btn btn-outline" style="font-size: 0.72rem; padding: 4px 8px; align-self: flex-end;" onclick="saveRawJsonConfig()">💾 Simpan JSON Direct</button>
+            </div>
+
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
+              <span id="cfgSaveNotice" style="font-size: 0.72rem; color: #4ade80; display: none;">✅ Settings tersimpan</span>
+              <button type="button" class="btn btn-purple" style="font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; margin-left: auto;" onclick="saveAllSilhouetteConfig()">💾 Simpan Settings Profile</button>
+            </div>
+          </details>
+
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <button class="btn btn-green" style="flex: 1; font-weight: 800;" onclick="runStation3()">⚡ Jalankan Stasiun 3</button>
+            <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 Stop</button>
+          </div>
+
+          <!-- Console Log Node 3 -->
+          <div class="log-box" id="st3Log" style="height: 110px; border-color: #334155;">[NODE 3] Rust Engine Ready.</div>
+
+          <!-- Outputs Gallery -->
+          <div>
+            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 6px;">Hasil Paket Deliverables (EPS & JPG):</label>
+            <div class="output-grid" id="st3OutputGrid">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- NODE 4: AI METADATA & EXIFTOOL INJECTOR -->
+        <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- In Pin -->
+          <div style="position: absolute; left: -9px; top: 38px; width: 18px; height: 18px; background: #f59e0b; border-radius: 50%; box-shadow: 0 0 12px #f59e0b; border: 3px solid #0f172a; z-index: 4;" title="Input: EPS & JPG Deliverables"></div>
+
+          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+            <div>
+              <h2 style="color: #f59e0b; font-size: 1.05rem; font-weight: 800;">🏷️ NODE 4: AI METADATA & EXIFTOOL</h2>
+              <span style="font-size: 0.75rem; color: #94a3b8;">Gemini Canvas AI ➔ ExifTool Metadata Injected</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Status Lamp Box -->
+          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div id="node4StatusDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
+              <span id="node4StatusText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: IDLE / OFF</span>
+            </div>
+          </div>
+
+          <!-- Live Counters -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="val val-queue" id="st4Queue">0</span>
+              <span class="lbl">📄 PASANGAN</span>
+            </div>
+            <div class="stat-card">
+              <span class="val val-success" id="st4Success">0</span>
+              <span class="lbl">✅ INJEKSI</span>
+            </div>
+            <div class="stat-card">
+              <span class="val val-failed" id="st4Failed">0</span>
+              <span class="lbl">❌ GAGAL</span>
+            </div>
+          </div>
+
+          <!-- Form Controls Node 4 -->
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
+            <div>
+              <label style="font-size: 0.72rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Gemini Canvas AI Link:</label>
+              <input type="text" id="geminiUrlInput" value="https://gemini.google.com/app/1c8f6f7e10330ba6" style="width: 100%; background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.75rem; padding: 6px 8px; border-radius: 6px;">
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <label style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">Ukuran Batch File:</label>
+              <input type="number" id="batchSizeInput" value="5" min="1" max="50" style="width: 60px; background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.75rem; text-align: center; padding: 4px; border-radius: 6px;">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <button class="btn" style="flex: 1; background: #f59e0b; color: #000; font-weight: 800;" onclick="runStation4()">🚀 Jalankan Stasiun 4</button>
+            <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 Stop</button>
+          </div>
+
+          <a href="/api/download_master_csv" target="_blank" class="btn btn-outline" style="width: 100%; text-align: center; font-size: 0.78rem; margin-bottom: 8px; text-decoration: none; display: block;">📥 Download Master Katalog CSV</a>
+
+          <!-- Console Log Node 4 -->
+          <div class="log-box" id="st4Log" style="height: 110px; border-color: #334155;">[NODE 4] AI Metadata Engine Ready.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Color picker and text input sync
+    document.addEventListener('DOMContentLoaded', () => {
+      const picker = document.getElementById('bgColorPicker');
+      const txt = document.getElementById('bgColorText');
+      if (picker && txt) {
+        picker.addEventListener('input', e => txt.value = e.target.value.toUpperCase());
+        txt.addEventListener('input', e => {
+          if (/^#[0-9A-F]{6}$/i.test(e.target.value)) picker.value = e.target.value;
+        });
+      }
+      loadConfigSilhouette();
+    });
+
+    async function loadConfigSilhouette() {
+      try {
+        const res = await fetch('/api/config_silhouette');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const area = document.getElementById('rawJsonArea');
+        if (area) area.value = JSON.stringify(data, null, 4);
+
+        if (data.low_color_bad_two) {
+          const low = data.low_color_bad_two;
+          if (document.getElementById('lowMaxColorsInput')) document.getElementById('lowMaxColorsInput').value = low.max_colors ?? 5;
+          if (document.getElementById('lowThresholdInput')) document.getElementById('lowThresholdInput').value = low.threshold ?? 0.50;
+          if (document.getElementById('lineArtCheck')) document.getElementById('lineArtCheck').checked = !!low.line_art;
+          if (document.getElementById('gapInput')) document.getElementById('gapInput').value = low.gap ?? 50.0;
+          if (document.getElementById('bgColorText')) document.getElementById('bgColorText').value = low.bg_color || "#FFFFFF";
+          if (document.getElementById('bgColorPicker')) document.getElementById('bgColorPicker').value = low.bg_color || "#FFFFFF";
+          
+          if (low.pattern_config) {
+            const pc = low.pattern_config;
+            if (document.getElementById('lowPatternEnableCheck')) document.getElementById('lowPatternEnableCheck').checked = !!pc.enable;
+            if (document.getElementById('patternStyleSelect')) document.getElementById('patternStyleSelect').value = pc.style || "brick_wall";
+            if (document.getElementById('gridXInput')) document.getElementById('gridXInput').value = pc.grid_x ?? 3;
+            if (document.getElementById('gridYInput')) document.getElementById('gridYInput').value = pc.grid_y ?? 3;
+            if (document.getElementById('wraparoundCheck')) document.getElementById('wraparoundCheck').checked = !!pc.wraparound_seamless;
+          }
+        }
+
+        if (data.multi_color_bad_two) {
+          const multi = data.multi_color_bad_two;
+          if (document.getElementById('multiMinColorsInput')) document.getElementById('multiMinColorsInput').value = multi.min_colors ?? 6;
+          if (document.getElementById('multiThresholdInput')) document.getElementById('multiThresholdInput').value = multi.threshold ?? 0.95;
+          if (multi.pattern_config) {
+            if (document.getElementById('multiPatternEnableCheck')) document.getElementById('multiPatternEnableCheck').checked = !!multi.pattern_config.enable;
+          }
+          if (multi.middle_panel) {
+            if (document.getElementById('midMinLumInput')) document.getElementById('midMinLumInput').value = multi.middle_panel.min_luminance ?? 0.20;
+            if (document.getElementById('midMaxLumInput')) document.getElementById('midMaxLumInput').value = multi.middle_panel.max_luminance ?? 0.62;
+          }
+          if (multi.right_panel) {
+            if (document.getElementById('rightMinLumInput')) document.getElementById('rightMinLumInput').value = multi.right_panel.min_luminance ?? 0.20;
+            if (document.getElementById('rightMaxLumInput')) document.getElementById('rightMaxLumInput').value = multi.right_panel.max_luminance ?? 0.62;
+            if (document.getElementById('rightExcludeBgCheck')) document.getElementById('rightExcludeBgCheck').checked = !!multi.right_panel.exclude_background;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load config_silhouette:", err);
+      }
+    }
+
+    function switchCfgTab(tab) {
+      const pLow = document.getElementById('cfgPanelLow');
+      const pMulti = document.getElementById('cfgPanelMulti');
+      const pJson = document.getElementById('cfgPanelJson');
+      
+      const bLow = document.getElementById('tabBtnLow');
+      const bMulti = document.getElementById('tabBtnMulti');
+      const bJson = document.getElementById('tabBtnJson');
+
+      if (pLow) pLow.style.display = tab === 'low' ? 'flex' : 'none';
+      if (pMulti) pMulti.style.display = tab === 'multi' ? 'flex' : 'none';
+      if (pJson) pJson.style.display = tab === 'json' ? 'flex' : 'none';
+
+      if (bLow) { bLow.style.background = tab === 'low' ? '#1e293b' : '#0f172a'; bLow.style.color = tab === 'low' ? '#4ade80' : '#94a3b8'; }
+      if (bMulti) { bMulti.style.background = tab === 'multi' ? '#1e293b' : '#0f172a'; bMulti.style.color = tab === 'multi' ? '#4ade80' : '#94a3b8'; }
+      if (bJson) { bJson.style.background = tab === 'json' ? '#1e293b' : '#0f172a'; bJson.style.color = tab === 'json' ? '#4ade80' : '#94a3b8'; }
+    }
+
+    async function saveAllSilhouetteConfig() {
+      const cfg = getStation3Config();
+      try {
+        await fetch('/api/run_station_3', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(cfg)
+        });
+        const showNotice = document.getElementById('cfgSaveNotice');
+        if (showNotice) {
+          showNotice.style.display = 'inline';
+          setTimeout(() => showNotice.style.display = 'none', 3000);
+        }
+        loadConfigSilhouette();
+      } catch(e) {
+        alert("Gagal menyimpan konfigurasi: " + e);
+      }
+    }
+
+    async function saveRawJsonConfig() {
+      const area = document.getElementById('rawJsonArea');
+      if (!area) return;
+      try {
+        const parsed = JSON.parse(area.value);
+        const res = await fetch('/api/config_silhouette', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(parsed)
+        });
+        const data = await res.json();
+        alert(data.message || "Konfigurasi JSON berhasil disimpan!");
+        loadConfigSilhouette();
+      } catch(e) {
+        alert("Format JSON tidak valid: " + e.message);
+      }
+    }
+
+    function getStation3Config() {
+      const txt = document.getElementById('bgColorText');
+      const picker = document.getElementById('bgColorPicker');
+      const color = txt ? txt.value : (picker ? picker.value : "#FFFFFF");
+      return {
+        export_mode: document.getElementById('exportModeSelect') ? document.getElementById('exportModeSelect').value : "auto",
+        pattern_style: document.getElementById('patternStyleSelect') ? document.getElementById('patternStyleSelect').value : "brick_wall",
+        pattern_enable: document.getElementById('lowPatternEnableCheck') ? document.getElementById('lowPatternEnableCheck').checked : true,
+        grid_x: parseInt(document.getElementById('gridXInput') ? document.getElementById('gridXInput').value : 3),
+        grid_y: parseInt(document.getElementById('gridYInput') ? document.getElementById('gridYInput').value : 3),
+        wraparound: document.getElementById('wraparoundCheck') ? document.getElementById('wraparoundCheck').checked : true,
+        gap: parseFloat(document.getElementById('gapInput') ? document.getElementById('gapInput').value : 50.0),
+        bg_color: color,
+        line_art: document.getElementById('lineArtCheck') ? document.getElementById('lineArtCheck').checked : false,
+        low_max_colors: parseInt(document.getElementById('lowMaxColorsInput') ? document.getElementById('lowMaxColorsInput').value : 5),
+        low_threshold: parseFloat(document.getElementById('lowThresholdInput') ? document.getElementById('lowThresholdInput').value : 0.50),
+        low_pattern_enable: document.getElementById('lowPatternEnableCheck') ? document.getElementById('lowPatternEnableCheck').checked : true,
+        low_pattern_style: document.getElementById('patternStyleSelect') ? document.getElementById('patternStyleSelect').value : "brick_wall",
+        multi_min_colors: parseInt(document.getElementById('multiMinColorsInput') ? document.getElementById('multiMinColorsInput').value : 6),
+        multi_threshold: parseFloat(document.getElementById('multiThresholdInput') ? document.getElementById('multiThresholdInput').value : 0.95),
+        multi_pattern_enable: document.getElementById('multiPatternEnableCheck') ? document.getElementById('multiPatternEnableCheck').checked : false,
+        multi_pattern_style: document.getElementById('patternStyleSelect') ? document.getElementById('patternStyleSelect').value : "brick_wall",
+        mid_min_lum: parseFloat(document.getElementById('midMinLumInput') ? document.getElementById('midMinLumInput').value : 0.20),
+        mid_max_lum: parseFloat(document.getElementById('midMaxLumInput') ? document.getElementById('midMaxLumInput').value : 0.62),
+        right_min_lum: parseFloat(document.getElementById('rightMinLumInput') ? document.getElementById('rightMinLumInput').value : 0.20),
+        right_max_lum: parseFloat(document.getElementById('rightMaxLumInput') ? document.getElementById('rightMaxLumInput').value : 0.62),
+        right_exclude_bg: document.getElementById('rightExcludeBgCheck') ? document.getElementById('rightExcludeBgCheck').checked : true,
+        gemini_url: document.getElementById('geminiUrlInput') ? document.getElementById('geminiUrlInput').value.trim() : "",
+        batch_size: parseInt(document.getElementById('batchSizeInput') ? document.getElementById('batchSizeInput').value : 5)
+      };
+    }
+
+    async function updateStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        // Node 1 Status Lamp (Auth Node)
+        const n1Dot = document.getElementById('sessionDot');
+        const n1Text = document.getElementById('sessionText');
+        if (data.has_login_session) {
+          n1Dot.style.background = '#4ade80';
+          n1Dot.style.boxShadow = '0 0 12px #4ade80';
+          n1Text.innerText = 'STATUS: ONLINE (LOGGED IN)';
+          n1Text.style.color = '#4ade80';
+        } else {
+          n1Dot.style.background = '#f87171';
+          n1Dot.style.boxShadow = '0 0 12px #f87171';
+          n1Text.innerText = 'STATUS: OFFLINE';
+          n1Text.style.color = '#f87171';
+        }
+
+        // Node 2 Status Lamp (Headless Node)
+        const n2Dot = document.getElementById('node2StatusDot');
+        const n2Text = document.getElementById('node2StatusText');
+        const wire1 = document.getElementById('wire1Path');
+        const st2Running = data.job && data.job.station_2 && data.job.station_2.running;
+        if (st2Running) {
+          if (n2Dot) { n2Dot.style.background = '#4ade80'; n2Dot.style.boxShadow = '0 0 12px #4ade80'; }
+          if (n2Text) { n2Text.innerText = 'STATUS: RUNNING (CONVERTING)'; n2Text.style.color = '#4ade80'; }
+          if (wire1) { wire1.setAttribute('stroke', 'url(#wireGradRunning)'); wire1.setAttribute('stroke-dasharray', 'none'); }
+        } else {
+          if (n2Dot) { n2Dot.style.background = '#f87171'; n2Dot.style.boxShadow = '0 0 12px #f87171'; }
+          if (n2Text) { n2Text.innerText = 'STATUS: IDLE / OFF'; n2Text.style.color = '#f87171'; }
+          if (wire1) { wire1.setAttribute('stroke', 'url(#wireGradIdle)'); wire1.setAttribute('stroke-dasharray', '8 4'); }
+        }
+
+        // Node 3 Status Lamp (Rust Engine Node)
+        const n3Dot = document.getElementById('node3StatusDot');
+        const n3Text = document.getElementById('node3StatusText');
+        const wire2 = document.getElementById('wire2Path');
+        const st3Running = data.job && data.job.station_3 && data.job.station_3.running;
+        if (st3Running) {
+          if (n3Dot) { n3Dot.style.background = '#4ade80'; n3Dot.style.boxShadow = '0 0 12px #4ade80'; }
+          if (n3Text) { n3Text.innerText = 'STATUS: RUNNING (PROCESSING)'; n3Text.style.color = '#4ade80'; }
+          if (wire2) { wire2.setAttribute('stroke', 'url(#wireGradRunning)'); wire2.setAttribute('stroke-dasharray', 'none'); }
+        } else {
+          if (n3Dot) { n3Dot.style.background = '#f87171'; n3Dot.style.boxShadow = '0 0 12px #f87171'; }
+          if (n3Text) { n3Text.innerText = 'STATUS: IDLE / OFF'; n3Text.style.color = '#f87171'; }
+          if (wire2) { wire2.setAttribute('stroke', 'url(#wireGradIdle)'); wire2.setAttribute('stroke-dasharray', '8 4'); }
+        }
+
+        // Node 4 Status Lamp (AI Metadata Node)
+        const n4Dot = document.getElementById('node4StatusDot');
+        const n4Text = document.getElementById('node4StatusText');
+        const wire3 = document.getElementById('wire3Path');
+        const st4Running = data.job && data.job.station_4 && data.job.station_4.running;
+        if (st4Running) {
+          if (n4Dot) { n4Dot.style.background = '#f59e0b'; n4Dot.style.boxShadow = '0 0 12px #f59e0b'; }
+          if (n4Text) { n4Text.innerText = 'STATUS: RUNNING (AI INJECTING)'; n4Text.style.color = '#f59e0b'; }
+          if (wire3) { wire3.setAttribute('stroke', 'url(#wireGradRunning)'); wire3.setAttribute('stroke-dasharray', 'none'); }
+        } else {
+          if (n4Dot) { n4Dot.style.background = '#f87171'; n4Dot.style.boxShadow = '0 0 12px #f87171'; }
+          if (n4Text) { n4Text.innerText = 'STATUS: IDLE / OFF'; n4Text.style.color = '#f87171'; }
+          if (wire3) { wire3.setAttribute('stroke', 'url(#wireGradIdle)'); wire3.setAttribute('stroke-dasharray', '8 4'); }
+        }
+
+        // Update Box 2 Live Stats
+        if (document.getElementById('st2Queue')) document.getElementById('st2Queue').innerText = data.vec_input_files.length;
+        if (document.getElementById('st2Success')) document.getElementById('st2Success').innerText = data.stats.station_2_success;
+        if (document.getElementById('st2Failed')) document.getElementById('st2Failed').innerText = data.stats.station_2_failed;
+
+        // Update Box 3 Live Stats
+        if (document.getElementById('st3Queue')) document.getElementById('st3Queue').innerText = data.input_files.length;
+        if (document.getElementById('st3Success')) document.getElementById('st3Success').innerText = data.stats.station_3_success;
+        if (document.getElementById('st3Failed')) document.getElementById('st3Failed').innerText = data.stats.station_3_failed;
+
+        // Update Box 4 Live Stats
+        if (document.getElementById('st4Queue')) document.getElementById('st4Queue').innerText = data.output_files ? Math.floor(data.output_files.length / 2) : 0;
+        if (document.getElementById('st4Success')) document.getElementById('st4Success').innerText = data.stats.station_4_success;
+        if (document.getElementById('st4Failed')) document.getElementById('st4Failed').innerText = data.stats.station_4_failed;
+
+        // Update Outputs Gallery
+        const outGrid = document.getElementById('st3OutputGrid');
+        if (data.output_files.length > 0) {
+          outGrid.innerHTML = data.output_files.map(f => {
+            const isImg = f.endsWith('.jpg') || f.endsWith('.png');
+            return `
+              <div class="output-card">
+                ${isImg ? `<img src="/api/preview?file=${encodeURIComponent(f)}" alt="${f}">` : `<div style="height:90px; display:flex; align-items:center; justify-content:center; background:#1e293b; border-radius:6px; font-weight:bold; color:#38bdf8;">EPS DELIVERABLE</div>`}
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f}</span>
+                <a class="btn btn-outline" style="font-size:0.72rem; padding:4px 8px;" href="/api/download?file=${encodeURIComponent(f)}">📥 Download</a>
+              </div>
+            `;
+          }).join('');
+        }
+      } catch (err) {
+        console.error('Update status error:', err);
+      }
+    }
+
+    async function retryFailedFiles() {
+      if (!confirm('Kembalikan semua file gagal ke antrean utama untuk dicoba ulang?')) return;
+      try {
+        const res = await fetch('/api/retry_failed', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || 'Berhasil mengembalikan file gagal ke antrean.');
+        updateStatus();
+      } catch (err) {
+        alert('Gagal retry file: ' + err.message);
+      }
+    }
+
+    async function toggleManifestMode() {
+      try {
+        const res = await fetch('/api/toggle_manifest', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || 'Status Absensi Batch berhasil diubah.');
+        updateStatus();
+      } catch (err) {
+        alert('Gagal mengubah mode absensi: ' + err.message);
+      }
+    }
+
+    async function triggerAutoRename() {
+      const prefix = document.getElementById('renamePrefixInput').value.trim() || 'vector_stock';
+      try {
+        const res = await fetch('/api/auto_rename', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prefix: prefix })
+        });
+        const data = await res.json();
+        alert(data.message || 'Berhasil merename file antrean secara urut');
+        updateStatus();
+      } catch (err) {
+        alert('Gagal auto-rename: ' + err.message);
+      }
+    }
+
+    async function uploadFiles(files, endpoint) {
+      if (!files || files.length === 0) return;
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+      try {
+        const res = await fetch(endpoint, { method: 'POST', body: formData });
+        const data = await res.json();
+        alert(data.message || 'Berhasil diunggah ke server');
+        updateStatus();
+      } catch (err) {
+        alert('Gagal unggah: ' + err.message);
+      }
+    }
+
+    async function triggerLoginSession() {
+      const res = await fetch('/api/login-session', { method: 'POST' });
+      const data = await res.json();
+      alert(data.message);
+    }
+
+    async function resetProfile() {
+      if (!confirm("Apakah Anda yakin ingin mereset profil Chromium? Sesi login lama akan dihapus bersih.")) return;
+      const res = await fetch('/api/reset_profile', { method: 'POST' });
+      const data = await res.json();
+      alert(data.message);
+      updateStatus();
+    }
+
+    async function runStation2() {
+      const res = await fetch('/api/run_station_2', { method: 'POST' });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+    }
+
+    async function runStation3() {
+      const config = getStation3Config();
+      const res = await fetch('/api/run_station_3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+    }
+
+    async function runStation4() {
+      const geminiUrl = document.getElementById('geminiUrlInput').value.trim();
+      const batchSize = parseInt(document.getElementById('batchSizeInput').value) || 5;
+      const res = await fetch('/api/run_station_4', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gemini_url: geminiUrl, batch_size: batchSize })
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+    }
+
+    async function runChainedPipeline() {
+      const config = getStation3Config();
+      const res = await fetch('/api/run_chained', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+    }
+
+    async function stopPipeline() {
+      if (!confirm("Apakah Anda yakin ingin menghentikan proses pipeline yang sedang berjalan?")) return;
+      try {
+        const res = await fetch('/api/stop', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message || 'Proses dihentikan.');
+        updateStatus();
+      } catch (err) {
+        alert('Gagal menghentikan: ' + err.message);
+      }
+    }
+
+    // SSE EventSource for real-time progress & counters (with deduplicated log messages)
+    let lastSt2Log = "";
+    let lastSt3Log = "";
+    let lastSt4Log = "";
+
+    function handleSSEData(data) {
+      if (data.job) {
+        if (data.job.station_2 && data.job.station_2.log && data.job.station_2.log !== lastSt2Log) {
+          lastSt2Log = data.job.station_2.log;
+          const log2 = document.getElementById('st2Log');
+          if (log2) {
+            log2.innerText += '\n' + lastSt2Log;
+            log2.scrollTop = log2.scrollHeight;
+          }
+          if (lastSt2Log.includes('CAPTCHA_DETECTED')) {
+            const alertBox = document.getElementById('captchaAlertBox');
+            if (alertBox) {
+              alertBox.style.display = 'block';
+              const img = document.getElementById('captchaPreviewImg');
+              if (img) img.src = '/captcha_screenshot.png?t=' + Date.now();
+            }
+          }
+        }
+        if (data.job.station_3 && data.job.station_3.log && data.job.station_3.log !== lastSt3Log) {
+          lastSt3Log = data.job.station_3.log;
+          const log3 = document.getElementById('st3Log');
+          if (log3) {
+            log3.innerText += '\n' + lastSt3Log;
+            log3.scrollTop = log3.scrollHeight;
+          }
+        }
+        if (data.job.station_4 && data.job.station_4.log && data.job.station_4.log !== lastSt4Log) {
+          lastSt4Log = data.job.station_4.log;
+          const log4 = document.getElementById('st4Log');
+          if (log4) {
+            log4.innerText += '\n' + lastSt4Log;
+            log4.scrollTop = log4.scrollHeight;
+          }
+        }
+      }
+      if (data.stats) {
+        if (document.getElementById('st2Success')) document.getElementById('st2Success').innerText = data.stats.station_2_success;
+        if (document.getElementById('st2Failed')) document.getElementById('st2Failed').innerText = data.stats.station_2_failed;
+        if (document.getElementById('st3Success')) document.getElementById('st3Success').innerText = data.stats.station_3_success;
+        if (document.getElementById('st3Failed')) document.getElementById('st3Failed').innerText = data.stats.station_3_failed;
+        if (document.getElementById('st4Success')) document.getElementById('st4Success').innerText = data.stats.station_4_success;
+        if (document.getElementById('st4Failed')) document.getElementById('st4Failed').innerText = data.stats.station_4_failed;
+      }
+      updateStatus();
+    }
+
+    function connectSSE() {
+      const evtSource = new EventSource('/api/progress');
+      evtSource.onmessage = function(e) {
+        try { handleSSEData(JSON.parse(e.data)); } catch (err) {}
+      };
+      evtSource.addEventListener('update', function(e) {
+        try { handleSSEData(JSON.parse(e.data)); } catch (err) {}
+      });
+    }
+
+    updateStatus();
+    setInterval(updateStatus, 4000);
+    connectSSE();
+  </script>
+</body>
+</html>

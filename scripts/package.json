@@ -1,0 +1,11 @@
+{
+  "name": "vectorizer-scripts",
+  "version": "1.0.0",
+  "description": "Headless Vectorizer.ai Automation Scripts",
+  "main": "vectorizer_headless.js",
+  "dependencies": {
+    "puppeteer-core": "^22.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  }
+}

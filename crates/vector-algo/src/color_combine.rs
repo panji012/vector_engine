@@ -279,7 +279,8 @@ impl ColorCombiner {
                 || pid.contains("canvas_bg")
                 || Some(idx) == bg_idx_opt;
 
-            if pid.starts_with("stencil_sub_") || is_full_bg {
+            let is_stencil_standalone = pid.starts_with("stencil_sub_") && !pid.contains("_tile_");
+            if is_stencil_standalone || is_full_bg {
                 let mut standalone_path = path.clone();
                 if is_full_bg {
                     standalone_path.group_id = usize::MAX;
