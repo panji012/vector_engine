@@ -152,9 +152,9 @@
       <div>
         <h3 style="color: #a855f7; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
           <span>🚀 COMFY-NODE FLOW EXECUTOR</span>
-          <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 0.75rem; padding: 2px 10px; border-radius: 20px;">NODE 1 ➔ NODE 2 ➔ NODE 3</span>
+          <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 0.75rem; padding: 2px 10px; border-radius: 20px;">NODE 0 ➔ NODE 1 ➔ NODE 2 ➔ NODE 3 ➔ NODE 4</span>
         </h3>
-        <p style="font-size: 0.82rem; color: #e9d5ff; margin-top: 2px;">Eksekusi otomatis berurutan dari Autentikasi Sesi ➔ Headless Vectorizer ➔ Geometry Rust Engine</p>
+        <p style="font-size: 0.82rem; color: #e9d5ff; margin-top: 2px;">Eksekusi otomatis berurutan dari AI Concept Remixer ➔ Chromium Auth ➔ Headless Vectorizer ➔ Rust Geometry Engine ➔ AI Metadata ExifTool</p>
       </div>
       <div style="display: flex; gap: 10px;">
         <button class="btn btn-purple" style="box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);" onclick="runChainedPipeline()">⚡ RUN FULL COMFY FLOW</button>
@@ -186,15 +186,139 @@
           </filter>
         </defs>
         
+        <!-- Cable Wire 0: Node 0 Output Pin -> Node 1 Input Pin -->
+        <path id="wire0Path" d="M 18.5% 45 C 20.5% 45, 20.5% 45, 21.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
         <!-- Cable Wire 1: Node 1 Output Pin -> Node 2 Input Pin -->
-        <path id="wire1Path" d="M 23.5% 45 C 25.5% 45, 25.5% 45, 26.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
+        <path id="wire1Path" d="M 38.5% 45 C 40.5% 45, 40.5% 45, 41.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
         <!-- Cable Wire 2: Node 2 Output Pin -> Node 3 Input Pin -->
-        <path id="wire2Path" d="M 48.5% 45 C 50.5% 45, 50.5% 45, 51.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
+        <path id="wire2Path" d="M 58.5% 45 C 60.5% 45, 60.5% 45, 61.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
         <!-- Cable Wire 3: Node 3 Output Pin -> Node 4 Input Pin -->
-        <path id="wire3Path" d="M 73.5% 45 C 75.5% 45, 75.5% 45, 76.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
+        <path id="wire3Path" d="M 78.5% 45 C 80.5% 45, 80.5% 45, 81.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
       </svg>
 
-      <div class="stations-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; position: relative; z-index: 3;">
+      <div class="stations-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; position: relative; z-index: 3;">
+
+        <!-- NODE 0: AI CONCEPT REMIXER PRO -->
+        <div class="station-box" style="background: #0f172a; border: 1px solid #14b8a6; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+          <!-- Out Pin -->
+          <div style="position: absolute; right: -9px; top: 38px; width: 18px; height: 18px; background: #14b8a6; border-radius: 50%; box-shadow: 0 0 12px #14b8a6; border: 3px solid #0f172a; z-index: 4;" title="Output: Remix JPG Files to Node 2"></div>
+
+          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
+            <div>
+              <h2 style="color: #14b8a6; font-size: 1.05rem; font-weight: 800;">🎨 NODE 0: AI REMIXER PRO</h2>
+              <span style="font-size: 0.75rem; color: #94a3b8;">Gemini AI Image Remix Engine</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Status Lamp Box -->
+          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div id="node0StatusDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
+              <span id="node0StatusText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: IDLE / OFF</span>
+            </div>
+          </div>
+
+          <!-- Live Counters -->
+          <div class="stats-row">
+            <div class="stat-card">
+              <span class="val val-queue" id="st0Queue">0</span>
+              <span class="lbl">📥 ANTREAN</span>
+            </div>
+            <div class="stat-card">
+              <span class="val val-success" id="st0Success">0</span>
+              <span class="lbl">✅ REMIX</span>
+            </div>
+            <div class="stat-card">
+              <span class="val val-failed" id="st0Failed">0</span>
+              <span class="lbl">❌ GAGAL</span>
+            </div>
+          </div>
+
+          <!-- Form Inputs Node 0 -->
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.75rem;">
+            <!-- Dropzone / Local Upload -->
+            <div class="dropzone" onclick="document.getElementById('st0FileInput').click()" style="padding: 10px; border-radius: 8px; font-size: 0.75rem;">
+              <span>📁 Upload Gambar Acuan & Style Ref</span>
+              <input type="file" id="st0FileInput" accept="image/jpeg, image/png, image/webp" multiple style="display: none;" onchange="uploadFiles(this.files, '/api/upload_station_0')">
+            </div>
+
+            <!-- HTTP URLs -->
+            <div>
+              <label style="color: #14b8a6; font-weight: 700; display: block; margin-bottom: 2px;">🔗 Link HTTP Gambar (Pinterest/Web):</label>
+              <textarea id="st0HttpUrls" rows="2" style="width: 100%; background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.72rem; padding: 4px 6px; border-radius: 6px; font-family: monospace;" placeholder="https://i.pinimg.com/..."></textarea>
+            </div>
+
+            <!-- Extra Prompt -->
+            <div>
+              <label style="color: #14b8a6; font-weight: 700; display: block; margin-bottom: 2px;">Prompt Tambahan (Opsional):</label>
+              <input type="text" id="st0Prompt" style="width: 100%; background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.72rem; padding: 4px 6px; border-radius: 6px;" placeholder="Contoh: Suasana cyberpunk malam...">
+            </div>
+
+            <!-- Style Level & Color Match Controls -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <label style="color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Tingkat Gaya:</label>
+                <select id="st0StyleLevel" style="background: #090d16; border: 1px solid #334155; color: #14b8a6; font-weight: 700; font-size: 0.72rem; padding: 4px; border-radius: 6px; width: 100%;">
+                  <option value="Easy" selected>Easy (Aman Stock)</option>
+                  <option value="Off">Off (Jiplak Ref)</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard (Bentuk Baru)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Akurasi Warna:</label>
+                <select id="st0ColorMatch" style="background: #090d16; border: 1px solid #334155; color: #14b8a6; font-weight: 700; font-size: 0.72rem; padding: 4px; border-radius: 6px; width: 100%;">
+                  <option value="Kunci" selected>Kunci (Palet Asli)</option>
+                  <option value="Moderat">Moderat</option>
+                  <option value="Bebas">Bebas</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Canvas Ratio & Theme -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <div>
+                <label style="color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Rasio Kanvas:</label>
+                <select id="st0CanvasRatio" style="background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.72rem; padding: 4px; border-radius: 6px; width: 100%;">
+                  <option value="1:1" selected>Persegi (1:1)</option>
+                  <option value="16:9">Melebar (16:9)</option>
+                  <option value="5:6">Vertikal (5:6)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style="color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Color Palette:</label>
+                <select id="st0ColorTheme" style="background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.72rem; padding: 4px; border-radius: 6px; width: 100%;">
+                  <option value="" selected>Tanpa Tema</option>
+                  <option value="Vintage">Vintage Collection</option>
+                  <option value="Retro">Retro Collection</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Hack Tools -->
+            <div style="display: flex; gap: 12px; margin-top: 2px;">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="st0Tool1" checked style="accent-color: #14b8a6;">
+                <span>Tool 1: Anti-Gelap</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                <input type="checkbox" id="st0Tool2" checked style="accent-color: #14b8a6;">
+                <span>Tool 2: Mode BG</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-top: 6px;">
+            <button class="btn" style="flex: 1; background: #14b8a6; color: #000; font-weight: 800;" onclick="runStation0()">🚀 Jalankan Stasiun 0</button>
+            <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 Stop</button>
+          </div>
+
+          <!-- Console Log Node 0 -->
+          <div class="log-box" id="st0Log" style="height: 100px; border-color: #334155; color: #14b8a6; margin-top: 6px;">[NODE 0] AI Remixer Engine Ready.</div>
+        </div>
 
         <!-- NODE 1: CHROMIUM SESSION AUTH -->
         <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
@@ -917,13 +1041,51 @@
       }
     }
 
-    // SSE EventSource for real-time progress & counters (with deduplicated log messages)
+    async function runStation0() {
+      const httpUrls = document.getElementById('st0HttpUrls').value.trim();
+      const prompt = document.getElementById('st0Prompt').value.trim();
+      const styleLevel = document.getElementById('st0StyleLevel').value;
+      const colorMatch = document.getElementById('st0ColorMatch').value;
+      const canvasRatio = document.getElementById('st0CanvasRatio').value;
+      const colorTheme = document.getElementById('st0ColorTheme').value;
+      const tool1 = document.getElementById('st0Tool1').checked;
+      const tool2 = document.getElementById('st0Tool2').checked;
+      const geminiUrl = document.getElementById('geminiUrlInput') ? document.getElementById('geminiUrlInput').value.trim() : '';
+
+      const res = await fetch('/api/run_station_0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          http_urls: httpUrls,
+          prompt: prompt,
+          style_level: styleLevel,
+          color_match: colorMatch,
+          canvas_ratio: canvasRatio,
+          color_theme: colorTheme,
+          tool1_anti_gelap: tool1,
+          tool2_bg_bersih: tool2,
+          gemini_url: geminiUrl
+        })
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+    }
+
+    let lastSt0Log = "";
     let lastSt2Log = "";
     let lastSt3Log = "";
     let lastSt4Log = "";
 
     function handleSSEData(data) {
       if (data.job) {
+        if (data.job.station_0 && data.job.station_0.log && data.job.station_0.log !== lastSt0Log) {
+          lastSt0Log = data.job.station_0.log;
+          const log0 = document.getElementById('st0Log');
+          if (log0) {
+            log0.innerText += '\n' + lastSt0Log;
+            log0.scrollTop = log0.scrollHeight;
+          }
+        }
         if (data.job.station_2 && data.job.station_2.log && data.job.station_2.log !== lastSt2Log) {
           lastSt2Log = data.job.station_2.log;
           const log2 = document.getElementById('st2Log');
@@ -958,6 +1120,8 @@
         }
       }
       if (data.stats) {
+        if (document.getElementById('st0Success')) document.getElementById('st0Success').innerText = data.stats.station_0_success;
+        if (document.getElementById('st0Failed')) document.getElementById('st0Failed').innerText = data.stats.station_0_failed;
         if (document.getElementById('st2Success')) document.getElementById('st2Success').innerText = data.stats.station_2_success;
         if (document.getElementById('st2Failed')) document.getElementById('st2Failed').innerText = data.stats.station_2_failed;
         if (document.getElementById('st3Success')) document.getElementById('st3Success').innerText = data.stats.station_3_success;

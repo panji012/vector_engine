@@ -45,6 +45,7 @@ manifest_mode_enabled = False  # False = Mode Uji Coba / Trial (File JPG tetap a
 
 current_job = {
     "status": "idle",
+    "station_0": {"running": False, "queue": 0, "success": 0, "failed": 0, "log": "Stasiun 0 (AI Remixer Pro) Siap."},
     "station_2": {"running": False, "queue": 0, "success": 0, "failed": 0, "log": "Stasiun 2 Siap."},
     "station_3": {"running": False, "queue": 0, "success": 0, "failed": 0, "progress": 0, "log": "Stasiun 3 Siap."},
     "station_4": {"running": False, "queue": 0, "success": 0, "failed": 0, "progress": 0, "log": "Stasiun 4 Siap."}
@@ -52,6 +53,8 @@ current_job = {
 
 # Persistent counts
 stock_stats = {
+    "station_0_success": 0,
+    "station_0_failed": 0,
     "station_2_success": 0,
     "station_2_failed": 0,
     "station_3_success": 0,
@@ -202,6 +205,9 @@ def get_manifest_summary():
 
 def get_pending_queues():
     sync_input_queues()
+    temp_remix_dir = os.path.join(PROJECT_ROOT, "temp_remix")
+    st0_pending = [f for f in os.listdir(temp_remix_dir) if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))] if os.path.exists(temp_remix_dir) else []
+    
     rasters = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))] if os.path.exists(INPUT_DIR) else []
     svgs = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith(".svg")] if os.path.exists(INPUT_DIR) else []
     vec_svgs = [f for f in os.listdir(VECTORIZER_OUTPUT) if f.lower().endswith(".svg")] if os.path.exists(VECTORIZER_OUTPUT) else []
@@ -232,6 +238,7 @@ def get_pending_queues():
     st4_pending = [o for o in outputs if o.lower().endswith((".eps", ".jpg")) and o not in logged_files]
 
     return {
+        "st0_pending": sorted(st0_pending),
         "st2_pending": sorted(st2_pending),
         "st3_pending": sorted(st3_pending),
         "st4_pending": sorted(st4_pending),
@@ -433,8 +440,18 @@ class VectorEngineHandler(BaseHTTPRequestHandler):
             clean_profile_locks()
             return self.send_json({"message": "File pengunci Chromium (SingletonLock) berhasil dibersihkan."})
 
-        if path == "/api/upload_station_2":
-            return self.handle_upload(VECTORIZER_INPUT)
+        if path == "/api/upload_station_0":
+            temp_remix_dir = os.path.join(PROJECT_ROOT, "temp_remix")
+            os.makedirs(temp_remix_dir, exist_ok=True)
+            return self.handle_upload(temp_remix_dir)
+
+        if path == "/api/run_station_0":
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
+            payload = json.loads(raw) if raw else {}
+
+            threading.Thread(target=execute_station_0, args=(payload,), daemon=True).start()
+            return self.send_json({"message": "Stasiun 0 (AI Concept Remixer Pro) started"})
 
         if path == "/api/upload_station_3":
             return self.handle_upload(INPUT_DIR)
@@ -755,19 +772,76 @@ def execute_station_4(gemini_url=None, batch_size=5):
     current_job["station_4"]["log"] = "Stasiun 4: Selesai! Metadata terinjeksi & Master CSV diperbarui."
     broadcast_sse("update", {"job": current_job, "stats": stock_stats})
 
+current_proc_st0 = None
+current_proc_st2 = None
+current_proc_st3 = None
+current_proc_st4 = None
+
+def execute_station_0(payload=None):
+    global current_job, stock_stats, current_proc_st0
+    if payload is None: payload = {}
+
+    clean_profile_locks()
+
+    current_job["station_0"]["running"] = True
+    current_job["station_0"]["log"] = "Stasiun 0: Memulai AI Concept Remixer Engine..."
+    broadcast_sse("update", {"job": current_job, "stats": stock_stats})
+
+    env = os.environ.copy()
+    if "http_urls" in payload: env["HTTP_URLS"] = payload["http_urls"]
+    if "prompt" in payload: env["CUSTOM_PROMPT"] = payload["prompt"]
+    if "style_level" in payload: env["STYLE_LEVEL"] = payload["style_level"]
+    if "color_match" in payload: env["COLOR_MATCH"] = payload["color_match"]
+    if "canvas_ratio" in payload: env["CANVAS_RATIO"] = payload["canvas_ratio"]
+    if "tool1_anti_gelap" in payload: env["TOOL_ANTI_GELAP"] = "true" if payload["tool1_anti_gelap"] else "false"
+    if "tool2_bg_bersih" in payload: env["TOOL_BG_BERSIH"] = "true" if payload["tool2_bg_bersih"] else "false"
+    if "color_theme" in payload: env["COLOR_THEME"] = payload["color_theme"]
+    if "gemini_url" in payload and payload["gemini_url"]: env["TARGET_LINK"] = payload["gemini_url"]
+
+    current_proc_st0 = subprocess.Popen(
+        ["node", os.path.join(SCRIPTS_DIR, "remixer_engine.js")],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        env=env
+    )
+
+    if current_proc_st0 and current_proc_st0.stdout:
+        for line in current_proc_st0.stdout:
+            line_clean = line.strip()
+            if line_clean:
+                current_job["station_0"]["log"] = f"[Remixer AI] {line_clean}"
+                if "Downloaded:" in line_clean or "Selesai" in line_clean:
+                    stock_stats["station_0_success"] += 1
+                elif "ERROR" in line_clean or "Gagal" in line_clean:
+                    stock_stats["station_0_failed"] += 1
+                broadcast_sse("update", {"job": current_job, "stats": stock_stats})
+
+    if current_proc_st0:
+        current_proc_st0.wait()
+        current_proc_st0 = None
+
+    current_job["station_0"]["running"] = False
+    current_job["station_0"]["log"] = "Stasiun 0: Selesai! Gambar JPG hasil remix tersimpan ke Stasiun 2."
+    broadcast_sse("update", {"job": current_job, "stats": stock_stats})
+
 def execute_chained_pipeline(config_params=None):
+    execute_station_0(config_params)
     execute_station_2()
     execute_station_3(config_params)
     gemini_url = config_params.get("gemini_url") if isinstance(config_params, dict) else None
     batch_size = int(config_params.get("batch_size", 5)) if isinstance(config_params, dict) else 5
     execute_station_4(gemini_url, batch_size)
 
-current_proc_st2 = None
-current_proc_st3 = None
-current_proc_st4 = None
-
 def stop_all_pipelines():
-    global current_proc_st2, current_proc_st3, current_proc_st4, current_job, stock_stats
+    global current_proc_st0, current_proc_st2, current_proc_st3, current_proc_st4, current_job, stock_stats
+    if current_proc_st0 and current_proc_st0.poll() is None:
+        try:
+            current_proc_st0.terminate()
+            current_proc_st0.kill()
+        except Exception:
+            pass
     if current_proc_st2 and current_proc_st2.poll() is None:
         try:
             current_proc_st2.terminate()
@@ -787,9 +861,12 @@ def stop_all_pipelines():
         except Exception:
             pass
 
+    subprocess.run(["pkill", "-f", "remixer_engine.js"], stderr=subprocess.DEVNULL)
     subprocess.run(["pkill", "-f", "vectorizer_headless.js"], stderr=subprocess.DEVNULL)
     subprocess.run(["pkill", "-f", "metadata_engine.js"], stderr=subprocess.DEVNULL)
 
+    current_job["station_0"]["running"] = False
+    current_job["station_0"]["log"] = "🛑 Stasiun 0: Dihentikan oleh user."
     current_job["station_2"]["running"] = False
     current_job["station_2"]["log"] = "🛑 Stasiun 2: Dihentikan oleh user."
     current_job["station_3"]["running"] = False

@@ -8,7 +8,8 @@ Dokumen ini memuat catatan lengkap progress pengembangan, pencapaian fitur, peng
 
 | Tanggal | Fitur / Komponen | Status | Hasil & Kecepatan |
 |---|---|---|---|
-| **2026-09-07** | **4-Node ComfyUI Web Dashboard Graph & UI Controls** | ✅ **Selesai** | Membangun UI visual 4-Node ComfyUI Graph (`http://localhost:8000`), mengintegrasikan kontrol penuh `config_silhouette.json` (Tab Low-Color, Multi-Color & Raw JSON Editor), tombol penghenti darurat (`🛑 Cancel Queue`), serta perhitungan antrean real-time otomatis. |
+| **2026-09-08** | **Stasiun 0: AI Concept Remixer Pro** | ✅ **Selesai** | Integrasi Puppeteer Gemini AI Canvas untuk remiks gambar lokal/HTTP URL (Pinterest). Otomatis generate stok JPG berurutan ke `input/` (`vector_stock_XXXX.jpg`) untuk diproses Node 2. |
+| **2026-09-07** | **5-Node ComfyUI Web Dashboard Graph & UI Controls** | ✅ **Selesai** | Membangun UI visual 5-Node ComfyUI Graph (`http://localhost:8000`), mengintegrasikan Node 0-4, kontrol penuh `config_silhouette.json`, tombol penghenti darurat (`🛑 Cancel Queue`), serta perhitungan antrean real-time otomatis. |
 | **2026-09-07** | **Stasiun 4: AI Metadata & ExifTool Injector** | ✅ **Selesai** | Integrasi otomatisasi Puppeteer stealth Gemini AI Canvas untuk analisis visi batch gambar, ekstraksi Title/Description/Keywords, injeksi metadata fisik ke `.eps` & `.jpg` via ExifTool, dan pencatatan master log ke `master_katalog.csv`. |
 | **2026-09-02** | **Seamless Pattern 3x3 & Per-Tile EvenOdd Scope** | ✅ **Selesai** | Memperbaiki z-ordering & mengisolasi scope `fill-rule="evenodd"` per-tile di `pattern_gen.rs`. Menghasilkan pola 3x3 *edge-to-edge* sempurna tanpa blok siluet dan tanpa margin kosong. |
 | **2026-08-29** | **Penyederhanaan Node Vektor Rust Murni** | ✅ **Selesai** | Migrasi Phase 2 murni ke Rust. Menghapus dependensi FFI C++ Livarot/Inkscape. Menggunakan RDP & Bezier curve fitting murni Rust. |
@@ -24,7 +25,8 @@ Dokumen ini memuat catatan lengkap progress pengembangan, pencapaian fitur, peng
 
 ## 🚀 Detail Fitur Utama
 
-### 1. 🌐 ComfyUI 4-Node Modular Web Dashboard Server (`server/web_server.py`)
+### 1. 🌐 ComfyUI 5-Node Modular Web Dashboard Server (`server/web_server.py`)
+- **Node 0 (AI Concept Remixer Pro)**: Remiks konsep visual gambar lokal & URL HTTP (Pinterest) via Gemini AI Canvas, menghasilkan JPG berkualitas tinggi ke `input/`.
 - **Node 1 (Chromium Auth)**: Menjaga sesi login Google/Vectorizer aktif menggunakan Chromium profile pengguna (`userDataDir`).
 - **Node 2 (Headless Vectorizer)**: Otomatisasi Puppeteer konversi gambar raster (`.png`, `.jpg`) ke `.svg`.
 - **Node 3 (Vector Geometry Rust Engine)**: Pemrosesan Phase 1-7 Rust Engine dengan dukungan penuh 11 style seamless pattern & 3-panel presentation boards. Memiliki kontrol GUI visual lengkap untuk `config_silhouette.json`.

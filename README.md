@@ -13,35 +13,40 @@ The codebase is organized as a Cargo Workspace (Rust computational core) combine
 - **`crates/vector-ffi`**: PyO3 cross-language bindings and logging subscriber bridge.
 - **`crates/vector-cli`**: High-performance command line binary application.
 - **`python/vector_engine`**: Python API, configuration system, structlog integration, and workflow DAG runner.
-- **`server/web_server.py`**: Integrated 4-Node ComfyUI Web Dashboard server (`http://localhost:8000`).
+- **`server/web_server.py`**: Integrated 5-Node ComfyUI Web Dashboard server (`http://localhost:8000`).
+- **`scripts/remixer_engine.js`**: Node 0 AI Concept Remixer Pro Puppeteer automation.
 - **`scripts/metadata_engine.js`**: Node 4 AI Metadata Generator & ExifTool Injector engine.
 
-### ⏱️ Workflow & System Diagram (4-Node ComfyUI Graph Pipeline)
+### ⏱️ Workflow & System Diagram (5-Node ComfyUI Graph Pipeline)
 
-Diagram berikut menggambarkan arsitektur grafis 4-Node otomatisasi **Vector Engine**:
+Diagram berikut menggambarkan arsitektur grafis 5-Node otomatisasi **Vector Engine**:
 
 ```mermaid
 graph LR
     %% Style Definitions
+    classDef node0 fill:#0f172a,stroke:#ec4899,stroke-width:2px;
     classDef node1 fill:#0f172a,stroke:#c084fc,stroke-width:2px;
     classDef node2 fill:#0f172a,stroke:#38bdf8,stroke-width:2px;
     classDef node3 fill:#0f172a,stroke:#4ade80,stroke-width:2px;
     classDef node4 fill:#0f172a,stroke:#f59e0b,stroke-width:2px;
 
+    N0["🎨 NODE 0: AI REMIXER PRO <br> Local Image / HTTP ➔ Gemini Canvas JPG"]:::node0
     N1["🔑 NODE 1: CHROMIUM AUTH <br> User Profile Auth & Session"]:::node1
     N2["🖼️ NODE 2: VECTORIZER HEADLESS <br> Raster PNG/JPG ➔ SVG"]:::node2
     N3["⚡ NODE 3: RUST VECTOR ENGINE <br> Phase 1-7 Geometry & 11 Patterns"]:::node3
     N4["🏷️ NODE 4: AI METADATA & EXIFTOOL <br> Gemini AI ➔ ExifTool Injected EPS/JPG"]:::node4
 
+    N0 --> N1
     N1 --> N2
     N2 --> N3
     N3 --> N4
 ```
 
-### Alur Fase Pemrosesan (Phase 0 s.d. 7 & Node 4 AI Metadata)
+### Alur Fase Pemrosesan (Node 0 s.d. Node 4 & Phase 0-7 Geometry)
 
 | Fase / Node | Nama Komponen | Tipe Teknologi | Berkas Utama | Detail Fitur |
 | :---: | :--- | :---: | :--- | :--- |
+| **Node 0** | **AI Concept Remixer Pro** | **Puppeteer / Gemini Canvas** | `scripts/remixer_engine.js` | Mengolah gambar lokal/URL HTTP (Pinterest) via Gemini AI Canvas, membedah gaya visual, dan menghasilkan stok JPG di `input/`. |
 | **Node 1** | **Chromium Auth** | **Node.js / Chromium** | `server/web_server.py` | Mengelola sesi login terautentikasi pengguna secara konsisten. |
 | **Node 2** | **Vectorizer Headless** | **Puppeteer Stealth** | `scripts/vectorizer_headless.js` | Mengonversi gambar raster ke SVG via Vectorizer.ai secara otomatis. |
 | **Node 3 (Phase 0-7)** | **Rust Geometry Engine** | **Rust 🦀 / Python** | `crates/vector-cli`, `run_batch.py` | Transform Baking, RDP Curve Fitting, HSL Color Isolator, 3-Panel Board, dan 11 Seamless Pattern Styles. |
