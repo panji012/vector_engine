@@ -166,6 +166,7 @@ async function main() {
             "--disable-setuid-sandbox",
             "--start-maximized",
             "--disable-web-security",
+            "--disable-popup-blocking",
             "--disable-features=IsolateOrigins,site-per-process"
         ]
     });
@@ -173,6 +174,10 @@ async function main() {
     const page = await browser.newPage();
     const client = await page.target().createCDPSession();
     await client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: INPUT_DIR });
+    await client.send('Browser.setPermission', {
+        permission: { name: 'automatic-downloads' },
+        setting: 'granted',
+    }).catch(() => {});
 
     console.log(`-> Meluncur ke Gemini AI Canvas: ${TARGET_LINK}`);
     await page.goto(TARGET_LINK, { waitUntil: "networkidle2", timeout: 60000 });
@@ -290,8 +295,20 @@ async function main() {
                 successCount = newArrivals;
             }
 
+            // Check if Canvas queue in DOM has finished processing
+            const isCanvasFinished = await targetFrame.evaluate(() => {
+                const btnStart = document.getElementById('btnStart');
+                const counter = document.getElementById('queueCounter');
+                const isBtnVisible = btnStart && !btnStart.classList.contains('hidden');
+                const counterText = counter ? counter.innerText : '';
+                return isBtnVisible || counterText.includes('Selesai') || counterText.includes('DIBATALKAN');
+            }).catch(() => false);
+
             if (successCount >= targetBatchCount) {
                 console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik telah mendarat di input/ dalam ${((w * 25) / 60).toFixed(1)} menit!`);
+                break;
+            } else if (isCanvasFinished && w > 1) {
+                console.log(`-> ℹ️ Canvas Gemini telah menyelesaikan seluruh antrean (${successCount}/${targetBatchCount} berhasil terverifikasi). Mengakhiri stasiun...`);
                 break;
             } else {
                 console.log(`   [...] Memantau unduhan fisik di folder input/... (${w * 25}s | ${successCount}/${targetBatchCount} berkas mendarat)`);
