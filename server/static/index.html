@@ -12,7 +12,7 @@
   <link rel="manifest" href="/site.webmanifest">
   <link rel="apple-touch-icon" href="/captcha_screenshot.png">
   
-  <title>Vector Engine — Claude Warm Editorial Dashboard</title>
+  <title>Vector Engine — Claude Warm Editorial Dashboard (2-Tab Nodes)</title>
   
   <!-- Claude Design Typography: Cormorant Garamond (Serif Display), Inter (Sans Body), JetBrains Mono (Code) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -270,6 +270,7 @@
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-pill);
       transition: all 0.2s ease;
+      cursor: pointer;
     }
 
     .step-pill.active {
@@ -278,8 +279,49 @@
       border-color: var(--colors-primary);
     }
 
-    /* Vertical Nodes Container */
-    .vertical-nodes-container {
+    /* 2 Main Sequential Tabs Bar */
+    .node-tabs-bar {
+      display: flex;
+      gap: 12px;
+      background: var(--colors-surface-card);
+      border: 1px solid var(--colors-hairline);
+      border-radius: var(--radius-lg);
+      padding: 8px;
+      box-shadow: 0 4px 16px rgba(20, 20, 19, 0.03);
+    }
+
+    .node-tab-btn {
+      flex: 1;
+      background: transparent;
+      color: var(--colors-muted);
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
+      font-family: var(--font-sans);
+      font-size: 0.9375rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .node-tab-btn:hover {
+      background: var(--colors-canvas);
+      color: var(--colors-ink);
+    }
+
+    .node-tab-btn.active {
+      background: var(--colors-canvas);
+      color: var(--colors-ink);
+      border-color: var(--colors-hairline);
+      box-shadow: 0 2px 8px rgba(20, 20, 19, 0.05);
+    }
+
+    /* Tab Content Group Containers */
+    .node-tab-content {
       display: flex;
       flex-direction: column;
       gap: 20px;
@@ -589,6 +631,9 @@
         padding: 20px;
         border-radius: var(--radius-md);
       }
+      .node-tabs-bar {
+        flex-direction: column;
+      }
       .form-grid-2 {
         grid-template-columns: 1fr;
       }
@@ -640,24 +685,34 @@
       </div>
 
       <div class="flow-stepper">
-        <span class="step-pill active">Node 0: AI Remixer</span>
+        <span class="step-pill active" onclick="switchMainNodeTab('phase1')">Node 0: AI Remixer</span>
         <span>➔</span>
-        <span class="step-pill active">Node 1: Chromium Auth</span>
+        <span class="step-pill active" onclick="switchMainNodeTab('phase1')">Node 1: Chromium Auth</span>
         <span>➔</span>
-        <span class="step-pill active">Node 2: Headless Vectorizer</span>
+        <span class="step-pill active" onclick="switchMainNodeTab('phase1')">Node 2: Headless Vectorizer</span>
         <span>➔</span>
-        <span class="step-pill active">Node 3: Rust Geometry</span>
+        <span class="step-pill active" onclick="switchMainNodeTab('phase2')">Node 3: Rust Geometry</span>
         <span>➔</span>
-        <span class="step-pill active">Node 4: ExifTool Metadata</span>
+        <span class="step-pill active" onclick="switchMainNodeTab('phase2')">Node 4: ExifTool Metadata</span>
       </div>
     </div>
 
-    <!-- VERTICAL NODES LAYOUT (Node 0 ➔ Node 1 ➔ Node 2 ➔ Node 3 ➔ Node 4) -->
-    <div class="vertical-nodes-container">
+    <!-- MAIN NODE SEQUENTIAL TABS NAVIGATION -->
+    <div class="node-tabs-bar">
+      <button type="button" class="node-tab-btn active" id="mainTabBtnPhase1" onclick="switchMainNodeTab('phase1')">
+        <i class="fas fa-layer-group text-primary"></i> TAB 1: STASIUN INPUT & KONVERSI (NODE 0 ➔ 1 ➔ 2)
+      </button>
+      <button type="button" class="node-tab-btn" id="mainTabBtnPhase2" onclick="switchMainNodeTab('phase2')">
+        <i class="fas fa-cogs text-primary"></i> TAB 2: STASIUN GEOMETRI & METADATA (NODE 3 ➔ 4)
+      </button>
+    </div>
 
-      <!-- ==========================================
-           NODE 0: AI CONCEPT REMIXER PRO
-           ========================================== -->
+    <!-- ==========================================================================
+         TAB 1: PHASE 1 (NODE 0 ➔ NODE 1 ➔ NODE 2)
+         ========================================================================== -->
+    <div class="node-tab-content" id="mainNodeTabPhase1" style="display: flex;">
+
+      <!-- NODE 0: AI CONCEPT REMIXER PRO -->
       <div class="station-node-card" id="node0Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -770,10 +825,7 @@
       <!-- Arrow Down -->
       <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
 
-
-      <!-- ==========================================
-           NODE 1: CHROMIUM SESSION AUTH
-           ========================================== -->
+      <!-- NODE 1: CHROMIUM SESSION AUTH -->
       <div class="station-node-card" id="node1Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -810,10 +862,7 @@
       <!-- Arrow Down -->
       <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
 
-
-      <!-- ==========================================
-           NODE 2: VECTORIZER HEADLESS CONVERTER
-           ========================================== -->
+      <!-- NODE 2: VECTORIZER HEADLESS CONVERTER -->
       <div class="station-node-card" id="node2Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -875,13 +924,15 @@
         <div class="code-log-card" id="st2Log">[NODE 2] Headless Converter Ready.</div>
       </div>
 
-      <!-- Arrow Down -->
-      <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
+    </div>
 
 
-      <!-- ==========================================
-           NODE 3: VECTOR GEOMETRY RUST ENGINE
-           ========================================== -->
+    <!-- ==========================================================================
+         TAB 2: PHASE 2 (NODE 3 ➔ NODE 4)
+         ========================================================================== -->
+    <div class="node-tab-content" id="mainNodeTabPhase2" style="display: none;">
+
+      <!-- NODE 3: VECTOR GEOMETRY RUST ENGINE -->
       <div class="station-node-card" id="node3Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -1047,7 +1098,7 @@
           </div>
 
           <!-- TAB 3: RAW JSON EDITOR -->
-          <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 12px;">
+          <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 14px;">
             <textarea id="rawJsonArea" style="height: 180px;"></textarea>
             <button type="button" class="btn btn-secondary" onclick="saveRawJsonConfig()">💾 Simpan JSON Direct</button>
           </div>
@@ -1081,10 +1132,7 @@
       <!-- Arrow Down -->
       <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
 
-
-      <!-- ==========================================
-           NODE 4: AI METADATA & EXIFTOOL INJECTOR
-           ========================================== -->
+      <!-- NODE 4: AI METADATA & EXIFTOOL INJECTOR -->
       <div class="station-node-card" id="node4Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -1144,6 +1192,7 @@
       </div>
 
     </div>
+
   </div>
 
 
@@ -1160,6 +1209,22 @@
       }
       loadConfigSilhouette();
     });
+
+    function switchMainNodeTab(tabName) {
+      const p1 = document.getElementById('mainNodeTabPhase1');
+      const p2 = document.getElementById('mainNodeTabPhase2');
+      const b1 = document.getElementById('mainTabBtnPhase1');
+      const b2 = document.getElementById('mainTabBtnPhase2');
+
+      if (p1 && p2) {
+        p1.style.display = (tabName === 'phase1') ? 'flex' : 'none';
+        p2.style.display = (tabName === 'phase2') ? 'flex' : 'none';
+      }
+      if (b1 && b2) {
+        b1.classList.toggle('active', tabName === 'phase1');
+        b2.classList.toggle('active', tabName === 'phase2');
+      }
+    }
 
     async function loadConfigSilhouette() {
       try {
@@ -1499,6 +1564,7 @@
     }
 
     async function runStation3() {
+      switchMainNodeTab('phase2');
       const config = getStation3Config();
       const res = await fetch('/api/run_station_3', {
         method: 'POST',
@@ -1510,6 +1576,7 @@
     }
 
     async function runStation4() {
+      switchMainNodeTab('phase2');
       const geminiUrl = document.getElementById('geminiUrlInput').value.trim();
       const batchSize = parseInt(document.getElementById('batchSizeInput').value) || 5;
       const res = await fetch('/api/run_station_4', {
