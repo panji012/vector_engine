@@ -269,7 +269,7 @@ async function main() {
             if (btn) btn.click();
         });
 
-        const targetBatchCount = urls.length + localFiles.length;
+        const targetBatchCount = urls.length > 0 ? urls.length : localFiles.length;
 
         // Monitor batch rendering & downloads directly from input/
         console.log(`-> 📡 Memantau folder input/ hingga ${targetBatchCount} berkas fisik mendarat (Maks 20 Menit)...`);
