@@ -2,676 +2,1120 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vector Engine - 3-Station Modular Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- PWA & Standalone Mobile App Meta Tags (No Search Bar on iOS/Android) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Vector Engine">
+  <meta name="theme-color" content="#161616">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="apple-touch-icon" href="/captcha_screenshot.png">
+  
+  <title>Vector Engine - IBM Carbon 5-Node Pipeline Dashboard</title>
+  
+  <!-- IBM Carbon Type Hierarchy: IBM Plex Sans & IBM Plex Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
   <style>
+    /* ==========================================================================
+       IBM CARBON DESIGN SYSTEM TOKENS (getdesign.md Specification)
+       - Canvas: #161616 (Inverse Canvas / Charcoal)
+       - Surface 1: #262626 (Carbon Light Charcoal)
+       - Surface 2: #393939 (Elevated Charcoal Layer)
+       - Primary Accent: #0f62fe (IBM Blue)
+       - Primary Hover: #0353e9 / Pressed: #002d9c
+       - Hairline Border: 1px solid #393939
+       - Hairline Strong: 1px solid #525252
+       - Ink: #f4f4f4 / Ink Muted: #c6c6c6 / Ink Subtle: #8d8d8d
+       - Flat Geometry: 0px border-radius everywhere
+       - Letter Spacing: 0.16px body tracking
+       ========================================================================== */
+
     :root {
-      --bg-main: #0b0f19;
-      --bg-card: #151d2a;
-      --bg-card-hover: #1e293b;
-      --border-color: #273549;
-      --accent-blue: #38bdf8;
-      --accent-green: #4ade80;
-      --accent-red: #f87171;
-      --accent-yellow: #fbbf24;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
+      --colors-canvas: #161616;
+      --colors-surface-1: #262626;
+      --colors-surface-2: #393939;
+      --colors-hairline: #393939;
+      --colors-hairline-strong: #525252;
+      --colors-primary: #0f62fe;
+      --colors-primary-hover: #0353e9;
+      --colors-primary-pressed: #002d9c;
+      --colors-ink: #f4f4f4;
+      --colors-ink-muted: #c6c6c6;
+      --colors-ink-subtle: #8d8d8d;
+      --colors-semantic-success: #24a148;
+      --colors-semantic-warning: #f1c21b;
+      --colors-semantic-error: #da1e28;
+
+      --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: var(--bg-main);
-      color: var(--text-main);
-      padding: 24px;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0 !important; /* IBM Carbon Rule: Strict 0px Flat Geometry */
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      background-color: var(--colors-canvas);
+      color: var(--colors-ink);
+      font-family: var(--font-sans);
+      font-size: 16px;
       line-height: 1.5;
+      letter-spacing: 0.16px; /* Carbon Body Precision Tracking */
+      -webkit-font-smoothing: antialiased;
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
-    .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    .app-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
 
-    /* Header */
+    /* IBM Carbon Header Bar */
     header {
-      display: flex; justify-content: space-between; align-items: center;
-      background: var(--bg-card); padding: 18px 24px; border-radius: 16px;
-      border: 1px solid var(--border-color);
+      background: var(--colors-surface-1);
+      border: 1px solid var(--colors-hairline);
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
-    .header-title h1 { font-size: 1.4rem; font-weight: 800; color: var(--accent-blue); }
-    .header-title p { font-size: 0.82rem; color: var(--text-muted); }
 
-    /* Button styles */
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-title h1 {
+      font-size: 1.75rem;
+      font-weight: 300; /* IBM Signature Display Weight 300 */
+      color: var(--colors-ink);
+      letter-spacing: -0.4px;
+    }
+
+    .header-title p {
+      font-size: 0.875rem;
+      color: var(--colors-ink-muted);
+      letter-spacing: 0.16px;
+    }
+
+    .server-badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: var(--colors-surface-2);
+      color: var(--colors-ink);
+      padding: 6px 12px;
+      border: 1px solid var(--colors-hairline-strong);
+    }
+
+    /* IBM Carbon Button Base */
     .btn {
-      background: var(--accent-blue); color: #000; font-weight: 700; font-size: 0.85rem;
-      padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer;
-      transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; justify-content: center;
-    }
-    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-green { background: var(--accent-green); color: #000; }
-    .btn-purple { background: #a855f7; color: #fff; }
-    .btn-outline { background: transparent; color: var(--text-main); border: 1px solid var(--border-color); }
-    .btn-outline:hover { background: var(--bg-card-hover); }
-
-    /* Top Chained Action Bar */
-    .chained-bar {
-      background: linear-gradient(135deg, #1e1b4b, #311b92);
-      border: 1px solid #6366f1; border-radius: 16px; padding: 16px 24px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .chained-bar div h3 { font-size: 1.05rem; font-weight: 700; color: #c084fc; }
-    .chained-bar div p { font-size: 0.82rem; color: #e9d5ff; }
-
-    /* Box 1: Login Station */
-    .box-login {
-      background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color);
-      padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;
-    }
-    .session-indicator { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.9rem; }
-    .status-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 10px var(--accent-green); }
-    .status-dot.offline { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
-
-    /* 2 Main Station Columns */
-    .stations-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    
-    .station-box {
-      background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color);
-      padding: 24px; display: flex; flex-direction: column; gap: 16px; position: relative;
-    }
-    .station-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-color); pb: 14px; }
-    .station-header h2 { font-size: 1.15rem; font-weight: 700; color: var(--accent-blue); }
-    .station-header span { font-size: 0.8rem; color: var(--text-muted); }
-
-    /* Live Counters Grid */
-    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .stat-card {
-      background: #0d131f; border: 1px solid var(--border-color); border-radius: 12px;
-      padding: 12px; text-align: center; display: flex; flex-direction: column; gap: 4px;
-    }
-    .stat-card .val { font-size: 1.4rem; font-weight: 800; }
-    .stat-card .lbl { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
-
-    .val-queue { color: var(--accent-blue); }
-    .val-success { color: var(--accent-green); }
-    .val-failed { color: var(--accent-red); }
-
-    /* Dropzone */
-    .dropzone {
-      border: 2px dashed var(--border-color); border-radius: 12px; padding: 24px;
-      text-align: center; background: #090d16; cursor: pointer; transition: border 0.2s ease;
-    }
-    .dropzone:hover { border-color: var(--accent-blue); }
-
-    /* File List & Log */
-    .file-queue-box {
-      background: #090d16; border: 1px solid var(--border-color); border-radius: 10px;
-      padding: 12px; max-height: 140px; overflow-y: auto; font-size: 0.82rem;
-    }
-    .file-item { display: flex; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #1e293b; }
-    .file-item:last-child { border-bottom: none; }
-
-    .log-box {
-      background: #05080e; border: 1px solid var(--border-color); border-radius: 10px;
-      padding: 12px; font-family: monospace; font-size: 0.78rem; color: var(--accent-green);
-      height: 120px; overflow-y: auto; white-space: pre-wrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 48px; /* Carbon Spec 48px Minimum Touch Target */
+      padding: 12px 20px;
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 400;
+      letter-spacing: 0.16px;
+      color: #ffffff;
+      background-color: var(--colors-primary);
+      border: 1px solid var(--colors-primary);
+      cursor: pointer;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+      text-decoration: none;
+      user-select: none;
     }
 
-    /* Output Deliverables */
-    .output-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; max-height: 200px; overflow-y: auto; }
-    .output-card {
-      background: #090d16; border: 1px solid var(--border-color); border-radius: 10px;
-      padding: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem;
+    .btn:hover {
+      background-color: var(--colors-primary-hover);
+      border-color: var(--colors-primary-hover);
     }
-    .output-card img { width: 100%; height: 90px; object-fit: contain; border-radius: 6px; background: #fff; }
 
+    .btn:active {
+      background-color: var(--colors-primary-pressed);
+      border-color: var(--colors-primary-pressed);
+    }
+
+    .btn-secondary {
+      background-color: #393939;
+      color: #ffffff;
+      border: 1px solid #525252;
+    }
+
+    .btn-secondary:hover {
+      background-color: #4c4c4c;
+    }
+
+    .btn-ghost {
+      background-color: transparent;
+      color: var(--colors-ink);
+      border: 1px solid var(--colors-hairline-strong);
+    }
+
+    .btn-ghost:hover {
+      background-color: var(--colors-surface-2);
+    }
+
+    .btn-danger {
+      background-color: var(--colors-semantic-error);
+      color: #ffffff;
+      border: 1px solid var(--colors-semantic-error);
+    }
+
+    .btn-danger:hover {
+      background-color: #b81921;
+    }
+
+    .btn-success {
+      background-color: var(--colors-semantic-success);
+      color: #ffffff;
+      border: 1px solid var(--colors-semantic-success);
+    }
+
+    .btn-full {
+      width: 100%;
+    }
+
+    /* Master Pipeline Control Banner */
+    .pipeline-banner {
+      background: var(--colors-surface-1);
+      border: 1px solid var(--colors-primary);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .pipeline-banner-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .pipeline-banner h3 {
+      font-size: 1.25rem;
+      font-weight: 300;
+      color: var(--colors-ink);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pipeline-banner p {
+      font-size: 0.875rem;
+      color: var(--colors-ink-muted);
+    }
+
+    .pipeline-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .flow-stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--colors-ink-muted);
+      padding-top: 8px;
+      border-top: 1px solid var(--colors-hairline);
+    }
+
+    .flow-step-tag {
+      background: var(--colors-surface-2);
+      color: var(--colors-ink);
+      padding: 4px 10px;
+      border: 1px solid var(--colors-hairline-strong);
+    }
+
+    .flow-step-tag.active {
+      background: var(--colors-primary);
+      color: #ffffff;
+      border-color: var(--colors-primary);
+    }
+
+    /* Vertical Nodes Layout (Node 0 -> Node 1 -> Node 2 -> Node 3 -> Node 4) */
+    .vertical-nodes-container {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      position: relative;
+    }
+
+    /* IBM Carbon Station Card */
+    .station-node-card {
+      background: var(--colors-surface-1);
+      border: 1px solid var(--colors-hairline);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+    }
+
+    .station-node-card:focus-within {
+      border-color: var(--colors-primary);
+    }
+
+    .node-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--colors-hairline);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .node-title-group h2 {
+      font-size: 1.25rem;
+      font-weight: 400;
+      color: var(--colors-ink);
+
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .node-title-group span {
+      font-size: 0.8125rem;
+      color: var(--colors-ink-muted);
+    }
+
+    .node-badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      background: var(--colors-surface-2);
+      border: 1px solid var(--colors-hairline-strong);
+      color: var(--colors-ink);
+    }
+
+    /* Dynamic Indicator Strip */
+    .indicator-strip {
+      background: var(--colors-canvas);
+      border: 1px solid var(--colors-hairline);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .indicator-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    .status-indicator-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--colors-semantic-error);
+    }
+
+    .status-indicator-dot.online {
+      background: var(--colors-semantic-success);
+    }
+
+    .status-indicator-dot.warning {
+      background: var(--colors-semantic-warning);
+    }
+
+    /* Stats Grid */
+    .stats-row-carbon {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .stat-tile {
+      background: var(--colors-canvas);
+      border: 1px solid var(--colors-hairline);
+      padding: 14px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-tile .val {
+      font-family: var(--font-mono);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--colors-ink);
+    }
+
+    .stat-tile .lbl {
+      font-size: 0.75rem;
+      color: var(--colors-ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.32px;
+    }
+
+    /* Form Fields & Carbon Inputs */
+    label.carbon-label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: var(--colors-ink-muted);
+      margin-bottom: 6px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea,
     select {
-      background: #090d16; border: 1px solid var(--border-color); color: var(--text-main);
-      padding: 10px 14px; border-radius: 10px; font-size: 0.85rem; outline: none; width: 100%;
+      width: 100%;
+      min-height: 48px; /* Carbon 48px Input Height */
+      background: var(--colors-canvas);
+      border: 1px solid var(--colors-hairline-strong);
+      color: var(--colors-ink);
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    textarea {
+      min-height: 80px;
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      resize: vertical;
+    }
+
+    input[type="text"]:focus,
+    input[type="number"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--colors-primary);
+      border-bottom-width: 2px;
+    }
+
+    /* Carbon Dropzone */
+    .carbon-dropzone {
+      background: var(--colors-canvas);
+      border: 1px dashed var(--colors-hairline-strong);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      color: var(--colors-ink-muted);
+      font-size: 0.875rem;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .carbon-dropzone:hover {
+      border-color: var(--colors-primary);
+      background: var(--colors-surface-2);
+      color: var(--colors-ink);
+    }
+
+    /* Grid helper forms */
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* Checkbox & Switch Rules */
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.8125rem;
+      color: var(--colors-ink);
+      user-select: none;
+      min-height: 36px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      min-height: 18px;
+      accent-color: var(--colors-primary);
+      cursor: pointer;
+    }
+
+    /* Log Box Monospace */
+    .carbon-log-box {
+      background: #0d0d0d;
+      border: 1px solid var(--colors-hairline-strong);
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #3dd68c;
+      height: 120px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    /* Vertical Flow Connector Arrow */
+    .node-flow-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 0;
+      color: var(--colors-primary);
+      font-size: 1.25rem;
+      opacity: 0.8;
+    }
+
+    /* Output Deliverables Gallery */
+    .output-grid-carbon {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .output-card-carbon {
+      background: var(--colors-canvas);
+      border: 1px solid var(--colors-hairline);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .output-card-carbon img {
+      width: 100%;
+      height: 120px;
+      object-fit: contain;
+      background: #ffffff;
+      border: 1px solid var(--colors-hairline);
+    }
+
+    /* Sub-tabs inside Details */
+    .cfg-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 1px solid var(--colors-hairline);
+      margin-bottom: 12px;
+    }
+
+    .cfg-tab-btn {
+      background: var(--colors-canvas);
+      color: var(--colors-ink-muted);
+      border: 1px solid var(--colors-hairline);
+      border-bottom: none;
+      padding: 8px 14px;
+      font-size: 0.8125rem;
+      cursor: pointer;
+    }
+
+    .cfg-tab-btn.active {
+      background: var(--colors-surface-2);
+      color: var(--colors-ink);
+      border-color: var(--colors-primary);
+      border-bottom: 2px solid var(--colors-primary);
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .app-container {
+        padding: 12px 8px;
+        gap: 16px;
+      }
+      header, .pipeline-banner, .station-node-card {
+        padding: 16px;
+      }
+      .form-grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .stats-row-carbon {
+        grid-template-columns: 1fr;
+      }
+      .pipeline-actions {
+        width: 100%;
+      }
+      .pipeline-actions .btn {
+        flex: 1;
+      }
+      .output-grid-carbon {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <!-- Header -->
+  <div class="app-container">
+    
+    <!-- HEADER BAR -->
     <header>
-      <div class="header-title">
-        <h1>Vector Engine 3-Station Modular Dashboard</h1>
-        <p>Dynamic Multi-Station Pipeline: Vectorizer Headless & Rust Engine Phase 1–7</p>
-      </div>
-      <div style="font-size: 0.85rem; color: var(--text-muted);">
-        🌐 Local Server: <strong style="color: var(--accent-blue);">http://localhost:8000</strong>
+      <div class="header-top">
+        <div class="header-title">
+          <h1>Vector Engine Modular Dashboard</h1>
+          <p>IBM Carbon Design System Architecture — 5-Node ComfyUI Pipeline</p>
+        </div>
+        <div class="server-badge">
+          <i class="fas fa-server mr-1"></i> Localhost: <strong>8000</strong>
+        </div>
       </div>
     </header>
 
-    <!-- Top Chained Pipeline Action Bar -->
-    <div class="chained-bar">
-      <div>
-        <h3>🚀 JALANKAN PIPELINE OTOMATIS BERURUTAN (FULL CHAINED PIPELINE)</h3>
-        <p>Mengonversi file raster PNG/JPG via Vectorizer Headless (Kotak 2) ➔ Otomatis dioper ke Rust Engine Phase 1-7 (Kotak 3)</p>
-    <!-- TOP ACTION BAR (COMFYUI FLOW CONTROLLER) -->
-    <div class="chained-bar" style="background: linear-gradient(135deg, #111827, #1e1b4b); border: 1px solid #4f46e5; border-radius: 16px; padding: 18px 24px;">
-      <div>
-        <h3 style="color: #a855f7; font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-          <span>🚀 COMFY-NODE FLOW EXECUTOR</span>
-          <span style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 0.75rem; padding: 2px 10px; border-radius: 20px;">NODE 0 ➔ NODE 1 ➔ NODE 2 ➔ NODE 3 ➔ NODE 4</span>
-        </h3>
-        <p style="font-size: 0.82rem; color: #e9d5ff; margin-top: 2px;">Eksekusi otomatis berurutan dari AI Concept Remixer ➔ Chromium Auth ➔ Headless Vectorizer ➔ Rust Geometry Engine ➔ AI Metadata ExifTool</p>
+    <!-- MASTER COMFY-NODE PIPELINE EXECUTOR BANNER -->
+    <div class="pipeline-banner">
+      <div class="pipeline-banner-header">
+        <div>
+          <h3><i class="fas fa-bolt text-primary"></i> COMFY-NODE FLOW EXECUTOR</h3>
+          <p>Eksekusi otomatis berurutan dari Node 0 ➔ Node 1 ➔ Node 2 ➔ Node 3 ➔ Node 4</p>
+        </div>
+        <div class="pipeline-actions">
+          <button class="btn" onclick="runChainedPipeline()">
+            <i class="fas fa-play"></i> RUN FULL COMFY FLOW
+          </button>
+          <button class="btn btn-danger" onclick="stopPipeline()">
+            <i class="fas fa-stop"></i> CANCEL QUEUE
+          </button>
+        </div>
       </div>
-      <div style="display: flex; gap: 10px;">
-        <button class="btn btn-purple" style="box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);" onclick="runChainedPipeline()">⚡ RUN FULL COMFY FLOW</button>
-        <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 CANCEL QUEUE</button>
+
+      <div class="flow-stepper">
+        <span class="flow-step-tag active">NODE 0: AI Remixer</span>
+        <span>➔</span>
+        <span class="flow-step-tag active">NODE 1: Chromium Auth</span>
+        <span>➔</span>
+        <span class="flow-step-tag active">NODE 2: Headless Vectorizer</span>
+        <span>➔</span>
+        <span class="flow-step-tag active">NODE 3: Rust Geometry</span>
+        <span>➔</span>
+        <span class="flow-step-tag active">NODE 4: ExifTool Metadata</span>
       </div>
     </div>
 
-    <!-- STATIONS GRID: COMFYUI 3-NODE GRAPH -->
-    <div style="position: relative; margin-top: 10px;">
-      
-      <!-- SVG Connecting Cables (ComfyUI Cable Spline Wires) -->
-      <svg id="comfyWiresSvg" style="position: absolute; top: -10px; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; overflow: visible;">
-        <defs>
-          <linearGradient id="wireGradRunning" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#4ade80"/>
-            <stop offset="50%" stop-color="#38bdf8"/>
-            <stop offset="100%" stop-color="#a855f7"/>
-          </linearGradient>
-          <linearGradient id="wireGradIdle" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#f87171" stop-opacity="0.6"/>
-            <stop offset="100%" stop-color="#475569" stop-opacity="0.4"/>
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-            <feMerge>
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        
-        <!-- Cable Wire 0: Node 0 Output Pin -> Node 1 Input Pin -->
-        <path id="wire0Path" d="M 18.5% 45 C 20.5% 45, 20.5% 45, 21.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
-        <!-- Cable Wire 1: Node 1 Output Pin -> Node 2 Input Pin -->
-        <path id="wire1Path" d="M 38.5% 45 C 40.5% 45, 40.5% 45, 41.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
-        <!-- Cable Wire 2: Node 2 Output Pin -> Node 3 Input Pin -->
-        <path id="wire2Path" d="M 58.5% 45 C 60.5% 45, 60.5% 45, 61.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
-        <!-- Cable Wire 3: Node 3 Output Pin -> Node 4 Input Pin -->
-        <path id="wire3Path" d="M 78.5% 45 C 80.5% 45, 80.5% 45, 81.5% 45" stroke="url(#wireGradIdle)" stroke-width="4" stroke-dasharray="8 4" fill="none" filter="url(#glow)"/>
-      </svg>
+    <!-- VERTICAL STACKED NODES (Top-to-Bottom Flow) -->
+    <div class="vertical-nodes-container">
 
-      <div class="stations-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; position: relative; z-index: 3;">
-
-        <!-- NODE 0: AI CONCEPT REMIXER PRO -->
-        <div class="station-box" style="background: #0f172a; border: 1px solid #14b8a6; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-          <!-- Out Pin -->
-          <div style="position: absolute; right: -9px; top: 38px; width: 18px; height: 18px; background: #14b8a6; border-radius: 50%; box-shadow: 0 0 12px #14b8a6; border: 3px solid #0f172a; z-index: 4;" title="Output: Remix JPG Files to Node 2"></div>
-
-          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
-            <div>
-              <h2 style="color: #14b8a6; font-size: 1.05rem; font-weight: 800;">🎨 NODE 0: AI REMIXER PRO</h2>
-              <span style="font-size: 0.75rem; color: #94a3b8;">Gemini AI Image Remix Engine</span>
-            </div>
+      <!-- ==========================================
+           NODE 0: AI CONCEPT REMIXER PRO
+           ========================================== -->
+      <div class="station-node-card" id="node0Card">
+        <div class="node-header">
+          <div class="node-title-group">
+            <h2><i class="fas fa-paint-brush text-primary"></i> NODE 0: AI REMIXER PRO</h2>
+            <span>Gemini AI Image Concept Remix Engine</span>
           </div>
-
-          <!-- Dynamic Status Lamp Box -->
-          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="node0StatusDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
-              <span id="node0StatusText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: IDLE / OFF</span>
-            </div>
-          </div>
-
-          <!-- Live Counters -->
-          <div class="stats-row">
-            <div class="stat-card">
-              <span class="val val-queue" id="st0Queue">0</span>
-              <span class="lbl">📥 ANTREAN</span>
-            </div>
-            <div class="stat-card">
-              <span class="val val-success" id="st0Success">0</span>
-              <span class="lbl">✅ REMIX</span>
-            </div>
-            <div class="stat-card">
-              <span class="val val-failed" id="st0Failed">0</span>
-              <span class="lbl">❌ GAGAL</span>
-            </div>
-          </div>
-
-          <!-- Form Inputs Node 0 -->
-          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.75rem;">
-            <!-- Dropzone / Local Upload -->
-            <div class="dropzone" onclick="document.getElementById('st0FileInput').click()" style="padding: 10px; border-radius: 8px; font-size: 0.75rem;">
-              <span>📁 Upload Gambar Acuan & Style Ref</span>
-              <input type="file" id="st0FileInput" accept="image/jpeg, image/png, image/webp" multiple style="display: none;" onchange="uploadFiles(this.files, '/api/upload_station_0')">
-            </div>
-
-            <!-- HTTP URLs -->
-            <div>
-              <label style="color: #14b8a6; font-weight: 700; display: block; margin-bottom: 2px;">🔗 Link HTTP Gambar (Pinterest/Web):</label>
-              <textarea id="st0HttpUrls" rows="2" style="width: 100%; background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.72rem; padding: 4px 6px; border-radius: 6px; font-family: monospace;" placeholder="https://i.pinimg.com/..."></textarea>
-            </div>
-
-            <!-- Deskripsi Konsep -->
-            <div>
-              <label style="color: #14b8a6; font-weight: 700; display: block; margin-bottom: 2px;">Deskripsi Konsep / Prompt Remixer:</label>
-              <input type="text" id="st0Prompt" style="width: 100%; background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.72rem; padding: 4px 6px; border-radius: 6px;" placeholder="Contoh: Gambar ilustrasi vektor karakter astronot gaya retro, warna pastel solid...">
-            </div>
-
-            <!-- Style Level & Color Match Controls -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-              <div>
-                <label style="color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Tingkat Gaya:</label>
-                <select id="st0StyleLevel" style="background: #090d16; border: 1px solid #334155; color: #14b8a6; font-weight: 700; font-size: 0.72rem; padding: 4px; border-radius: 6px; width: 100%;">
-                  <option value="Easy" selected>Easy (Aman Stock)</option>
-                  <option value="Off">Off (Jiplak Ref)</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Hard">Hard (Bentuk Baru)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style="color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Akurasi Warna:</label>
-                <select id="st0ColorMatch" style="background: #090d16; border: 1px solid #334155; color: #14b8a6; font-weight: 700; font-size: 0.72rem; padding: 4px; border-radius: 6px; width: 100%;">
-                  <option value="Kunci" selected>Kunci (Palet Asli)</option>
-                  <option value="Moderat">Moderat</option>
-                  <option value="Bebas">Bebas</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Canvas Ratio & Theme -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-              <div>
-                <label style="color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Rasio Kanvas:</label>
-                <select id="st0CanvasRatio" style="background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.72rem; padding: 4px; border-radius: 6px; width: 100%;">
-                  <option value="1:1" selected>Persegi (1:1)</option>
-                  <option value="16:9">Melebar (16:9)</option>
-                  <option value="5:6">Vertikal (5:6)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style="color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Color Palette:</label>
-                <select id="st0ColorTheme" style="background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.72rem; padding: 4px; border-radius: 6px; width: 100%;">
-                  <option value="" selected>Tanpa Tema</option>
-                  <option value="Vintage">Vintage Collection</option>
-                  <option value="Retro">Retro Collection</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Hack Tools -->
-            <div style="display: flex; gap: 12px; margin-top: 2px;">
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="st0Tool1" checked style="accent-color: #14b8a6;">
-                <span>Tool 1: Anti-Gelap</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                <input type="checkbox" id="st0Tool2" checked style="accent-color: #14b8a6;">
-                <span>Tool 2: Mode BG</span>
-              </label>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 8px; margin-top: 6px;">
-            <button class="btn" style="flex: 1; background: #14b8a6; color: #000; font-weight: 800;" onclick="runStation0()">🚀 Jalankan Stasiun 0</button>
-            <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 Stop</button>
-          </div>
-
-          <!-- Console Log Node 0 -->
-          <div class="log-box" id="st0Log" style="height: 100px; border-color: #334155; color: #14b8a6; margin-top: 6px;">[NODE 0] AI Remixer Engine Ready.</div>
+          <span class="node-badge">NODE 0</span>
         </div>
 
-        <!-- NODE 1: CHROMIUM SESSION AUTH -->
-        <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-          <!-- Out Pin -->
-          <div style="position: absolute; right: -9px; top: 38px; width: 18px; height: 18px; background: #c084fc; border-radius: 50%; box-shadow: 0 0 12px #c084fc; border: 3px solid #0f172a; z-index: 4;" title="Output: Authenticated Session"></div>
-          
-          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
-            <div>
-              <h2 style="color: #c084fc; font-size: 1.05rem; font-weight: 800;">🔑 NODE 1: CHROMIUM AUTH</h2>
-              <span style="font-size: 0.75rem; color: #94a3b8;">Session Profile: System Chromium</span>
-            </div>
+        <div class="indicator-strip">
+          <span class="carbon-label" style="margin:0;">INDICATOR STATUS:</span>
+          <div class="indicator-status">
+            <div id="node0StatusDot" class="status-indicator-dot"></div>
+            <span id="node0StatusText" style="color: var(--colors-semantic-error);">STATUS: IDLE / OFF</span>
           </div>
-
-          <!-- Dynamic Status Lamp Box -->
-          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <div id="sessionDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
-                <span id="sessionText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: OFFLINE</span>
-              </div>
-            </div>
-            <p style="font-size: 0.72rem; color: var(--text-muted); word-break: break-all;"><code>/home/panjikali/snap/chromium/common/chromium</code></p>
-          </div>
-
-          <button class="btn btn-purple" style="font-size: 0.85rem; padding: 12px 18px; width: 100%; border-radius: 10px; font-weight: 800;" onclick="triggerLoginSession()">🔑 Sesi Login</button>
-
-          <!-- Console Log Node 1 -->
-          <div class="log-box" id="st1Log" style="height: 110px; color: #c084fc; border-color: #334155;">[NODE 1] Chromium Auth Node Ready.</div>
         </div>
 
-        <!-- NODE 2: VECTORIZER HEADLESS CONVERTER -->
-        <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-          <!-- In Pin & Out Pin -->
-          <div style="position: absolute; left: -9px; top: 38px; width: 18px; height: 18px; background: #38bdf8; border-radius: 50%; box-shadow: 0 0 12px #38bdf8; border: 3px solid #0f172a; z-index: 4;" title="Input: Session Auth"></div>
-          <div style="position: absolute; right: -9px; top: 38px; width: 18px; height: 18px; background: #38bdf8; border-radius: 50%; box-shadow: 0 0 12px #38bdf8; border: 3px solid #0f172a; z-index: 4;" title="Output: SVG Files"></div>
-
-          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
-            <div>
-              <h2 style="color: #38bdf8; font-size: 1.05rem; font-weight: 800;">🖼️ NODE 2: VECTORIZER HEADLESS</h2>
-              <span style="font-size: 0.75rem; color: #94a3b8;">Raster PNG/JPG ➔ SVG Converter</span>
-            </div>
+        <div class="stats-row-carbon">
+          <div class="stat-tile">
+            <span class="val" id="st0Queue" style="color: var(--colors-primary);">0</span>
+            <span class="lbl">📥 Antrean</span>
           </div>
-
-          <!-- Dynamic Status Lamp Box -->
-          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="node2StatusDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
-              <span id="node2StatusText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: IDLE / OFF</span>
-            </div>
+          <div class="stat-tile">
+            <span class="val" id="st0Success" style="color: var(--colors-semantic-success);">0</span>
+            <span class="lbl">✅ Remix Selesai</span>
           </div>
-
-          <!-- Live Counters -->
-          <div class="stats-row">
-            <div class="stat-card">
-              <span class="val val-queue" id="st2Queue">0</span>
-              <span class="lbl">📥 ANTREAN</span>
-            </div>
-            <div class="stat-card">
-              <span class="val val-success" id="st2Success">0</span>
-              <span class="lbl">✅ SELESAI</span>
-            </div>
-            <div class="stat-card">
-              <span class="val val-failed" id="st2Failed">0</span>
-              <span class="lbl">❌ GAGAL</span>
-            </div>
+          <div class="stat-tile">
+            <span class="val" id="st0Failed" style="color: var(--colors-semantic-error);">0</span>
+            <span class="lbl">❌ Gagal</span>
           </div>
-
-          <div style="display: flex; gap: 8px;">
-            <button class="btn" style="flex: 1; font-weight: 800;" onclick="runStation2()">🚀 Jalankan Stasiun 2</button>
-            <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 Stop</button>
-          </div>
-
-          <!-- CAPTCHA Alert Box -->
-          <div id="captchaAlertBox" style="display: none; background: #451a03; border: 1px solid #f59e0b; border-radius: 12px; padding: 14px; margin-top: 10px;">
-            <h4 style="color: #fbbf24; font-size: 0.95rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-              <span>🤖 TERDETEKSI CAPTCHA / CLOUDFLARE!</span>
-            </h4>
-            <p style="font-size: 0.8rem; color: #fef3c7; margin-top: 4px;">Sistem menjeda pemrosesan otomatis. Silakan klik tombol di bawah untuk membuka browser GUI dan menyelesaikan tantangan CAPTCHA.</p>
-            
-            <div style="margin-top: 10px; text-align: center;">
-              <img id="captchaPreviewImg" src="/captcha_screenshot.png" style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 1px solid #f59e0b; background: #000;" alt="Captcha Screenshot Preview">
-            </div>
-
-            <div style="margin-top: 10px; display: flex; gap: 8px;">
-              <button class="btn" style="background: #f59e0b; color: #000; font-weight: 700; font-size: 0.8rem;" onclick="triggerLoginSession()">🔑 Sesi Login & Selesaikan CAPTCHA</button>
-              <button class="btn btn-green" style="font-size: 0.8rem;" onclick="runStation2()">▶️ Resume Stasiun 2</button>
-            </div>
-          </div>
-
-          <!-- Console Log Node 2 -->
-          <div class="log-box" id="st2Log" style="height: 110px; border-color: #334155;">[NODE 2] Headless Converter Ready.</div>
         </div>
 
-        <!-- NODE 3: VECTOR GEOMETRY RUST ENGINE -->
-        <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-          <!-- In Pin & Out Pin -->
-          <div style="position: absolute; left: -9px; top: 38px; width: 18px; height: 18px; background: #4ade80; border-radius: 50%; box-shadow: 0 0 12px #4ade80; border: 3px solid #0f172a; z-index: 4;" title="Input: Vector SVG"></div>
-          <div style="position: absolute; right: -9px; top: 38px; width: 18px; height: 18px; background: #4ade80; border-radius: 50%; box-shadow: 0 0 12px #4ade80; border: 3px solid #0f172a; z-index: 4;" title="Output: EPS & JPG Deliverables"></div>
+        <div class="carbon-dropzone" onclick="document.getElementById('st0FileInput').click()">
+          <i class="fas fa-cloud-upload-alt"></i> Upload Gambar Acuan & Referensi Gaya (Locals)
+          <input type="file" id="st0FileInput" accept="image/jpeg, image/png, image/webp" multiple style="display: none;" onchange="uploadFiles(this.files, '/api/upload_station_0')">
+        </div>
 
-          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
-            <div>
-              <h2 style="color: #4ade80; font-size: 1.05rem; font-weight: 800;">⚡ NODE 3: VECTOR GEOMETRY ENGINE</h2>
-              <span style="font-size: 0.75rem; color: #94a3b8;">Rust Simplify ➔ Pattern ➔ EPS & JPG</span>
-            </div>
-          </div>
+        <div>
+          <label class="carbon-label">🔗 Link HTTP Gambar (Pinterest / Web Direct):</label>
+          <textarea id="st0HttpUrls" rows="2" placeholder="Masukkan link HTTP/HTTPS di sini... (Pisahkan dengan Enter)"></textarea>
+        </div>
 
-          <!-- Dynamic Status Lamp Box -->
-          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="node3StatusDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
-              <span id="node3StatusText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: IDLE / OFF</span>
-            </div>
-          </div>
+        <div>
+          <label class="carbon-label">Deskripsi Konsep / Prompt Remixer:</label>
+          <input type="text" id="st0Prompt" placeholder="Contoh: Gambar ilustrasi vektor karakter astronot gaya retro, warna pastel solid...">
+        </div>
 
-          <!-- Live Counters -->
-          <div class="stats-row">
-            <div class="stat-card">
-              <span class="val val-queue" id="st3Queue">0</span>
-              <span class="lbl">📄 ANTREAN</span>
-            </div>
-            <div class="stat-card">
-              <span class="val val-success" id="st3Success">0</span>
-              <span class="lbl">✅ SELESAI</span>
-            </div>
-            <div class="stat-card">
-              <span class="val val-failed" id="st3Failed">0</span>
-              <span class="lbl">❌ GAGAL</span>
-            </div>
-          </div>
-
-          <!-- Export Mode Selector -->
-          <div style="margin-bottom: 8px;">
-            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 4px;">Mode Ekspor Deliverables:</label>
-            <select id="exportModeSelect" style="width: 100%; background: #090d16; color: #4ade80; border: 1px solid #334155; padding: 8px; border-radius: 8px; font-weight: 700; margin-bottom: 8px;">
-              <option value="auto" selected>🤖 Auto Profile (config_silhouette.json: Pattern & 3-Panel)</option>
-              <option value="pattern">🎨 Seamless Pattern Only (--pattern)</option>
-              <option value="double">📊 Stock Presentation Board Only (2/3 Panel bad_two)</option>
-              <option value="single">🖼️ Single Output Only (--single)</option>
+        <div class="form-grid-2">
+          <div>
+            <label class="carbon-label">Tingkat Peniruan Gaya:</label>
+            <select id="st0StyleLevel">
+              <option value="Easy" selected>Easy (Aman Stock)</option>
+              <option value="Off">Off (Jiplak Ref)</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard (Bentuk Baru)</option>
             </select>
           </div>
-
-          <!-- Option Pattern Style -->
           <div>
-            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 4px;">Pilih Style Seamless Pattern (Phase 5):</label>
-            <select id="patternStyleSelect" style="width: 100%; background: #090d16; color: #f8fafc; border: 1px solid #334155; padding: 8px; border-radius: 8px; font-weight: 600; margin-bottom: 8px;">
-              <option value="brick_wall" selected>brick_wall (Susunan Bata Horizontal)</option>
-              <option value="slanted_left">slanted_left (Miring Kiri -50%)</option>
-              <option value="slanted_right">slanted_right (Miring Kanan +50%)</option>
-              <option value="half_drop_vertical">half_drop_vertical (Half-drop Kolom Vertikal)</option>
-              <option value="diamond_stagger">diamond_stagger (Matriks Belah Ketupat)</option>
-              <option value="checker_pinwheel">checker_pinwheel (Rotasi Kincir 90°)</option>
-              <option value="scale_rhythm">scale_rhythm (Irama Skala Ganda 100% & 75%)</option>
-              <option value="wave_sine_offset">wave_sine_offset (Gelombang Sinus)</option>
-              <option value="kaleidoscope_mirror">kaleidoscope_mirror (Simetri Cermin 4 Arah)</option>
-              <option value="grid">grid (Grid Lurus Sejajar NxM)</option>
-              <option value="alternating">alternating (Cermin Selang-Seling)</option>
+            <label class="carbon-label">Akurasi Warna Desain:</label>
+            <select id="st0ColorMatch">
+              <option value="Kunci" selected>Kunci (Palet Asli)</option>
+              <option value="Moderat">Moderat</option>
+              <option value="Bebas">Bebas</option>
             </select>
           </div>
+        </div>
 
-          <!-- Advanced Engine & Pattern Config Box -->
-          <details open style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; margin-bottom: 12px;">
-            <summary style="font-size: 0.85rem; font-weight: 800; color: #4ade80; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between;">
-              <span>⚙️ Konfigurasi Lengkap Profil (config_silhouette.json)</span>
-              <span style="font-size: 0.72rem; color: #94a3b8;">Klik untuk lipat/buka</span>
-            </summary>
-
-            <!-- Navigation Sub-Tabs -->
-            <div style="display: flex; gap: 4px; margin-top: 10px; margin-bottom: 10px; border-bottom: 1px solid #1e293b; padding-bottom: 6px;">
-              <button type="button" class="cfg-tab active" id="tabBtnLow" onclick="switchCfgTab('low')" style="background: #1e293b; color: #4ade80; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">🎨 Low-Color (≤ 5)</button>
-              <button type="button" class="cfg-tab" id="tabBtnMulti" onclick="switchCfgTab('multi')" style="background: #0f172a; color: #94a3b8; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">📊 Multi-Color (≥ 6)</button>
-              <button type="button" class="cfg-tab" id="tabBtnJson" onclick="switchCfgTab('json')" style="background: #0f172a; color: #94a3b8; border: 1px solid #334155; padding: 4px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">📝 Raw JSON Editor</button>
-            </div>
-
-            <!-- TAB 1: LOW-COLOR PROFILE (<= 5 colors) -->
-            <div id="cfgPanelLow" style="display: flex; flex-direction: column; gap: 8px; font-size: 0.75rem; color: #cbd5e1;">
-              <div style="display: flex; gap: 6px; align-items: center;">
-                <span style="flex: 1;">Max Colors (Warna ≤):</span>
-                <input type="number" id="lowMaxColorsInput" value="5" min="1" max="100" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-                <span style="flex: 1;">Edge Threshold:</span>
-                <input type="number" id="lowThresholdInput" value="0.50" step="0.05" min="0" max="1" style="width: 55px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-              </div>
-
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="lineArtCheck" style="accent-color: #4ade80;">
-                <span><strong>Mode Line Art / Silhouette Only</strong></span>
-              </label>
-
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="lowPatternEnableCheck" checked style="accent-color: #4ade80;">
-                <span><strong>Enable Pattern Export</strong> (Ubin Seamless)</span>
-              </label>
-
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="flex: 1;">Grid Repeat (Kolom × Baris):</span>
-                <input type="number" id="gridXInput" value="3" min="1" max="10" style="width: 45px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-                <span>×</span>
-                <input type="number" id="gridYInput" value="3" min="1" max="10" style="width: 45px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-              </div>
-
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="wraparoundCheck" checked style="accent-color: #4ade80;">
-                <span>Wraparound Seamless (Tepi Melingkar Canvas)</span>
-              </label>
-
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="flex: 1;">Tile Gap Margin (px):</span>
-                <input type="number" id="gapInput" value="50.0" step="5" style="width: 65px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-              </div>
-
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="flex: 1;">Background Color:</span>
-                <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 32px; height: 24px; border: none; background: none; cursor: pointer;">
-                <input type="text" id="bgColorText" value="#FFFFFF" style="width: 65px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-              </div>
-            </div>
-
-            <!-- TAB 2: MULTI-COLOR PROFILE (>= 6 colors) -->
-            <div id="cfgPanelMulti" style="display: none; flex-direction: column; gap: 8px; font-size: 0.75rem; color: #cbd5e1;">
-              <div style="display: flex; gap: 6px; align-items: center;">
-                <span style="flex: 1;">Min Colors (Warna ≥):</span>
-                <input type="number" id="multiMinColorsInput" value="6" min="1" max="100" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-                <span style="flex: 1;">Simplify Threshold:</span>
-                <input type="number" id="multiThresholdInput" value="0.95" step="0.05" min="0" max="1" style="width: 55px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-              </div>
-
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="multiPatternEnableCheck" style="accent-color: #4ade80;">
-                <span><strong>Enable Pattern Export for Multi-Color</strong></span>
-              </label>
-
-              <div style="border-top: 1px dashed #334155; padding-top: 6px; margin-top: 4px;">
-                <strong style="color: #38bdf8;">Board Panel 2 (Middle - Greyscale):</strong>
-                <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
-                  <span>Min Lum:</span>
-                  <input type="number" id="midMinLumInput" value="0.20" step="0.05" min="0" max="1" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-                  <span>Max Lum:</span>
-                  <input type="number" id="midMaxLumInput" value="0.62" step="0.05" min="0" max="1" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-                </div>
-              </div>
-
-              <div style="border-top: 1px dashed #334155; padding-top: 6px; margin-top: 4px;">
-                <strong style="color: #fbbf24;">Board Panel 3 (Right - Dominant Color):</strong>
-                <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
-                  <span>Min Lum:</span>
-                  <input type="number" id="rightMinLumInput" value="0.20" step="0.05" min="0" max="1" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-                  <span>Max Lum:</span>
-                  <input type="number" id="rightMaxLumInput" value="0.62" step="0.05" min="0" max="1" style="width: 50px; background: #0f172a; border: 1px solid #334155; color: #fff; text-align: center; border-radius: 4px; padding: 2px 4px;">
-                </div>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 4px;">
-                  <input type="checkbox" id="rightExcludeBgCheck" checked style="accent-color: #fbbf24;">
-                  <span>Exclude Background Color</span>
-                </label>
-              </div>
-            </div>
-
-            <!-- TAB 3: RAW JSON EDITOR -->
-            <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 6px;">
-              <textarea id="rawJsonArea" style="width: 100%; height: 160px; background: #05080e; border: 1px solid #334155; color: #38bdf8; font-family: monospace; font-size: 0.72rem; padding: 8px; border-radius: 6px; resize: vertical;"></textarea>
-              <button type="button" class="btn btn-outline" style="font-size: 0.72rem; padding: 4px 8px; align-self: flex-end;" onclick="saveRawJsonConfig()">💾 Simpan JSON Direct</button>
-            </div>
-
-            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center;">
-              <span id="cfgSaveNotice" style="font-size: 0.72rem; color: #4ade80; display: none;">✅ Settings tersimpan</span>
-              <button type="button" class="btn btn-purple" style="font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; margin-left: auto;" onclick="saveAllSilhouetteConfig()">💾 Simpan Settings Profile</button>
-            </div>
-          </details>
-
-          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-            <button class="btn btn-green" style="flex: 1; font-weight: 800;" onclick="runStation3()">⚡ Jalankan Stasiun 3</button>
-            <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 Stop</button>
-          </div>
-
-          <!-- Console Log Node 3 -->
-          <div class="log-box" id="st3Log" style="height: 110px; border-color: #334155;">[NODE 3] Rust Engine Ready.</div>
-
-          <!-- Outputs Gallery -->
+        <div class="form-grid-2">
           <div>
-            <label style="font-size: 0.75rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 6px;">Hasil Paket Deliverables (EPS & JPG):</label>
-            <div class="output-grid" id="st3OutputGrid">
-              <!-- Populated dynamically -->
-            </div>
+            <label class="carbon-label">Ukuran Kanvas / Output Ratio:</label>
+            <select id="st0CanvasRatio">
+              <option value="1:1" selected>Persegi (1:1)</option>
+              <option value="16:9">Melebar (16:9)</option>
+              <option value="5:6">Vertikal (5:6)</option>
+            </select>
+          </div>
+          <div>
+            <label class="carbon-label">Theme Color Palette:</label>
+            <select id="st0ColorTheme">
+              <option value="" selected>Tanpa Tema</option>
+              <option value="Vintage">Vintage Collection</option>
+              <option value="Retro">Retro Collection</option>
+            </select>
           </div>
         </div>
 
-        <!-- NODE 4: AI METADATA & EXIFTOOL INJECTOR -->
-        <div class="station-box" style="background: #0f172a; border: 1px solid #334155; position: relative; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-          <!-- In Pin -->
-          <div style="position: absolute; left: -9px; top: 38px; width: 18px; height: 18px; background: #f59e0b; border-radius: 50%; box-shadow: 0 0 12px #f59e0b; border: 3px solid #0f172a; z-index: 4;" title="Input: EPS & JPG Deliverables"></div>
-
-          <div class="station-header" style="border-bottom: 1px solid #1e293b; padding-bottom: 12px;">
-            <div>
-              <h2 style="color: #f59e0b; font-size: 1.05rem; font-weight: 800;">🏷️ NODE 4: AI METADATA & EXIFTOOL</h2>
-              <span style="font-size: 0.75rem; color: #94a3b8;">Gemini Canvas AI ➔ ExifTool Metadata Injected</span>
-            </div>
-          </div>
-
-          <!-- Dynamic Status Lamp Box -->
-          <div style="background: #090d16; border: 1px solid #1e293b; border-radius: 12px; padding: 10px; display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.75rem; font-weight: 700; color: #94a3b8;">INDICATOR:</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <div id="node4StatusDot" style="width: 12px; height: 12px; border-radius: 50%; background: #f87171; box-shadow: 0 0 10px #f87171; transition: all 0.3s ease;"></div>
-              <span id="node4StatusText" style="font-size: 0.8rem; font-weight: 800; color: #f87171;">STATUS: IDLE / OFF</span>
-            </div>
-          </div>
-
-          <!-- Live Counters -->
-          <div class="stats-row">
-            <div class="stat-card">
-              <span class="val val-queue" id="st4Queue">0</span>
-              <span class="lbl">📄 PASANGAN</span>
-            </div>
-            <div class="stat-card">
-              <span class="val val-success" id="st4Success">0</span>
-              <span class="lbl">✅ INJEKSI</span>
-            </div>
-            <div class="stat-card">
-              <span class="val val-failed" id="st4Failed">0</span>
-              <span class="lbl">❌ GAGAL</span>
-            </div>
-          </div>
-
-          <!-- Form Controls Node 4 -->
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px;">
-            <div>
-              <label style="font-size: 0.72rem; color: #94a3b8; font-weight: 700; display: block; margin-bottom: 2px;">Gemini Canvas AI Link:</label>
-              <input type="text" id="geminiUrlInput" value="https://gemini.google.com/app/1c8f6f7e10330ba6" style="width: 100%; background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.75rem; padding: 6px 8px; border-radius: 6px;">
-            </div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <label style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">Ukuran Batch File:</label>
-              <input type="number" id="batchSizeInput" value="5" min="1" max="50" style="width: 60px; background: #090d16; border: 1px solid #334155; color: #fff; font-size: 0.75rem; text-align: center; padding: 4px; border-radius: 6px;">
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-            <button class="btn" style="flex: 1; background: #f59e0b; color: #000; font-weight: 800;" onclick="runStation4()">🚀 Jalankan Stasiun 4</button>
-            <button class="btn" style="background: var(--accent-red); color: #fff;" onclick="stopPipeline()">🛑 Stop</button>
-          </div>
-
-          <a href="/api/download_master_csv" target="_blank" class="btn btn-outline" style="width: 100%; text-align: center; font-size: 0.78rem; margin-bottom: 8px; text-decoration: none; display: block;">📥 Download Master Katalog CSV</a>
-
-          <!-- Console Log Node 4 -->
-          <div class="log-box" id="st4Log" style="height: 110px; border-color: #334155;">[NODE 4] AI Metadata Engine Ready.</div>
+        <div class="form-grid-2">
+          <label class="checkbox-group">
+            <input type="checkbox" id="st0Tool1" checked>
+            <span>Tool 1: Anti-Gelap (Kunci Kecerahan Asli)</span>
+          </label>
+          <label class="checkbox-group">
+            <input type="checkbox" id="st0Tool2" checked>
+            <span>Tool 2: Mode Background (Bersihkan Warna BG)</span>
+          </label>
         </div>
 
+        <div class="pipeline-actions">
+          <button class="btn btn-full" onclick="runStation0()">
+            <i class="fas fa-play"></i> Jalankan Stasiun 0
+          </button>
+          <button class="btn btn-danger" onclick="stopPipeline()">
+            <i class="fas fa-stop"></i> Stop
+          </button>
+        </div>
+
+        <div class="carbon-log-box" id="st0Log">[NODE 0] AI Remixer Engine Ready.</div>
       </div>
+
+      <!-- Connector Arrow -->
+      <div class="node-flow-arrow"><i class="fas fa-chevron-down"></i></div>
+
+
+      <!-- ==========================================
+           NODE 1: CHROMIUM SESSION AUTH
+           ========================================== -->
+      <div class="station-node-card" id="node1Card">
+        <div class="node-header">
+          <div class="node-title-group">
+            <h2><i class="fas fa-key text-primary"></i> NODE 1: CHROMIUM AUTH</h2>
+            <span>System Chromium Profile & Authentication Session</span>
+          </div>
+          <span class="node-badge">NODE 1</span>
+        </div>
+
+        <div class="indicator-strip">
+          <span class="carbon-label" style="margin:0;">SESI CHROMIUM:</span>
+          <div class="indicator-status">
+            <div id="sessionDot" class="status-indicator-dot"></div>
+            <span id="sessionText" style="color: var(--colors-semantic-error);">STATUS: OFFLINE</span>
+          </div>
+        </div>
+
+        <div style="font-family: var(--font-mono); font-size: 0.8125rem; color: var(--colors-ink-muted);">
+          Profile Path: <code>/home/panjikali/snap/chromium/common/chromium</code>
+        </div>
+
+        <div class="pipeline-actions">
+          <button class="btn btn-secondary btn-full" onclick="triggerLoginSession()">
+            <i class="fas fa-sign-in-alt"></i> Buka Sesi Login Chromium
+          </button>
+          <button class="btn btn-ghost" onclick="resetProfile()">
+            <i class="fas fa-trash-alt"></i> Reset Profil
+          </button>
+        </div>
+
+        <div class="carbon-log-box" id="st1Log">[NODE 1] Chromium Auth Node Ready.</div>
+      </div>
+
+      <!-- Connector Arrow -->
+      <div class="node-flow-arrow"><i class="fas fa-chevron-down"></i></div>
+
+
+      <!-- ==========================================
+           NODE 2: VECTORIZER HEADLESS CONVERTER
+           ========================================== -->
+      <div class="station-node-card" id="node2Card">
+        <div class="node-header">
+          <div class="node-title-group">
+            <h2><i class="fas fa-vector-square text-primary"></i> NODE 2: VECTORIZER HEADLESS</h2>
+            <span>Raster PNG/JPG ➔ SVG Vector Converter</span>
+          </div>
+          <span class="node-badge">NODE 2</span>
+        </div>
+
+        <div class="indicator-strip">
+          <span class="carbon-label" style="margin:0;">INDICATOR STATUS:</span>
+          <div class="indicator-status">
+            <div id="node2StatusDot" class="status-indicator-dot"></div>
+            <span id="node2StatusText" style="color: var(--colors-semantic-error);">STATUS: IDLE / OFF</span>
+          </div>
+        </div>
+
+        <div class="stats-row-carbon">
+          <div class="stat-tile">
+            <span class="val" id="st2Queue" style="color: var(--colors-primary);">0</span>
+            <span class="lbl">📥 Antrean File</span>
+          </div>
+          <div class="stat-tile">
+            <span class="val" id="st2Success" style="color: var(--colors-semantic-success);">0</span>
+            <span class="lbl">✅ Konversi Selesai</span>
+          </div>
+          <div class="stat-tile">
+            <span class="val" id="st2Failed" style="color: var(--colors-semantic-error);">0</span>
+            <span class="lbl">❌ Gagal</span>
+          </div>
+        </div>
+
+        <div class="pipeline-actions">
+          <button class="btn btn-full" onclick="runStation2()">
+            <i class="fas fa-play"></i> Jalankan Stasiun 2
+          </button>
+          <button class="btn btn-danger" onclick="stopPipeline()">
+            <i class="fas fa-stop"></i> Stop
+          </button>
+        </div>
+
+        <!-- CAPTCHA Alert Box -->
+        <div id="captchaAlertBox" style="display: none; background: #331f00; border: 1px solid var(--colors-semantic-warning); padding: 16px;">
+          <h4 style="color: var(--colors-semantic-warning); font-size: 0.9375rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-exclamation-triangle"></i> TERDETEKSI CAPTCHA / CLOUDFLARE!
+          </h4>
+          <p style="font-size: 0.8125rem; color: #fff; margin-top: 6px;">Sistem menjeda pemrosesan otomatis. Silakan buka browser GUI untuk menyelesaikan verifikasi CAPTCHA.</p>
+          
+          <div style="margin-top: 10px; text-align: center;">
+            <img id="captchaPreviewImg" src="/captcha_screenshot.png" style="width: 100%; max-height: 350px; object-fit: contain; border: 1px solid var(--colors-hairline-strong);" alt="Captcha Screenshot Preview">
+          </div>
+
+          <div style="margin-top: 12px; display: flex; gap: 10px;">
+            <button class="btn" style="background: var(--colors-semantic-warning); color: #000;" onclick="triggerLoginSession()">🔑 Selesaikan CAPTCHA</button>
+            <button class="btn btn-success" onclick="runStation2()">▶️ Resume Stasiun 2</button>
+          </div>
+        </div>
+
+        <div class="carbon-log-box" id="st2Log">[NODE 2] Headless Converter Ready.</div>
+      </div>
+
+      <!-- Connector Arrow -->
+      <div class="node-flow-arrow"><i class="fas fa-chevron-down"></i></div>
+
+
+      <!-- ==========================================
+           NODE 3: VECTOR GEOMETRY RUST ENGINE
+           ========================================== -->
+      <div class="station-node-card" id="node3Card">
+        <div class="node-header">
+          <div class="node-title-group">
+            <h2><i class="fas fa-microchip text-primary"></i> NODE 3: VECTOR GEOMETRY ENGINE</h2>
+            <span>Rust Simplify ➔ Seamless Pattern ➔ EPS & JPG Deliverables</span>
+          </div>
+          <span class="node-badge">NODE 3</span>
+        </div>
+
+        <div class="indicator-strip">
+          <span class="carbon-label" style="margin:0;">INDICATOR STATUS:</span>
+          <div class="indicator-status">
+            <div id="node3StatusDot" class="status-indicator-dot"></div>
+            <span id="node3StatusText" style="color: var(--colors-semantic-error);">STATUS: IDLE / OFF</span>
+          </div>
+        </div>
+
+        <div class="stats-row-carbon">
+          <div class="stat-tile">
+            <span class="val" id="st3Queue" style="color: var(--colors-primary);">0</span>
+            <span class="lbl">📄 Antrean SVG</span>
+          </div>
+          <div class="stat-tile">
+            <span class="val" id="st3Success" style="color: var(--colors-semantic-success);">0</span>
+            <span class="lbl">✅ EPS & JPG Selesai</span>
+          </div>
+          <div class="stat-tile">
+            <span class="val" id="st3Failed" style="color: var(--colors-semantic-error);">0</span>
+            <span class="lbl">❌ Gagal</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="carbon-label">Mode Ekspor Deliverables:</label>
+          <select id="exportModeSelect">
+            <option value="auto" selected>🤖 Auto Profile (config_silhouette.json: Pattern & 3-Panel)</option>
+            <option value="pattern">🎨 Seamless Pattern Only (--pattern)</option>
+            <option value="double">📊 Stock Presentation Board Only (2/3 Panel bad_two)</option>
+            <option value="single">🖼️ Single Output Only (--single)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="carbon-label">Pilih Style Seamless Pattern (Phase 5):</label>
+          <select id="patternStyleSelect">
+            <option value="brick_wall" selected>brick_wall (Susunan Bata Horizontal)</option>
+            <option value="slanted_left">slanted_left (Miring Kiri -50%)</option>
+            <option value="slanted_right">slanted_right (Miring Kanan +50%)</option>
+            <option value="half_drop_vertical">half_drop_vertical (Half-drop Kolom Vertikal)</option>
+            <option value="diamond_stagger">diamond_stagger (Matriks Belah Ketupat)</option>
+            <option value="checker_pinwheel">checker_pinwheel (Rotasi Kincir 90°)</option>
+            <option value="scale_rhythm">scale_rhythm (Irama Skala Ganda 100% & 75%)</option>
+            <option value="wave_sine_offset">wave_sine_offset (Gelombang Sinus)</option>
+            <option value="kaleidoscope_mirror">kaleidoscope_mirror (Simetri Cermin 4 Arah)</option>
+            <option value="grid">grid (Grid Lurus Sejajar NxM)</option>
+            <option value="alternating">alternating (Cermin Selang-Seling)</option>
+          </select>
+        </div>
+
+        <!-- Advanced Engine Profile Config Details -->
+        <details open style="background: var(--colors-canvas); border: 1px solid var(--colors-hairline); padding: 16px;">
+          <summary style="font-size: 0.875rem; font-weight: 500; color: var(--colors-ink); cursor: pointer; user-select: none;">
+            <i class="fas fa-sliders-h text-primary mr-2"></i> Konfigurasi Lengkap Profil (config_silhouette.json)
+          </summary>
+
+          <div class="cfg-tabs" style="margin-top: 12px;">
+            <button type="button" class="cfg-tab-btn active" id="tabBtnLow" onclick="switchCfgTab('low')">🎨 Low-Color (≤ 5)</button>
+            <button type="button" class="cfg-tab-btn" id="tabBtnMulti" onclick="switchCfgTab('multi')">📊 Multi-Color (≥ 6)</button>
+            <button type="button" class="cfg-tab-btn" id="tabBtnJson" onclick="switchCfgTab('json')">📝 Raw JSON Editor</button>
+          </div>
+
+          <!-- TAB 1: LOW-COLOR PROFILE -->
+          <div id="cfgPanelLow" style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="form-grid-2">
+              <div>
+                <label class="carbon-label">Max Colors:</label>
+                <input type="number" id="lowMaxColorsInput" value="5" min="1" max="100">
+              </div>
+              <div>
+                <label class="carbon-label">Edge Threshold:</label>
+                <input type="number" id="lowThresholdInput" value="0.50" step="0.05" min="0" max="1">
+              </div>
+            </div>
+
+            <label class="checkbox-group">
+              <input type="checkbox" id="lineArtCheck">
+              <span>Mode Line Art / Silhouette Only</span>
+            </label>
+
+            <label class="checkbox-group">
+              <input type="checkbox" id="lowPatternEnableCheck" checked>
+              <span>Enable Pattern Export (Ubin Seamless)</span>
+            </label>
+
+            <div class="form-grid-2">
+              <div>
+                <label class="carbon-label">Grid Repeat X (Kolom):</label>
+                <input type="number" id="gridXInput" value="3" min="1" max="10">
+              </div>
+              <div>
+                <label class="carbon-label">Grid Repeat Y (Baris):</label>
+                <input type="number" id="gridYInput" value="3" min="1" max="10">
+              </div>
+            </div>
+
+            <label class="checkbox-group">
+              <input type="checkbox" id="wraparoundCheck" checked>
+              <span>Wraparound Seamless (Tepi Melingkar Canvas)</span>
+            </label>
+
+            <div class="form-grid-2">
+              <div>
+                <label class="carbon-label">Tile Gap Margin (px):</label>
+                <input type="number" id="gapInput" value="50.0" step="5">
+              </div>
+              <div>
+                <label class="carbon-label">Background Color (HEX):</label>
+                <div style="display: flex; gap: 8px;">
+                  <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 50px; min-height: 48px; padding: 2px;">
+                  <input type="text" id="bgColorText" value="#FFFFFF">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: MULTI-COLOR PROFILE -->
+          <div id="cfgPanelMulti" style="display: none; flex-direction: column; gap: 12px;">
+            <div class="form-grid-2">
+              <div>
+                <label class="carbon-label">Min Colors:</label>
+                <input type="number" id="multiMinColorsInput" value="6" min="1" max="100">
+              </div>
+              <div>
+                <label class="carbon-label">Simplify Threshold:</label>
+                <input type="number" id="multiThresholdInput" value="0.95" step="0.05" min="0" max="1">
+              </div>
+            </div>
+
+            <label class="checkbox-group">
+              <input type="checkbox" id="multiPatternEnableCheck">
+              <span>Enable Pattern Export for Multi-Color</span>
+            </label>
+
+            <div style="border-top: 1px dashed var(--colors-hairline-strong); padding-top: 10px;">
+              <label class="carbon-label" style="color: var(--colors-primary);">Board Panel 2 (Middle - Greyscale Luminance):</label>
+              <div class="form-grid-2">
+                <input type="number" id="midMinLumInput" value="0.20" step="0.05" min="0" max="1" placeholder="Min Lum">
+                <input type="number" id="midMaxLumInput" value="0.62" step="0.05" min="0" max="1" placeholder="Max Lum">
+              </div>
+            </div>
+
+            <div style="border-top: 1px dashed var(--colors-hairline-strong); padding-top: 10px;">
+              <label class="carbon-label" style="color: var(--colors-semantic-warning);">Board Panel 3 (Right - Dominant Color):</label>
+              <div class="form-grid-2">
+                <input type="number" id="rightMinLumInput" value="0.20" step="0.05" min="0" max="1" placeholder="Min Lum">
+                <input type="number" id="rightMaxLumInput" value="0.62" step="0.05" min="0" max="1" placeholder="Max Lum">
+              </div>
+              <label class="checkbox-group" style="margin-top: 8px;">
+                <input type="checkbox" id="rightExcludeBgCheck" checked>
+                <span>Exclude Background Color</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- TAB 3: RAW JSON EDITOR -->
+          <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 10px;">
+            <textarea id="rawJsonArea" style="height: 180px;"></textarea>
+            <button type="button" class="btn btn-secondary" onclick="saveRawJsonConfig()">💾 Simpan JSON Direct</button>
+          </div>
+
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--colors-hairline); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <span id="cfgSaveNotice" style="font-size: 0.8125rem; color: var(--colors-semantic-success); display: none;">✅ Settings tersimpan</span>
+            <button type="button" class="btn btn-secondary" onclick="saveAllSilhouetteConfig()">💾 Simpan Settings Profile</button>
+          </div>
+        </details>
+
+        <div class="pipeline-actions">
+          <button class="btn btn-full" onclick="runStation3()">
+            <i class="fas fa-play"></i> Jalankan Stasiun 3
+          </button>
+          <button class="btn btn-danger" onclick="stopPipeline()">
+            <i class="fas fa-stop"></i> Stop
+          </button>
+        </div>
+
+        <div class="carbon-log-box" id="st3Log">[NODE 3] Rust Engine Ready.</div>
+
+        <!-- Deliverables Output Gallery -->
+        <div>
+          <label class="carbon-label" style="font-weight: 500;">Hasil Paket Deliverables (EPS & JPG):</label>
+          <div class="output-grid-carbon" id="st3OutputGrid">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Connector Arrow -->
+      <div class="node-flow-arrow"><i class="fas fa-chevron-down"></i></div>
+
+
+      <!-- ==========================================
+           NODE 4: AI METADATA & EXIFTOOL INJECTOR
+           ========================================== -->
+      <div class="station-node-card" id="node4Card">
+        <div class="node-header">
+          <div class="node-title-group">
+            <h2><i class="fas fa-tags text-primary"></i> NODE 4: AI METADATA & EXIFTOOL</h2>
+            <span>Gemini Canvas AI ➔ ExifTool Metadata Ingestion</span>
+          </div>
+          <span class="node-badge">NODE 4</span>
+        </div>
+
+        <div class="indicator-strip">
+          <span class="carbon-label" style="margin:0;">INDICATOR STATUS:</span>
+          <div class="indicator-status">
+            <div id="node4StatusDot" class="status-indicator-dot"></div>
+            <span id="node4StatusText" style="color: var(--colors-semantic-error);">STATUS: IDLE / OFF</span>
+          </div>
+        </div>
+
+        <div class="stats-row-carbon">
+          <div class="stat-tile">
+            <span class="val" id="st4Queue" style="color: var(--colors-primary);">0</span>
+            <span class="lbl">📄 Pasangan File</span>
+          </div>
+          <div class="stat-tile">
+            <span class="val" id="st4Success" style="color: var(--colors-semantic-success);">0</span>
+            <span class="lbl">✅ Injeksi Selesai</span>
+          </div>
+          <div class="stat-tile">
+            <span class="val" id="st4Failed" style="color: var(--colors-semantic-error);">0</span>
+            <span class="lbl">❌ Gagal</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="carbon-label">Gemini Canvas AI Target Link:</label>
+          <input type="text" id="geminiUrlInput" value="https://gemini.google.com/app/4f103880bda96c54">
+        </div>
+
+        <div>
+          <label class="carbon-label">Ukuran Batch File (Target Processing):</label>
+          <input type="number" id="batchSizeInput" value="5" min="1" max="50">
+        </div>
+
+        <div class="pipeline-actions">
+          <button class="btn btn-full" onclick="runStation4()">
+            <i class="fas fa-play"></i> Jalankan Stasiun 4
+          </button>
+          <button class="btn btn-danger" onclick="stopPipeline()">
+            <i class="fas fa-stop"></i> Stop
+          </button>
+        </div>
+
+        <a href="/api/download_master_csv" target="_blank" class="btn btn-ghost btn-full">
+          <i class="fas fa-file-csv mr-2"></i> Download Master Katalog CSV
+        </a>
+
+        <div class="carbon-log-box" id="st4Log">[NODE 4] AI Metadata Engine Ready.</div>
+      </div>
+
     </div>
   </div>
 
+
+  <!-- SCRIPT LOGIC (Fully Preserved Endpoints & Functions) -->
   <script>
-    // Color picker and text input sync
     document.addEventListener('DOMContentLoaded', () => {
       const picker = document.getElementById('bgColorPicker');
       const txt = document.getElementById('bgColorText');
@@ -747,56 +1191,16 @@
       if (pMulti) pMulti.style.display = tab === 'multi' ? 'flex' : 'none';
       if (pJson) pJson.style.display = tab === 'json' ? 'flex' : 'none';
 
-      if (bLow) { bLow.style.background = tab === 'low' ? '#1e293b' : '#0f172a'; bLow.style.color = tab === 'low' ? '#4ade80' : '#94a3b8'; }
-      if (bMulti) { bMulti.style.background = tab === 'multi' ? '#1e293b' : '#0f172a'; bMulti.style.color = tab === 'multi' ? '#4ade80' : '#94a3b8'; }
-      if (bJson) { bJson.style.background = tab === 'json' ? '#1e293b' : '#0f172a'; bJson.style.color = tab === 'json' ? '#4ade80' : '#94a3b8'; }
-    }
-
-    async function saveAllSilhouetteConfig() {
-      const cfg = getStation3Config();
-      try {
-        await fetch('/api/run_station_3', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(cfg)
-        });
-        const showNotice = document.getElementById('cfgSaveNotice');
-        if (showNotice) {
-          showNotice.style.display = 'inline';
-          setTimeout(() => showNotice.style.display = 'none', 3000);
-        }
-        loadConfigSilhouette();
-      } catch(e) {
-        alert("Gagal menyimpan konfigurasi: " + e);
-      }
-    }
-
-    async function saveRawJsonConfig() {
-      const area = document.getElementById('rawJsonArea');
-      if (!area) return;
-      try {
-        const parsed = JSON.parse(area.value);
-        const res = await fetch('/api/config_silhouette', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(parsed)
-        });
-        const data = await res.json();
-        alert(data.message || "Konfigurasi JSON berhasil disimpan!");
-        loadConfigSilhouette();
-      } catch(e) {
-        alert("Format JSON tidak valid: " + e.message);
-      }
+      if (bLow) bLow.classList.toggle('active', tab === 'low');
+      if (bMulti) bMulti.classList.toggle('active', tab === 'multi');
+      if (bJson) bJson.classList.toggle('active', tab === 'json');
     }
 
     function getStation3Config() {
-      const txt = document.getElementById('bgColorText');
-      const picker = document.getElementById('bgColorPicker');
-      const color = txt ? txt.value : (picker ? picker.value : "#FFFFFF");
+      const color = document.getElementById('bgColorText') ? document.getElementById('bgColorText').value.trim() : '#FFFFFF';
       return {
         export_mode: document.getElementById('exportModeSelect') ? document.getElementById('exportModeSelect').value : "auto",
         pattern_style: document.getElementById('patternStyleSelect') ? document.getElementById('patternStyleSelect').value : "brick_wall",
-        pattern_enable: document.getElementById('lowPatternEnableCheck') ? document.getElementById('lowPatternEnableCheck').checked : true,
         grid_x: parseInt(document.getElementById('gridXInput') ? document.getElementById('gridXInput').value : 3),
         grid_y: parseInt(document.getElementById('gridYInput') ? document.getElementById('gridYInput').value : 3),
         wraparound: document.getElementById('wraparoundCheck') ? document.getElementById('wraparoundCheck').checked : true,
@@ -821,141 +1225,177 @@
       };
     }
 
+    async function saveAllSilhouetteConfig() {
+      const config = getStation3Config();
+      try {
+        const res = await fetch('/api/config_silhouette', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            low_color_bad_two: {
+              max_colors: config.low_max_colors,
+              threshold: config.low_threshold,
+              line_art: config.line_art,
+              gap: config.gap,
+              bg_color: config.bg_color,
+              pattern_config: {
+                enable: config.low_pattern_enable,
+                style: config.low_pattern_style,
+                grid_x: config.grid_x,
+                grid_y: config.grid_y,
+                wraparound_seamless: config.wraparound
+              }
+            },
+            multi_color_bad_two: {
+              min_colors: config.multi_min_colors,
+              threshold: config.multi_threshold,
+              pattern_config: {
+                enable: config.multi_pattern_enable,
+                style: config.multi_pattern_style,
+                grid_x: config.grid_x,
+                grid_y: config.grid_y,
+                wraparound_seamless: config.wraparound
+              },
+              middle_panel: {
+                min_luminance: config.mid_min_lum,
+                max_luminance: config.mid_max_lum
+              },
+              right_panel: {
+                min_luminance: config.right_min_lum,
+                max_luminance: config.right_max_lum,
+                exclude_background: config.right_exclude_bg
+              }
+            }
+          })
+        });
+        const data = await res.json();
+        const notice = document.getElementById('cfgSaveNotice');
+        if (notice) {
+          notice.innerText = data.message || "✅ Config profile tersimpan!";
+          notice.style.display = 'inline';
+          setTimeout(() => notice.style.display = 'none', 3000);
+        }
+      } catch (err) {
+        alert("Gagal menyimpan config profile: " + err.message);
+      }
+    }
+
+    async function saveRawJsonConfig() {
+      const rawText = document.getElementById('rawJsonArea').value;
+      try {
+        const parsed = JSON.parse(rawText);
+        const res = await fetch('/api/config_silhouette', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parsed)
+        });
+        const data = await res.json();
+        alert(data.message || "✅ Raw JSON berhasil disimpan.");
+        loadConfigSilhouette();
+      } catch (err) {
+        alert("Format JSON tidak valid: " + err.message);
+      }
+    }
+
     async function updateStatus() {
       try {
         const res = await fetch('/api/status');
         const data = await res.json();
 
-        // Node 1 Status Lamp (Auth Node)
+        // Node 0 Status
+        const n0Dot = document.getElementById('node0StatusDot');
+        const n0Text = document.getElementById('node0StatusText');
+        const st0Running = data.job && data.job.station_0 && data.job.station_0.running;
+        if (st0Running) {
+          if (n0Dot) { n0Dot.classList.add('online'); }
+          if (n0Text) { n0Text.innerText = 'STATUS: RUNNING (REMIXING)'; n0Text.style.color = 'var(--colors-semantic-success)'; }
+        } else {
+          if (n0Dot) { n0Dot.classList.remove('online'); }
+          if (n0Text) { n0Text.innerText = 'STATUS: IDLE / OFF'; n0Text.style.color = 'var(--colors-semantic-error)'; }
+        }
+
+        // Node 1 Status (Auth Node)
         const n1Dot = document.getElementById('sessionDot');
         const n1Text = document.getElementById('sessionText');
         if (data.has_login_session) {
-          n1Dot.style.background = '#4ade80';
-          n1Dot.style.boxShadow = '0 0 12px #4ade80';
-          n1Text.innerText = 'STATUS: ONLINE (LOGGED IN)';
-          n1Text.style.color = '#4ade80';
+          if (n1Dot) { n1Dot.classList.add('online'); }
+          if (n1Text) { n1Text.innerText = 'STATUS: ONLINE (LOGGED IN)'; n1Text.style.color = 'var(--colors-semantic-success)'; }
         } else {
-          n1Dot.style.background = '#f87171';
-          n1Dot.style.boxShadow = '0 0 12px #f87171';
-          n1Text.innerText = 'STATUS: OFFLINE';
-          n1Text.style.color = '#f87171';
+          if (n1Dot) { n1Dot.classList.remove('online'); }
+          if (n1Text) { n1Text.innerText = 'STATUS: OFFLINE'; n1Text.style.color = 'var(--colors-semantic-error)'; }
         }
 
-        // Node 2 Status Lamp (Headless Node)
+        // Node 2 Status (Headless Node)
         const n2Dot = document.getElementById('node2StatusDot');
         const n2Text = document.getElementById('node2StatusText');
-        const wire1 = document.getElementById('wire1Path');
         const st2Running = data.job && data.job.station_2 && data.job.station_2.running;
         if (st2Running) {
-          if (n2Dot) { n2Dot.style.background = '#4ade80'; n2Dot.style.boxShadow = '0 0 12px #4ade80'; }
-          if (n2Text) { n2Text.innerText = 'STATUS: RUNNING (CONVERTING)'; n2Text.style.color = '#4ade80'; }
-          if (wire1) { wire1.setAttribute('stroke', 'url(#wireGradRunning)'); wire1.setAttribute('stroke-dasharray', 'none'); }
+          if (n2Dot) { n2Dot.classList.add('online'); }
+          if (n2Text) { n2Text.innerText = 'STATUS: RUNNING (CONVERTING)'; n2Text.style.color = 'var(--colors-semantic-success)'; }
         } else {
-          if (n2Dot) { n2Dot.style.background = '#f87171'; n2Dot.style.boxShadow = '0 0 12px #f87171'; }
-          if (n2Text) { n2Text.innerText = 'STATUS: IDLE / OFF'; n2Text.style.color = '#f87171'; }
-          if (wire1) { wire1.setAttribute('stroke', 'url(#wireGradIdle)'); wire1.setAttribute('stroke-dasharray', '8 4'); }
+          if (n2Dot) { n2Dot.classList.remove('online'); }
+          if (n2Text) { n2Text.innerText = 'STATUS: IDLE / OFF'; n2Text.style.color = 'var(--colors-semantic-error)'; }
         }
 
-        // Node 3 Status Lamp (Rust Engine Node)
+        // Node 3 Status (Rust Engine Node)
         const n3Dot = document.getElementById('node3StatusDot');
         const n3Text = document.getElementById('node3StatusText');
-        const wire2 = document.getElementById('wire2Path');
         const st3Running = data.job && data.job.station_3 && data.job.station_3.running;
         if (st3Running) {
-          if (n3Dot) { n3Dot.style.background = '#4ade80'; n3Dot.style.boxShadow = '0 0 12px #4ade80'; }
-          if (n3Text) { n3Text.innerText = 'STATUS: RUNNING (PROCESSING)'; n3Text.style.color = '#4ade80'; }
-          if (wire2) { wire2.setAttribute('stroke', 'url(#wireGradRunning)'); wire2.setAttribute('stroke-dasharray', 'none'); }
+          if (n3Dot) { n3Dot.classList.add('online'); }
+          if (n3Text) { n3Text.innerText = 'STATUS: RUNNING (PROCESSING)'; n3Text.style.color = 'var(--colors-semantic-success)'; }
         } else {
-          if (n3Dot) { n3Dot.style.background = '#f87171'; n3Dot.style.boxShadow = '0 0 12px #f87171'; }
-          if (n3Text) { n3Text.innerText = 'STATUS: IDLE / OFF'; n3Text.style.color = '#f87171'; }
-          if (wire2) { wire2.setAttribute('stroke', 'url(#wireGradIdle)'); wire2.setAttribute('stroke-dasharray', '8 4'); }
+          if (n3Dot) { n3Dot.classList.remove('online'); }
+          if (n3Text) { n3Text.innerText = 'STATUS: IDLE / OFF'; n3Text.style.color = 'var(--colors-semantic-error)'; }
         }
 
-        // Node 4 Status Lamp (AI Metadata Node)
+        // Node 4 Status (AI Metadata Node)
         const n4Dot = document.getElementById('node4StatusDot');
         const n4Text = document.getElementById('node4StatusText');
-        const wire3 = document.getElementById('wire3Path');
         const st4Running = data.job && data.job.station_4 && data.job.station_4.running;
         if (st4Running) {
-          if (n4Dot) { n4Dot.style.background = '#f59e0b'; n4Dot.style.boxShadow = '0 0 12px #f59e0b'; }
-          if (n4Text) { n4Text.innerText = 'STATUS: RUNNING (AI INJECTING)'; n4Text.style.color = '#f59e0b'; }
-          if (wire3) { wire3.setAttribute('stroke', 'url(#wireGradRunning)'); wire3.setAttribute('stroke-dasharray', 'none'); }
+          if (n4Dot) { n4Dot.classList.add('online'); }
+          if (n4Text) { n4Text.innerText = 'STATUS: RUNNING (AI INJECTING)'; n4Text.style.color = 'var(--colors-semantic-warning)'; }
         } else {
-          if (n4Dot) { n4Dot.style.background = '#f87171'; n4Dot.style.boxShadow = '0 0 12px #f87171'; }
-          if (n4Text) { n4Text.innerText = 'STATUS: IDLE / OFF'; n4Text.style.color = '#f87171'; }
-          if (wire3) { wire3.setAttribute('stroke', 'url(#wireGradIdle)'); wire3.setAttribute('stroke-dasharray', '8 4'); }
+          if (n4Dot) { n4Dot.classList.remove('online'); }
+          if (n4Text) { n4Text.innerText = 'STATUS: IDLE / OFF'; n4Text.style.color = 'var(--colors-semantic-error)'; }
         }
 
-        // Update Box 2 Live Stats
-        if (document.getElementById('st2Queue')) document.getElementById('st2Queue').innerText = data.vec_input_files.length;
-        if (document.getElementById('st2Success')) document.getElementById('st2Success').innerText = data.stats.station_2_success;
-        if (document.getElementById('st2Failed')) document.getElementById('st2Failed').innerText = data.stats.station_2_failed;
+        // Update Node 0 Live Stats
+        if (document.getElementById('st0Success')) document.getElementById('st0Success').innerText = data.stats ? data.stats.station_0_success : 0;
+        if (document.getElementById('st0Failed')) document.getElementById('st0Failed').innerText = data.stats ? data.stats.station_0_failed : 0;
 
-        // Update Box 3 Live Stats
-        if (document.getElementById('st3Queue')) document.getElementById('st3Queue').innerText = data.input_files.length;
-        if (document.getElementById('st3Success')) document.getElementById('st3Success').innerText = data.stats.station_3_success;
-        if (document.getElementById('st3Failed')) document.getElementById('st3Failed').innerText = data.stats.station_3_failed;
+        // Update Node 2 Live Stats
+        if (document.getElementById('st2Queue')) document.getElementById('st2Queue').innerText = data.vec_input_files ? data.vec_input_files.length : 0;
+        if (document.getElementById('st2Success')) document.getElementById('st2Success').innerText = data.stats ? data.stats.station_2_success : 0;
+        if (document.getElementById('st2Failed')) document.getElementById('st2Failed').innerText = data.stats ? data.stats.station_2_failed : 0;
 
-        // Update Box 4 Live Stats
+        // Update Node 3 Live Stats
+        if (document.getElementById('st3Queue')) document.getElementById('st3Queue').innerText = data.input_files ? data.input_files.length : 0;
+        if (document.getElementById('st3Success')) document.getElementById('st3Success').innerText = data.stats ? data.stats.station_3_success : 0;
+        if (document.getElementById('st3Failed')) document.getElementById('st3Failed').innerText = data.stats ? data.stats.station_3_failed : 0;
+
+        // Update Node 4 Live Stats
         if (document.getElementById('st4Queue')) document.getElementById('st4Queue').innerText = data.output_files ? Math.floor(data.output_files.length / 2) : 0;
-        if (document.getElementById('st4Success')) document.getElementById('st4Success').innerText = data.stats.station_4_success;
-        if (document.getElementById('st4Failed')) document.getElementById('st4Failed').innerText = data.stats.station_4_failed;
+        if (document.getElementById('st4Success')) document.getElementById('st4Success').innerText = data.stats ? data.stats.station_4_success : 0;
+        if (document.getElementById('st4Failed')) document.getElementById('st4Failed').innerText = data.stats ? data.stats.station_4_failed : 0;
 
         // Update Outputs Gallery
         const outGrid = document.getElementById('st3OutputGrid');
-        if (data.output_files.length > 0) {
+        if (outGrid && data.output_files && data.output_files.length > 0) {
           outGrid.innerHTML = data.output_files.map(f => {
             const isImg = f.endsWith('.jpg') || f.endsWith('.png');
             return `
-              <div class="output-card">
-                ${isImg ? `<img src="/api/preview?file=${encodeURIComponent(f)}" alt="${f}">` : `<div style="height:90px; display:flex; align-items:center; justify-content:center; background:#1e293b; border-radius:6px; font-weight:bold; color:#38bdf8;">EPS DELIVERABLE</div>`}
-                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${f}</span>
-                <a class="btn btn-outline" style="font-size:0.72rem; padding:4px 8px;" href="/api/download?file=${encodeURIComponent(f)}">📥 Download</a>
+              <div class="output-card-carbon">
+                ${isImg ? `<img src="/api/preview?file=${encodeURIComponent(f)}" alt="${f}">` : `<div style="height:120px; display:flex; align-items:center; justify-content:center; background:var(--colors-surface-2); font-family:var(--font-mono); font-weight:600; color:var(--colors-primary);">EPS DELIVERABLE</div>`}
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:var(--font-mono); font-size:0.75rem;">${f}</span>
+                <a class="btn btn-ghost" style="min-height:36px; padding:6px 12px; font-size:0.75rem;" href="/api/download?file=${encodeURIComponent(f)}"><i class="fas fa-download"></i> Download</a>
               </div>
             `;
           }).join('');
         }
       } catch (err) {
         console.error('Update status error:', err);
-      }
-    }
-
-    async function retryFailedFiles() {
-      if (!confirm('Kembalikan semua file gagal ke antrean utama untuk dicoba ulang?')) return;
-      try {
-        const res = await fetch('/api/retry_failed', { method: 'POST' });
-        const data = await res.json();
-        alert(data.message || 'Berhasil mengembalikan file gagal ke antrean.');
-        updateStatus();
-      } catch (err) {
-        alert('Gagal retry file: ' + err.message);
-      }
-    }
-
-    async function toggleManifestMode() {
-      try {
-        const res = await fetch('/api/toggle_manifest', { method: 'POST' });
-        const data = await res.json();
-        alert(data.message || 'Status Absensi Batch berhasil diubah.');
-        updateStatus();
-      } catch (err) {
-        alert('Gagal mengubah mode absensi: ' + err.message);
-      }
-    }
-
-    async function triggerAutoRename() {
-      const prefix = document.getElementById('renamePrefixInput').value.trim() || 'vector_stock';
-      try {
-        const res = await fetch('/api/auto_rename', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prefix: prefix })
-        });
-        const data = await res.json();
-        alert(data.message || 'Berhasil merename file antrean secara urut');
-        updateStatus();
-      } catch (err) {
-        alert('Gagal auto-rename: ' + err.message);
       }
     }
 
@@ -987,6 +1427,36 @@
       const data = await res.json();
       alert(data.message);
       updateStatus();
+    }
+
+    async function runStation0() {
+      const httpUrls = document.getElementById('st0HttpUrls').value.trim();
+      const prompt = document.getElementById('st0Prompt').value.trim();
+      const styleLevel = document.getElementById('st0StyleLevel').value;
+      const colorMatch = document.getElementById('st0ColorMatch').value;
+      const canvasRatio = document.getElementById('st0CanvasRatio').value;
+      const colorTheme = document.getElementById('st0ColorTheme').value;
+      const tool1 = document.getElementById('st0Tool1').checked;
+      const tool2 = document.getElementById('st0Tool2').checked;
+      const geminiUrl = "https://gemini.google.com/app/4f103880bda96c54";
+
+      const res = await fetch('/api/run_station_0', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          http_urls: httpUrls,
+          prompt: prompt,
+          style_level: styleLevel,
+          color_match: colorMatch,
+          canvas_ratio: canvasRatio,
+          color_theme: colorTheme,
+          tool1_anti_gelap: tool1,
+          tool2_bg_bersih: tool2,
+          gemini_url: geminiUrl
+        })
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
     }
 
     async function runStation2() {
@@ -1039,36 +1509,6 @@
       } catch (err) {
         alert('Gagal menghentikan: ' + err.message);
       }
-    }
-
-    async function runStation0() {
-      const httpUrls = document.getElementById('st0HttpUrls').value.trim();
-      const prompt = document.getElementById('st0Prompt').value.trim();
-      const styleLevel = document.getElementById('st0StyleLevel').value;
-      const colorMatch = document.getElementById('st0ColorMatch').value;
-      const canvasRatio = document.getElementById('st0CanvasRatio').value;
-      const colorTheme = document.getElementById('st0ColorTheme').value;
-      const tool1 = document.getElementById('st0Tool1').checked;
-      const tool2 = document.getElementById('st0Tool2').checked;
-      const geminiUrl = "https://gemini.google.com/app/4f103880bda96c54";
-
-      const res = await fetch('/api/run_station_0', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          http_urls: httpUrls,
-          prompt: prompt,
-          style_level: styleLevel,
-          color_match: colorMatch,
-          canvas_ratio: canvasRatio,
-          color_theme: colorTheme,
-          tool1_anti_gelap: tool1,
-          tool2_bg_bersih: tool2,
-          gemini_url: geminiUrl
-        })
-      });
-      const data = await res.json();
-      if (data.error) alert(data.error);
     }
 
     let lastSt0Log = "";
