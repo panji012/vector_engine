@@ -1050,7 +1050,7 @@
       const colorTheme = document.getElementById('st0ColorTheme').value;
       const tool1 = document.getElementById('st0Tool1').checked;
       const tool2 = document.getElementById('st0Tool2').checked;
-      const geminiUrl = document.getElementById('geminiUrlInput') ? document.getElementById('geminiUrlInput').value.trim() : '';
+      const geminiUrl = "https://gemini.google.com/app/4f103880bda96c54";
 
       const res = await fetch('/api/run_station_0', {
         method: 'POST',

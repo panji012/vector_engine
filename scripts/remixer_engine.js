@@ -192,111 +192,145 @@ async function main() {
     let successCount = 0;
     let failedCount = 0;
 
-    for (let i = 0; i < localFiles.length; i++) {
-        const imagePath = localFiles[i];
-        console.log(`\n-> [Batch ${i + 1}/${localFiles.length}] Mengunggah gambar acuan: ${path.basename(imagePath)}`);
+    // Record existing files in input/ before batch execution
+    const initialInputFiles = new Set(fs.existsSync(INPUT_DIR) ? fs.readdirSync(INPUT_DIR) : []);
 
-        try {
-            let targetFrame = null;
-            let fileInput = null;
+    try {
+        let targetFrame = null;
+        let fileInput = null;
 
-            for (const frame of page.frames()) {
-                try {
-                    let inputEl = await frame.$('#puppeteer-file-input');
-                    if (!inputEl) inputEl = await frame.$('input[type="file"]');
-                    if (inputEl) { targetFrame = frame; fileInput = inputEl; break; }
-                } catch (err) {}
+        for (const frame of page.frames()) {
+            try {
+                let inputEl = await frame.$('#puppeteer-file-input');
+                if (!inputEl) inputEl = await frame.$('input[type="file"]');
+                if (inputEl) { targetFrame = frame; fileInput = inputEl; break; }
+            } catch (err) {}
+        }
+
+        if (!targetFrame) {
+            const ssPath = path.join(ERROR_SCREENSHOT_DIR, `missing_iframe_remix_${Date.now()}.png`);
+            await page.screenshot({ path: ssPath });
+            throw new Error(`Gagal menemukan Iframe Gemini Canvas AI! Screenshot disimpan di ${ssPath}`);
+        }
+
+        // Single-Pass Batch Upload: Upload all local image files at once
+        if (localFiles.length > 0) {
+            console.log(`-> 📤 Mengunggah ${localFiles.length} berkas gambar acuan sekaligus ke Canvas AI...`);
+            let fileInputEl = await targetFrame.$('#fileInput');
+            if (!fileInputEl) fileInputEl = await targetFrame.$('input[type="file"]');
+            if (fileInputEl) {
+                await fileInputEl.uploadFile(...localFiles);
+                await wait(3000);
             }
+        }
 
-            if (!fileInput || !targetFrame) {
-                const ssPath = path.join(ERROR_SCREENSHOT_DIR, `missing_upload_remix_${Date.now()}.png`);
-                await page.screenshot({ path: ssPath });
-                throw new Error(`Gagal menemukan upload input Iframe Canvas! Screenshot disimpan di ${ssPath}`);
-            }
+        // Single-Pass Batch Paste: Input HTTP URLs if provided
+        if (urls.length > 0) {
+            console.log(`-> 🔗 Menginput ${urls.length} link HTTP gambar ke Canvas...`);
+            await targetFrame.evaluate((urlList) => {
+                let httpBox = document.getElementById('urlInput');
+                if (!httpBox) {
+                    const textareas = Array.from(document.querySelectorAll('textarea, input[type="text"]'));
+                    httpBox = textareas.find(t => t.placeholder && (t.placeholder.includes('http') || t.placeholder.includes('URL') || t.placeholder.includes('Pinterest')));
+                }
+                if (httpBox) {
+                    httpBox.value = urlList.join("\n");
+                    httpBox.dispatchEvent(new Event('input', { bubbles: true }));
+                    httpBox.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }, urls);
+            await wait(1500);
+        }
 
-            // Upload image
-            await fileInput.uploadFile(imagePath);
-            await wait(3000);
-
-            // Inject master prompt text if text area available
-            await targetFrame.evaluate((promptText) => {
+        // Inject master prompt directive
+        await targetFrame.evaluate((promptText) => {
+            let promptBox = document.getElementById('promptInput');
+            if (!promptBox) {
                 const textareas = Array.from(document.querySelectorAll('textarea, input[type="text"], div[contenteditable="true"]'));
-                const promptBox = textareas.find(t => t.placeholder && (t.placeholder.includes('prompt') || t.placeholder.includes('Tanyakan') || t.placeholder.includes('Ketik')));
-                if (promptBox) {
-                    if (promptBox.tagName === 'DIV') promptBox.innerText = promptText;
-                    else promptBox.value = promptText;
-                    promptBox.dispatchEvent(new Event('input', { bubbles: true }));
-                    promptBox.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            }, masterPrompt);
+                promptBox = textareas.find(t => t.placeholder && (t.placeholder.includes('prompt') || t.placeholder.includes('Konsep') || t.placeholder.includes('Tanyakan') || t.placeholder.includes('Ketik')));
+            }
+            if (promptBox) {
+                if (promptBox.tagName === 'DIV') promptBox.innerText = promptText;
+                else promptBox.value = promptText;
+                promptBox.dispatchEvent(new Event('input', { bubbles: true }));
+                promptBox.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }, masterPrompt);
+        await wait(1500);
 
-            // Click generate button
-            console.log("-> Memerintahkan robot menekan 'Mulai Render Remix'...");
-            await targetFrame.evaluate(() => {
-                const buttons = Array.from(document.querySelectorAll('button'));
-                const btn = buttons.find(b => b.innerText && (b.innerText.includes('Mulai') || b.innerText.includes('Batch') || b.innerText.includes('Generate') || b.innerText.includes('Kirim')));
-                if (btn) btn.click();
+        // Click "Mulai Proses (Batch)" button (#btnStart)
+        console.log("-> 🚀 Memerintahkan robot menekan 'Mulai Proses (Batch)' (#btnStart)...");
+        await targetFrame.evaluate(() => {
+            let btn = document.getElementById('btnStart');
+            if (!btn) {
+                const buttons = Array.from(document.querySelectorAll('button, a'));
+                btn = buttons.find(b => b.innerText && (b.innerText.includes('Mulai') || b.innerText.includes('Batch') || b.innerText.includes('Generate') || b.innerText.includes('Kirim')));
+            }
+            if (btn) btn.click();
+        });
+
+        // Monitor batch rendering & downloads
+        console.log("-> 📡 Memantau AI Canvas Processing & Batch Downloads (Maks 15 Menit)...");
+        let isDone = false;
+        for (let w = 1; w <= 90; w++) {
+            await wait(10000);
+
+            // Check if frame reports done
+            isDone = await targetFrame.evaluate(() => {
+                const elements = Array.from(document.querySelectorAll('button, div, p, span'));
+                return elements.some(el => el.innerText && (el.innerText.includes('Proses Selesai') || el.innerText.includes('Selesai')));
             });
 
-            // Poll for finish
-            console.log("-> 📡 Memantau AI Canvas Rendering (Maks 10 Menit)...");
-            let isDone = false;
-            for (let w = 1; w <= 60; w++) {
-                await wait(10000);
-                isDone = await targetFrame.evaluate(() => {
-                    const elements = Array.from(document.querySelectorAll('button, div, p, span'));
-                    return elements.some(el => el.innerText && (el.innerText.includes('Proses Selesai') || el.innerText.includes('Selesai')));
-                });
+            // Scan input/ directory for new files
+            const currentFiles = fs.readdirSync(INPUT_DIR);
+            const newFiles = currentFiles.filter(f => !initialInputFiles.has(f) && f.match(/\.(jpg|jpeg|png|webp)$/i) && !f.startsWith("vector_stock_"));
 
-                if (isDone) {
-                    console.log(`-> ✅ AI Remixer Selesai dalam ${((w * 10) / 60).toFixed(1)} menit!`);
-                    break;
-                } else {
-                    console.log(`   [...] Merender AI Remix... (${w * 10}s)`);
-                }
+            for (const nf of newFiles) {
+                const targetFilename = getNextSequentialName();
+                const oldPath = path.join(INPUT_DIR, nf);
+                const newPath = path.join(INPUT_DIR, targetFilename);
+                fs.renameSync(oldPath, newPath);
+                initialInputFiles.add(targetFilename);
+
+                console.log(`[ITEM_REMIX_SUCCESS] Downloaded: Remix Output Saved to input/${targetFilename}`);
+                successCount++;
             }
 
-            // Download generated image
-            console.log("-> 📥 Mendownload hasil JPG remix...");
-            await targetFrame.evaluate(() => {
-                const buttons = Array.from(document.querySelectorAll('button'));
-                const dlBtn = buttons.find(b => b.innerText && b.innerText.includes('Download'));
-                if (dlBtn) dlBtn.click();
-            });
+            if (isDone) {
+                console.log(`-> ✅ AI Remixer Canvas Selesai dalam ${((w * 10) / 60).toFixed(1)} menit!`);
+                break;
+            } else {
+                console.log(`   [...] Merender AI Remix... (${w * 10}s | ${successCount} berkas fisik terverifikasi)`);
+            }
+        }
 
-            await wait(4000);
-
-            // Determine output sequential name in input/
+        // Final check after completion wait
+        await wait(5000);
+        const finalFiles = fs.readdirSync(INPUT_DIR);
+        const remainingNew = finalFiles.filter(f => !initialInputFiles.has(f) && f.match(/\.(jpg|jpeg|png|webp)$/i) && !f.startsWith("vector_stock_"));
+        for (const nf of remainingNew) {
             const targetFilename = getNextSequentialName();
-            const targetPath = path.join(INPUT_DIR, targetFilename);
-
-            // Look for newly downloaded JPG in input/ and rename it if needed
-            const files = fs.readdirSync(INPUT_DIR);
-            const downloadedJpg = files.find(f => f.match(/\.jpg$/i) && !f.startsWith("vector_stock_"));
-            if (downloadedJpg) {
-                fs.renameSync(path.join(INPUT_DIR, downloadedJpg), targetPath);
-            }
+            const oldPath = path.join(INPUT_DIR, nf);
+            const newPath = path.join(INPUT_DIR, targetFilename);
+            fs.renameSync(oldPath, newPath);
+            initialInputFiles.add(targetFilename);
 
             console.log(`[ITEM_REMIX_SUCCESS] Downloaded: Remix Output Saved to input/${targetFilename}`);
             successCount++;
-
-        } catch (err) {
-            console.error(`[ITEM_REMIX_FAILED] ❌ [ERROR Batch ${i + 1}] ${err.message}`);
-            failedCount++;
         }
 
-        // Clean processed source file from temp_remix/
-        try { fs.unlinkSync(imagePath); } catch (e) {}
-
-        // Jeda 20 detik antar-proses gambar (simulasi diskusi & pendinginan AI Canvas)
-        if (i < localFiles.length - 1) {
-            console.log(`\n⏳ [NODE 0] Mengambil jeda 20 detik (simulasi diskusi & pendinginan AI Canvas)...`);
-            await wait(COOLDOWN_MS);
-        }
+    } catch (err) {
+        console.error(`[ITEM_REMIX_FAILED] ❌ [ERROR Node 0] ${err.message}`);
+        failedCount++;
     }
 
+    // Clean processed source files from temp_remix/
+    localFiles.forEach(fp => {
+        try { fs.unlinkSync(fp); } catch (e) {}
+    });
+
     await browser.close();
-    console.log(`\n🎉 [NODE 0] Selesai! ${successCount} gambar berhasil diremix & disimpan ke input/ untuk Stasiun 2.`);
+    console.log(`\n🎉 [NODE 0] Selesai! ${successCount} gambar fisik berhasil terverifikasi & tersimpan di input/ untuk Stasiun 2.`);
 }
 
 main().catch(err => {
