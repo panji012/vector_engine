@@ -14,10 +14,10 @@
   
   <title>Vector Engine — Claude Warm Editorial Dashboard (Dark & Light Theme)</title>
   
-  <!-- Claude Design Typography: Cormorant Garamond (Serif Display), Inter (Sans Body), JetBrains Mono (Code) -->
+  <!-- macOS Modern San Francisco & Inter Typography Stack + JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
   <style>
@@ -28,13 +28,13 @@
        ========================================================================== */
 
     :root {
-      --colors-canvas: #faf9f5;
-      --colors-surface-soft: #f5f0e8;
-      --colors-surface-card: #efe9de;
-      --colors-surface-dark: #181715;
-      --colors-surface-dark-elevated: #252320;
-      --colors-hairline: #e6dfd8;
-      --colors-hairline-soft: #ebe6df;
+      --colors-canvas: #f8f6f0;
+      --colors-surface-soft: rgba(245, 240, 232, 0.75);
+      --colors-surface-card: rgba(255, 255, 255, 0.65);
+      --colors-surface-dark: rgba(24, 23, 21, 0.92);
+      --colors-surface-dark-elevated: rgba(37, 35, 32, 0.95);
+      --colors-hairline: rgba(230, 223, 216, 0.8);
+      --colors-hairline-soft: rgba(235, 230, 223, 0.8);
       --colors-primary: #cc785c;
       --colors-primary-hover: #b56449;
       --colors-primary-active: #a9583e;
@@ -53,27 +53,33 @@
       --colors-glow-2: rgba(204, 120, 92, 0.14);
       --colors-glow-3: rgba(230, 200, 160, 0.4);
 
-      --font-serif: 'Cormorant Garamond', Georgia, serif;
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      /* macOS Glassmorphism Tokens */
+      --glass-border: rgba(255, 255, 255, 0.75);
+      --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.02), inset 0 1px 1px rgba(255, 255, 255, 0.9);
+      --glass-shadow-hover: 0 20px 48px rgba(0, 0, 0, 0.09), 0 4px 12px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 1);
 
-      --radius-sm: 6px;
-      --radius-md: 10px;
-      --radius-lg: 16px;
-      --radius-xl: 24px;
+      /* macOS San Francisco Modern Font Stack */
+      --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", sans-serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+      --font-mono: "SF Mono", "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
       --radius-pill: 9999px;
 
-      --theme-transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      --theme-transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
     }
 
     html[data-theme="dark"] {
-      --colors-canvas: #141413;
-      --colors-surface-soft: #1f1e1b;
-      --colors-surface-card: #252320;
-      --colors-surface-dark: #0d0c0b;
-      --colors-surface-dark-elevated: #1a1917;
-      --colors-hairline: #383530;
-      --colors-hairline-soft: #2e2b27;
+      --colors-canvas: #121110;
+      --colors-surface-soft: rgba(31, 30, 27, 0.75);
+      --colors-surface-card: rgba(37, 35, 32, 0.62);
+      --colors-surface-dark: rgba(13, 12, 11, 0.92);
+      --colors-surface-dark-elevated: rgba(26, 25, 23, 0.95);
+      --colors-hairline: rgba(56, 53, 48, 0.8);
+      --colors-hairline-soft: rgba(46, 43, 39, 0.8);
       --colors-primary: #d9856c;
       --colors-primary-hover: #e0947c;
       --colors-primary-active: #c5765f;
@@ -88,6 +94,11 @@
       --colors-glow-1: rgba(217, 133, 108, 0.15);
       --colors-glow-2: rgba(45, 38, 35, 0.65);
       --colors-glow-3: rgba(25, 23, 21, 0.85);
+
+      /* macOS Dark Glass Tokens */
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.12);
+      --glass-shadow-hover: 0 20px 48px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.18);
     }
 
     * {
@@ -173,35 +184,39 @@
       gap: 28px;
     }
 
-    /* Claude Editorial Header Bar */
+    /* macOS Glassmorphism Header Bar */
     header {
       background: var(--colors-surface-card);
-      border: 1px solid var(--colors-hairline);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-lg);
-      padding: 28px 32px;
+      padding: 26px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 16px;
-      box-shadow: 0 4px 20px rgba(20, 20, 19, 0.03);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      box-shadow: var(--glass-shadow);
       transition: var(--theme-transition);
     }
 
     .header-title h1 {
-      font-family: var(--font-serif);
-      font-size: 2.2rem;
-      font-weight: 500;
+      font-family: var(--font-display);
+      font-size: 2.1rem;
+      font-weight: 700;
       color: var(--colors-ink);
-      letter-spacing: -0.5px;
+      letter-spacing: -0.03em;
       line-height: 1.15;
       transition: var(--theme-transition);
     }
 
     .header-title p {
+      font-family: var(--font-sans);
       font-size: 0.9375rem;
       color: var(--colors-muted);
       margin-top: 4px;
+      letter-spacing: -0.01em;
       transition: var(--theme-transition);
     }
 
@@ -220,14 +235,16 @@
       padding: 8px 18px;
       font-family: var(--font-sans);
       font-size: 0.8125rem;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--colors-ink);
-      background-color: var(--colors-canvas);
-      border: 1px solid var(--colors-hairline);
+      background-color: var(--colors-surface-card);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-pill);
       cursor: pointer;
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
       transition: var(--theme-transition);
-      box-shadow: 0 2px 6px rgba(20, 20, 19, 0.04);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       user-select: none;
     }
 
@@ -235,6 +252,7 @@
       background-color: var(--colors-surface-soft);
       border-color: var(--colors-primary);
       color: var(--colors-primary);
+      transform: translateY(-1px);
     }
 
     .brand-spike-badge {
@@ -243,42 +261,45 @@
       gap: 8px;
       font-family: var(--font-sans);
       font-size: 0.8125rem;
-      font-weight: 500;
-      background: var(--colors-canvas);
+      font-weight: 600;
+      background: var(--colors-surface-card);
       color: var(--colors-ink);
       padding: 8px 16px;
-      border: 1px solid var(--colors-hairline);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-pill);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
       transition: var(--theme-transition);
     }
 
-    /* Button Styles (Claude Warm Coral & Soft Surfaces) */
+    /* Button Styles (macOS Tactile Warm Coral & Glass Surfaces) */
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      min-height: 48px;
+      min-height: 46px;
       padding: 12px 24px;
       font-family: var(--font-sans);
       font-size: 0.875rem;
-      font-weight: 500;
+      font-weight: 600;
+      letter-spacing: -0.01em;
       color: var(--colors-on-primary);
       background-color: var(--colors-primary);
       border: 1px solid var(--colors-primary);
       border-radius: var(--radius-md);
       cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
       text-decoration: none;
       user-select: none;
-      box-shadow: 0 2px 8px rgba(204, 120, 92, 0.2);
+      box-shadow: 0 4px 14px rgba(204, 120, 92, 0.28);
     }
 
     .btn:hover {
       background-color: var(--colors-primary-hover);
       border-color: var(--colors-primary-hover);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(204, 120, 92, 0.3);
+      box-shadow: 0 6px 18px rgba(204, 120, 92, 0.38);
     }
 
     .btn:active {
@@ -287,10 +308,12 @@
     }
 
     .btn-secondary {
-      background-color: var(--colors-canvas);
+      background-color: var(--colors-surface-card);
       color: var(--colors-ink);
-      border: 1px solid var(--colors-hairline);
-      box-shadow: 0 2px 6px rgba(20, 20, 19, 0.04);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
     .btn-secondary:hover {
@@ -302,7 +325,7 @@
       background-color: var(--colors-surface-dark);
       color: var(--colors-on-dark);
       border: 1px solid var(--colors-surface-dark);
-      box-shadow: 0 2px 8px rgba(24, 23, 21, 0.2);
+      box-shadow: 0 4px 14px rgba(24, 23, 21, 0.3);
     }
 
     .btn-dark:hover {
@@ -313,7 +336,7 @@
       background-color: var(--colors-error);
       color: #ffffff;
       border: 1px solid var(--colors-error);
-      box-shadow: 0 2px 8px rgba(198, 69, 69, 0.2);
+      box-shadow: 0 4px 14px rgba(198, 69, 69, 0.28);
     }
 
     .btn-danger:hover {
@@ -324,16 +347,18 @@
       width: 100%;
     }
 
-    /* Master Pipeline Control Card */
+    /* macOS Master Pipeline Control Glass Card */
     .pipeline-card {
       background: var(--colors-surface-card);
-      border: 1px solid var(--colors-hairline);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-lg);
-      padding: 32px;
+      padding: 30px;
       display: flex;
       flex-direction: column;
       gap: 20px;
-      box-shadow: 0 6px 24px rgba(20, 20, 19, 0.04);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      box-shadow: var(--glass-shadow);
       transition: var(--theme-transition);
     }
 
@@ -346,9 +371,10 @@
     }
 
     .pipeline-header h3 {
-      font-family: var(--font-serif);
-      font-size: 1.5rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
       color: var(--colors-ink);
       display: flex;
       align-items: center;
@@ -360,6 +386,7 @@
       font-size: 0.9375rem;
       color: var(--colors-body);
       margin-top: 4px;
+      letter-spacing: -0.01em;
       transition: var(--theme-transition);
     }
 
@@ -382,11 +409,13 @@
     .step-pill {
       font-size: 0.8125rem;
       font-weight: 500;
-      background: var(--colors-canvas);
+      background: var(--colors-surface-soft);
       color: var(--colors-body);
       padding: 6px 14px;
-      border: 1px solid var(--colors-hairline);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-pill);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       transition: var(--theme-transition);
     }
 
@@ -404,10 +433,10 @@
       align-items: stretch;
     }
 
-    /* Claude Warm Card for Nodes */
+    /* macOS Glassmorphism Station Node Cards */
     .station-node-card {
       background: var(--colors-surface-card);
-      border: 1px solid var(--colors-hairline);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-lg);
       padding: 28px;
       display: flex;
@@ -415,8 +444,10 @@
       justify-content: flex-start;
       gap: 20px;
       height: 100%;
-      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), var(--theme-transition);
-      box-shadow: 0 4px 16px rgba(20, 20, 19, 0.03);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      box-shadow: var(--glass-shadow);
+      transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease, var(--theme-transition);
     }
 
     .station-node-card.full-width {
@@ -424,7 +455,9 @@
     }
 
     .station-node-card:hover {
-      box-shadow: 0 8px 30px rgba(20, 20, 19, 0.06);
+      transform: translateY(-3px);
+      box-shadow: var(--glass-shadow-hover);
+      border-color: rgba(204, 120, 92, 0.35);
     }
 
     .node-header {
@@ -438,9 +471,10 @@
     }
 
     .node-title-group h2 {
-      font-family: var(--font-serif);
-      font-size: 1.4rem;
-      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
       color: var(--colors-ink);
       display: flex;
       align-items: center;
@@ -451,6 +485,7 @@
     .node-title-group span {
       font-size: 0.8125rem;
       color: var(--colors-muted);
+      letter-spacing: -0.01em;
       transition: var(--theme-transition);
     }
 
@@ -459,22 +494,26 @@
       font-weight: 600;
       letter-spacing: 0.5px;
       padding: 6px 14px;
-      background: var(--colors-canvas);
+      background: var(--colors-surface-soft);
       color: var(--colors-primary);
-      border: 1px solid var(--colors-hairline);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-pill);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       transition: var(--theme-transition);
     }
 
     /* Status Strip */
     .status-strip-claude {
-      background: var(--colors-canvas);
-      border: 1px solid var(--colors-hairline);
+      background: var(--colors-surface-soft);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
       padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       transition: var(--theme-transition);
     }
 
@@ -508,14 +547,16 @@
     }
 
     .stat-card-claude {
-      background: var(--colors-canvas);
-      border: 1px solid var(--colors-hairline);
+      background: var(--colors-surface-soft);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
       padding: 14px;
       text-align: center;
       display: flex;
       flex-direction: column;
       gap: 4px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       transition: var(--theme-transition);
     }
 
@@ -530,7 +571,7 @@
     .stat-card-claude .lbl {
       font-size: 0.75rem;
       color: var(--colors-muted);
-      font-weight: 500;
+      font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       transition: var(--theme-transition);
@@ -540,7 +581,8 @@
     label.claude-label {
       display: block;
       font-size: 0.8125rem;
-      font-weight: 500;
+      font-weight: 600;
+      letter-spacing: -0.01em;
       color: var(--colors-body);
       margin-bottom: 6px;
       transition: var(--theme-transition);
@@ -552,16 +594,18 @@
     select {
       width: 100%;
       min-height: 44px;
-      background: var(--colors-canvas);
-      border: 1px solid var(--colors-hairline);
+      background: var(--colors-surface-soft);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
       color: var(--colors-ink);
       font-family: var(--font-sans);
       font-size: 0.875rem;
       padding: 10px 16px;
       outline: none;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       transition: var(--theme-transition);
-      box-shadow: inset 0 1px 3px rgba(20, 20, 19, 0.02);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
     }
 
     textarea {
@@ -632,21 +676,23 @@
       border-radius: var(--radius-sm);
     }
 
-    /* Code Window Card (Dark Navy Log Box) - Pushed to Bottom of Card */
+    /* Code Window Card (macOS Terminal Glass Box) - Pushed to Bottom of Card */
     .code-log-card {
       background: var(--colors-surface-dark);
-      border: 1px solid var(--colors-surface-dark-elevated);
+      border: 1px solid var(--glass-border);
       border-radius: var(--radius-md);
       padding: 14px 18px;
       font-family: var(--font-mono);
       font-size: 0.78rem;
-      color: #5db8a6; /* Accent Teal text on dark navy */
+      color: #5db8a6; /* Accent Teal text on dark terminal */
       height: 120px;
       overflow-y: auto;
       white-space: pre-wrap;
       line-height: 1.5;
       margin-top: auto;
-      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4), var(--glass-shadow);
       transition: var(--theme-transition);
     }
 
