@@ -48,6 +48,11 @@
       --colors-warning: #d4a017;
       --colors-error: #c64545;
 
+      --colors-grid-line: rgba(204, 120, 92, 0.08);
+      --colors-glow-1: rgba(239, 218, 190, 0.55);
+      --colors-glow-2: rgba(204, 120, 92, 0.14);
+      --colors-glow-3: rgba(230, 200, 160, 0.4);
+
       --font-serif: 'Cormorant Garamond', Georgia, serif;
       --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
@@ -78,6 +83,11 @@
       --colors-on-primary: #ffffff;
       --colors-on-dark: #faf9f5;
       --colors-on-dark-soft: #c6c3bc;
+
+      --colors-grid-line: rgba(217, 133, 108, 0.07);
+      --colors-glow-1: rgba(217, 133, 108, 0.15);
+      --colors-glow-2: rgba(45, 38, 35, 0.65);
+      --colors-glow-3: rgba(25, 23, 21, 0.85);
     }
 
     * {
@@ -98,9 +108,63 @@
       -webkit-font-smoothing: antialiased;
       padding-bottom: env(safe-area-inset-bottom);
       transition: var(--theme-transition);
+      overflow-x: hidden;
+    }
+
+    /* Dynamic Subtle Grid & Soft Ambient Gradient Layer */
+    .bg-grid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .bg-grid-overlay::before {
+      content: '';
+      position: absolute;
+      inset: -60px;
+      background-image: 
+        linear-gradient(to right, var(--colors-grid-line) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--colors-grid-line) 1px, transparent 1px);
+      background-size: 32px 32px;
+      transform: translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0);
+      transition: transform 0.1s cubic-bezier(0.1, 0.9, 0.2, 1);
+      animation: retroGridFloat 14s ease-in-out infinite alternate;
+    }
+
+    .bg-grid-overlay::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: 
+        radial-gradient(circle at 15% 20%, var(--colors-glow-1) 0%, transparent 42%),
+        radial-gradient(circle at 85% 65%, var(--colors-glow-2) 0%, transparent 50%),
+        radial-gradient(circle at 50% 95%, var(--colors-glow-3) 0%, transparent 45%);
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    @keyframes retroGridFloat {
+      0% {
+        opacity: 0.55;
+        background-position: 0px 0px;
+      }
+      50% {
+        opacity: 0.9;
+      }
+      100% {
+        opacity: 0.65;
+        background-position: 16px 16px;
+      }
     }
 
     .app-container {
+      position: relative;
+      z-index: 1;
       max-width: 1280px;
       margin: 0 auto;
       padding: 32px 20px;
@@ -641,6 +705,9 @@
   </style>
 </head>
 <body>
+
+  <!-- Dynamic Subtle Grid & Ambient Radial Gradient Overlay -->
+  <div class="bg-grid-overlay" id="bgGridOverlay"></div>
 
   <div class="app-container">
     
@@ -1660,6 +1727,41 @@
     updateStatus();
     setInterval(updateStatus, 4000);
     connectSSE();
+
+    // Smooth Retro Parallax Mouse Controller & Mobile Gyroscope Integration
+    let mouseX = 0, mouseY = 0;
+    let currentX = 0, currentY = 0;
+    const gridOverlay = document.getElementById('bgGridOverlay');
+
+    window.addEventListener('mousemove', (e) => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      mouseX = (e.clientX / w - 0.5) * 2;
+      mouseY = (e.clientY / h - 0.5) * 2;
+    });
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', (e) => {
+        if (e.gamma !== null && e.beta !== null) {
+          mouseX = Math.min(Math.max(e.gamma / 30, -1), 1);
+          mouseY = Math.min(Math.max((e.beta - 45) / 30, -1), 1);
+        }
+      });
+    }
+
+    function animateParallax() {
+      currentX += (mouseX * 16 - currentX) * 0.08;
+      currentY += (mouseY * 16 - currentY) * 0.08;
+
+      if (gridOverlay) {
+        gridOverlay.style.setProperty('--parallax-x', `${-currentX}px`);
+        gridOverlay.style.setProperty('--parallax-y', `${-currentY}px`);
+      }
+
+      requestAnimationFrame(animateParallax);
+    }
+
+    animateParallax();
   </script>
 </body>
 </html>
