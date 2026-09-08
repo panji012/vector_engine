@@ -2,64 +2,74 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <!-- PWA & Standalone Mobile App Meta Tags (No Search Bar on iOS/Android) -->
+  <!-- PWA & Standalone Mobile Web App Metas (No Search Bar on iOS/Android) -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Vector Engine">
-  <meta name="theme-color" content="#161616">
+  <meta name="theme-color" content="#faf9f5">
   <link rel="manifest" href="/site.webmanifest">
   <link rel="apple-touch-icon" href="/captcha_screenshot.png">
   
-  <title>Vector Engine - IBM Carbon 5-Node Pipeline Dashboard</title>
+  <title>Vector Engine — Claude Warm Editorial Dashboard</title>
   
-  <!-- IBM Carbon Type Hierarchy: IBM Plex Sans & IBM Plex Mono -->
+  <!-- Claude Design Typography: Cormorant Garamond (Serif Display), Inter (Sans Body), JetBrains Mono (Code) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
   <style>
     /* ==========================================================================
-       IBM CARBON DESIGN SYSTEM TOKENS (getdesign.md Specification)
-       - Canvas: #161616 (Inverse Canvas / Charcoal)
-       - Surface 1: #262626 (Carbon Light Charcoal)
-       - Surface 2: #393939 (Elevated Charcoal Layer)
-       - Primary Accent: #0f62fe (IBM Blue)
-       - Primary Hover: #0353e9 / Pressed: #002d9c
-       - Hairline Border: 1px solid #393939
-       - Hairline Strong: 1px solid #525252
-       - Ink: #f4f4f4 / Ink Muted: #c6c6c6 / Ink Subtle: #8d8d8d
-       - Flat Geometry: 0px border-radius everywhere
-       - Letter Spacing: 0.16px body tracking
+       CLAUDE ANTHROPIC DESIGN SYSTEM TOKENS (DESIGN-claude.md)
+       - Canvas (Warm Tinted Cream): #faf9f5
+       - Surface Soft: #f5f0e8
+       - Surface Card: #efe9de
+       - Surface Dark (Code & Dark Mockups): #181715
+       - Surface Dark Elevated: #252320
+       - Primary Coral Accent: #cc785c (Hover: #b56449 / Active: #a9583e)
+       - Hairline Border: #e6dfd8
+       - Ink: #141413 / Body: #3d3d3a / Muted: #6c6a64
+       - Modern Rounded Corners: rounded-md (10px), rounded-lg (16px), pill (9999px)
        ========================================================================== */
 
     :root {
-      --colors-canvas: #161616;
-      --colors-surface-1: #262626;
-      --colors-surface-2: #393939;
-      --colors-hairline: #393939;
-      --colors-hairline-strong: #525252;
-      --colors-primary: #0f62fe;
-      --colors-primary-hover: #0353e9;
-      --colors-primary-pressed: #002d9c;
-      --colors-ink: #f4f4f4;
-      --colors-ink-muted: #c6c6c6;
-      --colors-ink-subtle: #8d8d8d;
-      --colors-semantic-success: #24a148;
-      --colors-semantic-warning: #f1c21b;
-      --colors-semantic-error: #da1e28;
+      --colors-canvas: #faf9f5;
+      --colors-surface-soft: #f5f0e8;
+      --colors-surface-card: #efe9de;
+      --colors-surface-dark: #181715;
+      --colors-surface-dark-elevated: #252320;
+      --colors-hairline: #e6dfd8;
+      --colors-hairline-soft: #ebe6df;
+      --colors-primary: #cc785c;
+      --colors-primary-hover: #b56449;
+      --colors-primary-active: #a9583e;
+      --colors-ink: #141413;
+      --colors-body: #3d3d3a;
+      --colors-muted: #6c6a64;
+      --colors-on-primary: #ffffff;
+      --colors-on-dark: #faf9f5;
+      --colors-on-dark-soft: #a09d96;
+      --colors-success: #5db872;
+      --colors-warning: #d4a017;
+      --colors-error: #c64545;
 
-      --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'IBM Plex Mono', monospace;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --radius-pill: 9999px;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      border-radius: 0 !important; /* IBM Carbon Rule: Strict 0px Flat Geometry */
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -70,8 +80,7 @@
       color: var(--colors-ink);
       font-family: var(--font-sans);
       font-size: 16px;
-      line-height: 1.5;
-      letter-spacing: 0.16px; /* Carbon Body Precision Tracking */
+      line-height: 1.55;
       -webkit-font-smoothing: antialiased;
       padding-bottom: env(safe-area-inset-bottom);
     }
@@ -79,134 +88,140 @@
     .app-container {
       max-width: 1100px;
       margin: 0 auto;
-      padding: 24px 16px;
+      padding: 32px 20px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 28px;
     }
 
-    /* IBM Carbon Header Bar */
+    /* Claude Editorial Header Bar */
     header {
-      background: var(--colors-surface-1);
+      background: var(--colors-surface-card);
       border: 1px solid var(--colors-hairline);
-      padding: 20px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .header-top {
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 12px;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(20, 20, 19, 0.03);
     }
 
     .header-title h1 {
-      font-size: 1.75rem;
-      font-weight: 300; /* IBM Signature Display Weight 300 */
+      font-family: var(--font-serif);
+      font-size: 2.2rem;
+      font-weight: 500;
       color: var(--colors-ink);
-      letter-spacing: -0.4px;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
     }
 
     .header-title p {
-      font-size: 0.875rem;
-      color: var(--colors-ink-muted);
-      letter-spacing: 0.16px;
+      font-size: 0.9375rem;
+      color: var(--colors-muted);
+      margin-top: 4px;
     }
 
-    .server-badge {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      background: var(--colors-surface-2);
+    .brand-spike-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-sans);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      background: var(--colors-canvas);
       color: var(--colors-ink);
-      padding: 6px 12px;
-      border: 1px solid var(--colors-hairline-strong);
+      padding: 8px 16px;
+      border: 1px solid var(--colors-hairline);
+      border-radius: var(--radius-pill);
     }
 
-    /* IBM Carbon Button Base */
+    /* Button Styles (Claude Warm Coral & Soft Surfaces) */
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      min-height: 48px; /* Carbon Spec 48px Minimum Touch Target */
-      padding: 12px 20px;
+      min-height: 48px;
+      padding: 12px 24px;
       font-family: var(--font-sans);
       font-size: 0.875rem;
-      font-weight: 400;
-      letter-spacing: 0.16px;
-      color: #ffffff;
+      font-weight: 500;
+      color: var(--colors-on-primary);
       background-color: var(--colors-primary);
       border: 1px solid var(--colors-primary);
+      border-radius: var(--radius-md);
       cursor: pointer;
-      transition: background-color 0.15s ease, border-color 0.15s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       text-decoration: none;
       user-select: none;
+      box-shadow: 0 2px 8px rgba(204, 120, 92, 0.2);
     }
 
     .btn:hover {
       background-color: var(--colors-primary-hover);
       border-color: var(--colors-primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(204, 120, 92, 0.3);
     }
 
     .btn:active {
-      background-color: var(--colors-primary-pressed);
-      border-color: var(--colors-primary-pressed);
+      background-color: var(--colors-primary-active);
+      transform: translateY(0);
     }
 
     .btn-secondary {
-      background-color: #393939;
-      color: #ffffff;
-      border: 1px solid #525252;
+      background-color: var(--colors-canvas);
+      color: var(--colors-ink);
+      border: 1px solid var(--colors-hairline);
+      box-shadow: 0 2px 6px rgba(20, 20, 19, 0.04);
     }
 
     .btn-secondary:hover {
-      background-color: #4c4c4c;
+      background-color: var(--colors-surface-soft);
+      border-color: var(--colors-hairline-soft);
     }
 
-    .btn-ghost {
-      background-color: transparent;
-      color: var(--colors-ink);
-      border: 1px solid var(--colors-hairline-strong);
+    .btn-dark {
+      background-color: var(--colors-surface-dark);
+      color: var(--colors-on-dark);
+      border: 1px solid var(--colors-surface-dark);
+      box-shadow: 0 2px 8px rgba(24, 23, 21, 0.2);
     }
 
-    .btn-ghost:hover {
-      background-color: var(--colors-surface-2);
+    .btn-dark:hover {
+      background-color: var(--colors-surface-dark-elevated);
     }
 
     .btn-danger {
-      background-color: var(--colors-semantic-error);
+      background-color: var(--colors-error);
       color: #ffffff;
-      border: 1px solid var(--colors-semantic-error);
+      border: 1px solid var(--colors-error);
+      box-shadow: 0 2px 8px rgba(198, 69, 69, 0.2);
     }
 
     .btn-danger:hover {
-      background-color: #b81921;
-    }
-
-    .btn-success {
-      background-color: var(--colors-semantic-success);
-      color: #ffffff;
-      border: 1px solid var(--colors-semantic-success);
+      background-color: #aa3636;
     }
 
     .btn-full {
       width: 100%;
     }
 
-    /* Master Pipeline Control Banner */
-    .pipeline-banner {
-      background: var(--colors-surface-1);
-      border: 1px solid var(--colors-primary);
-      padding: 24px;
+    /* Master Pipeline Control Card */
+    .pipeline-card {
+      background: var(--colors-surface-card);
+      border: 1px solid var(--colors-hairline);
+      border-radius: var(--radius-lg);
+      padding: 32px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 20px;
+      box-shadow: 0 6px 24px rgba(20, 20, 19, 0.04);
     }
 
-    .pipeline-banner-header {
+    .pipeline-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
@@ -214,18 +229,20 @@
       gap: 16px;
     }
 
-    .pipeline-banner h3 {
-      font-size: 1.25rem;
-      font-weight: 300;
+    .pipeline-header h3 {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 600;
       color: var(--colors-ink);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
-    .pipeline-banner p {
-      font-size: 0.875rem;
-      color: var(--colors-ink-muted);
+    .pipeline-header p {
+      font-size: 0.9375rem;
+      color: var(--colors-body);
+      margin-top: 4px;
     }
 
     .pipeline-actions {
@@ -234,159 +251,166 @@
       flex-wrap: wrap;
     }
 
+    /* Step flow pills */
     .flow-stepper {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: wrap;
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--colors-ink-muted);
-      padding-top: 8px;
+      padding-top: 16px;
       border-top: 1px solid var(--colors-hairline);
     }
 
-    .flow-step-tag {
-      background: var(--colors-surface-2);
-      color: var(--colors-ink);
-      padding: 4px 10px;
-      border: 1px solid var(--colors-hairline-strong);
+    .step-pill {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      background: var(--colors-canvas);
+      color: var(--colors-body);
+      padding: 6px 14px;
+      border: 1px solid var(--colors-hairline);
+      border-radius: var(--radius-pill);
+      transition: all 0.2s ease;
     }
 
-    .flow-step-tag.active {
+    .step-pill.active {
       background: var(--colors-primary);
       color: #ffffff;
       border-color: var(--colors-primary);
     }
 
-    /* Vertical Nodes Layout (Node 0 -> Node 1 -> Node 2 -> Node 3 -> Node 4) */
+    /* Vertical Nodes Container */
     .vertical-nodes-container {
       display: flex;
       flex-direction: column;
-      gap: 24px;
-      position: relative;
+      gap: 20px;
     }
 
-    /* IBM Carbon Station Card */
+    /* Claude Warm Card for Nodes */
     .station-node-card {
-      background: var(--colors-surface-1);
+      background: var(--colors-surface-card);
       border: 1px solid var(--colors-hairline);
-      padding: 24px;
+      border-radius: var(--radius-lg);
+      padding: 32px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      position: relative;
+      gap: 24px;
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 16px rgba(20, 20, 19, 0.03);
     }
 
-    .station-node-card:focus-within {
-      border-color: var(--colors-primary);
+    .station-node-card:hover {
+      box-shadow: 0 8px 30px rgba(20, 20, 19, 0.06);
     }
 
     .node-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 16px;
+      padding-bottom: 20px;
       border-bottom: 1px solid var(--colors-hairline);
       flex-wrap: wrap;
       gap: 12px;
     }
 
     .node-title-group h2 {
-      font-size: 1.25rem;
-      font-weight: 400;
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 600;
       color: var(--colors-ink);
-
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
     .node-title-group span {
-      font-size: 0.8125rem;
-      color: var(--colors-ink-muted);
+      font-size: 0.875rem;
+      color: var(--colors-muted);
     }
 
-    .node-badge {
-      font-family: var(--font-mono);
+    .badge-node-tag {
       font-size: 0.75rem;
-      padding: 4px 10px;
-      background: var(--colors-surface-2);
-      border: 1px solid var(--colors-hairline-strong);
-      color: var(--colors-ink);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      padding: 6px 14px;
+      background: var(--colors-canvas);
+      color: var(--colors-primary);
+      border: 1px solid var(--colors-hairline);
+      border-radius: var(--radius-pill);
     }
 
-    /* Dynamic Indicator Strip */
-    .indicator-strip {
+    /* Status Strip */
+    .status-strip-claude {
       background: var(--colors-canvas);
       border: 1px solid var(--colors-hairline);
-      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      padding: 14px 20px;
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    .indicator-status {
+    .status-indicator-group {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-family: var(--font-mono);
-      font-size: 0.8125rem;
-      font-weight: 600;
+      gap: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
     }
 
-    .status-indicator-dot {
-      width: 10px;
-      height: 10px;
-      background: var(--colors-semantic-error);
+    .status-dot-pulse {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--colors-error);
+      box-shadow: 0 0 0 3px rgba(198, 69, 69, 0.15);
+      transition: all 0.3s ease;
     }
 
-    .status-indicator-dot.online {
-      background: var(--colors-semantic-success);
+    .status-dot-pulse.online {
+      background: var(--colors-success);
+      box-shadow: 0 0 0 3px rgba(93, 184, 114, 0.2);
     }
 
-    .status-indicator-dot.warning {
-      background: var(--colors-semantic-warning);
-    }
-
-    /* Stats Grid */
-    .stats-row-carbon {
+    /* Live Counters Row */
+    .stats-row-claude {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 16px;
     }
 
-    .stat-tile {
+    .stat-card-claude {
       background: var(--colors-canvas);
       border: 1px solid var(--colors-hairline);
-      padding: 14px;
+      border-radius: var(--radius-md);
+      padding: 16px;
       text-align: center;
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
 
-    .stat-tile .val {
+    .stat-card-claude .val {
       font-family: var(--font-mono);
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: 600;
       color: var(--colors-ink);
     }
 
-    .stat-tile .lbl {
+    .stat-card-claude .lbl {
       font-size: 0.75rem;
-      color: var(--colors-ink-muted);
+      color: var(--colors-muted);
+      font-weight: 500;
       text-transform: uppercase;
-      letter-spacing: 0.32px;
+      letter-spacing: 0.5px;
     }
 
-    /* Form Fields & Carbon Inputs */
-    label.carbon-label {
+    /* Form Controls & Inputs */
+    label.claude-label {
       display: block;
-      font-size: 0.8125rem;
-      font-weight: 400;
-      color: var(--colors-ink-muted);
-      margin-bottom: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--colors-body);
+      margin-bottom: 8px;
     }
 
     input[type="text"],
@@ -394,21 +418,23 @@
     textarea,
     select {
       width: 100%;
-      min-height: 48px; /* Carbon 48px Input Height */
+      min-height: 48px;
       background: var(--colors-canvas);
-      border: 1px solid var(--colors-hairline-strong);
+      border: 1px solid var(--colors-hairline);
+      border-radius: var(--radius-md);
       color: var(--colors-ink);
       font-family: var(--font-sans);
-      font-size: 0.875rem;
-      padding: 12px 16px;
+      font-size: 0.9375rem;
+      padding: 12px 18px;
       outline: none;
-      transition: border-color 0.15s ease;
+      transition: all 0.2s ease;
+      box-shadow: inset 0 1px 3px rgba(20, 20, 19, 0.02);
     }
 
     textarea {
-      min-height: 80px;
+      min-height: 90px;
       font-family: var(--font-mono);
-      font-size: 0.8125rem;
+      font-size: 0.875rem;
       resize: vertical;
     }
 
@@ -417,147 +443,156 @@
     textarea:focus,
     select:focus {
       border-color: var(--colors-primary);
-      border-bottom-width: 2px;
+      box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.15);
     }
 
-    /* Carbon Dropzone */
-    .carbon-dropzone {
+    /* Dropzone Upload Box */
+    .claude-dropzone {
       background: var(--colors-canvas);
-      border: 1px dashed var(--colors-hairline-strong);
-      padding: 20px;
+      border: 2px dashed var(--colors-hairline);
+      border-radius: var(--radius-md);
+      padding: 24px;
       text-align: center;
       cursor: pointer;
-      color: var(--colors-ink-muted);
-      font-size: 0.875rem;
-      min-height: 56px;
+      color: var(--colors-body);
+      font-size: 0.9375rem;
+      font-weight: 500;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      transition: border-color 0.15s ease, background-color 0.15s ease;
+      gap: 12px;
+      transition: all 0.2s ease;
     }
 
-    .carbon-dropzone:hover {
+    .claude-dropzone:hover {
       border-color: var(--colors-primary);
-      background: var(--colors-surface-2);
-      color: var(--colors-ink);
+      background: var(--colors-surface-soft);
+      color: var(--colors-primary);
     }
 
-    /* Grid helper forms */
+    /* Grid Layout Helpers */
     .form-grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      gap: 16px;
     }
 
-    /* Checkbox & Switch Rules */
     .checkbox-group {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       cursor: pointer;
-      font-size: 0.8125rem;
-      color: var(--colors-ink);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--colors-body);
       user-select: none;
-      min-height: 36px;
+      min-height: 40px;
     }
 
     .checkbox-group input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      min-height: 18px;
+      width: 20px;
+      height: 20px;
+      min-height: 20px;
       accent-color: var(--colors-primary);
       cursor: pointer;
+      border-radius: var(--radius-sm);
     }
 
-    /* Log Box Monospace */
-    .carbon-log-box {
-      background: #0d0d0d;
-      border: 1px solid var(--colors-hairline-strong);
-      padding: 12px 16px;
+    /* Code Window Card (Dark Navy Log Box) */
+    .code-log-card {
+      background: var(--colors-surface-dark);
+      border: 1px solid var(--colors-surface-dark-elevated);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
       font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: #3dd68c;
-      height: 120px;
+      font-size: 0.8125rem;
+      color: #5db8a6; /* Accent Teal text on dark navy */
+      height: 130px;
       overflow-y: auto;
       white-space: pre-wrap;
-      line-height: 1.4;
+      line-height: 1.6;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
     }
 
-    /* Vertical Flow Connector Arrow */
-    .node-flow-arrow {
+    /* Connector Flow Down Arrow */
+    .flow-arrow-down {
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8px 0;
+      padding: 4px 0;
       color: var(--colors-primary);
       font-size: 1.25rem;
-      opacity: 0.8;
+      opacity: 0.7;
     }
 
-    /* Output Deliverables Gallery */
-    .output-grid-carbon {
+    /* Output Deliverables Gallery Grid */
+    .output-gallery-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
     }
 
-    .output-card-carbon {
+    .output-item-card {
       background: var(--colors-canvas);
       border: 1px solid var(--colors-hairline);
-      padding: 12px;
+      border-radius: var(--radius-md);
+      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(20, 20, 19, 0.02);
     }
 
-    .output-card-carbon img {
+    .output-item-card img {
       width: 100%;
-      height: 120px;
+      height: 130px;
       object-fit: contain;
       background: #ffffff;
       border: 1px solid var(--colors-hairline);
+      border-radius: var(--radius-sm);
     }
 
-    /* Sub-tabs inside Details */
-    .cfg-tabs {
+    /* Config Sub-Tabs */
+    .cfg-tab-bar {
       display: flex;
-      gap: 4px;
+      gap: 8px;
       border-bottom: 1px solid var(--colors-hairline);
-      margin-bottom: 12px;
+      margin-bottom: 16px;
     }
 
     .cfg-tab-btn {
-      background: var(--colors-canvas);
-      color: var(--colors-ink-muted);
-      border: 1px solid var(--colors-hairline);
-      border-bottom: none;
-      padding: 8px 14px;
-      font-size: 0.8125rem;
+      background: transparent;
+      color: var(--colors-muted);
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 10px 16px;
+      font-family: var(--font-sans);
+      font-size: 0.875rem;
+      font-weight: 500;
       cursor: pointer;
+      transition: all 0.2s ease;
     }
 
     .cfg-tab-btn.active {
-      background: var(--colors-surface-2);
-      color: var(--colors-ink);
-      border-color: var(--colors-primary);
-      border-bottom: 2px solid var(--colors-primary);
+      color: var(--colors-primary);
+      border-bottom-color: var(--colors-primary);
     }
 
-    /* Responsive Adjustments */
+    /* Responsive adjustments */
     @media (max-width: 768px) {
       .app-container {
-        padding: 12px 8px;
-        gap: 16px;
+        padding: 16px 12px;
+        gap: 20px;
       }
-      header, .pipeline-banner, .station-node-card {
-        padding: 16px;
+      header, .pipeline-card, .station-node-card {
+        padding: 20px;
+        border-radius: var(--radius-md);
       }
       .form-grid-2 {
         grid-template-columns: 1fr;
       }
-      .stats-row-carbon {
+      .stats-row-claude {
         grid-template-columns: 1fr;
       }
       .pipeline-actions {
@@ -566,7 +601,7 @@
       .pipeline-actions .btn {
         flex: 1;
       }
-      .output-grid-carbon {
+      .output-gallery-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -576,22 +611,20 @@
 
   <div class="app-container">
     
-    <!-- HEADER BAR -->
+    <!-- EDITORIAL HEADER BAR -->
     <header>
-      <div class="header-top">
-        <div class="header-title">
-          <h1>Vector Engine Modular Dashboard</h1>
-          <p>IBM Carbon Design System Architecture — 5-Node ComfyUI Pipeline</p>
-        </div>
-        <div class="server-badge">
-          <i class="fas fa-server mr-1"></i> Localhost: <strong>8000</strong>
-        </div>
+      <div class="header-title">
+        <h1>Vector Engine Studio</h1>
+        <p>Warm Humanist Editorial Architecture — 5-Node ComfyUI Modular Pipeline</p>
+      </div>
+      <div class="brand-spike-badge">
+        <i class="fas fa-asterisk text-primary"></i> Server: <strong>8000</strong>
       </div>
     </header>
 
-    <!-- MASTER COMFY-NODE PIPELINE EXECUTOR BANNER -->
-    <div class="pipeline-banner">
-      <div class="pipeline-banner-header">
+    <!-- MASTER PIPELINE CONTROL CARD -->
+    <div class="pipeline-card">
+      <div class="pipeline-header">
         <div>
           <h3><i class="fas fa-bolt text-primary"></i> COMFY-NODE FLOW EXECUTOR</h3>
           <p>Eksekusi otomatis berurutan dari Node 0 ➔ Node 1 ➔ Node 2 ➔ Node 3 ➔ Node 4</p>
@@ -607,19 +640,19 @@
       </div>
 
       <div class="flow-stepper">
-        <span class="flow-step-tag active">NODE 0: AI Remixer</span>
+        <span class="step-pill active">Node 0: AI Remixer</span>
         <span>➔</span>
-        <span class="flow-step-tag active">NODE 1: Chromium Auth</span>
+        <span class="step-pill active">Node 1: Chromium Auth</span>
         <span>➔</span>
-        <span class="flow-step-tag active">NODE 2: Headless Vectorizer</span>
+        <span class="step-pill active">Node 2: Headless Vectorizer</span>
         <span>➔</span>
-        <span class="flow-step-tag active">NODE 3: Rust Geometry</span>
+        <span class="step-pill active">Node 3: Rust Geometry</span>
         <span>➔</span>
-        <span class="flow-step-tag active">NODE 4: ExifTool Metadata</span>
+        <span class="step-pill active">Node 4: ExifTool Metadata</span>
       </div>
     </div>
 
-    <!-- VERTICAL STACKED NODES (Top-to-Bottom Flow) -->
+    <!-- VERTICAL NODES LAYOUT (Node 0 ➔ Node 1 ➔ Node 2 ➔ Node 3 ➔ Node 4) -->
     <div class="vertical-nodes-container">
 
       <!-- ==========================================
@@ -629,52 +662,52 @@
         <div class="node-header">
           <div class="node-title-group">
             <h2><i class="fas fa-paint-brush text-primary"></i> NODE 0: AI REMIXER PRO</h2>
-            <span>Gemini AI Image Concept Remix Engine</span>
+            <span>Gemini AI Concept Remixer Engine</span>
           </div>
-          <span class="node-badge">NODE 0</span>
+          <span class="badge-node-tag">NODE 0</span>
         </div>
 
-        <div class="indicator-strip">
-          <span class="carbon-label" style="margin:0;">INDICATOR STATUS:</span>
-          <div class="indicator-status">
-            <div id="node0StatusDot" class="status-indicator-dot"></div>
-            <span id="node0StatusText" style="color: var(--colors-semantic-error);">STATUS: IDLE / OFF</span>
+        <div class="status-strip-claude">
+          <span class="claude-label" style="margin:0;">INDICATOR STATUS:</span>
+          <div class="status-indicator-group">
+            <div id="node0StatusDot" class="status-dot-pulse"></div>
+            <span id="node0StatusText" style="color: var(--colors-error);">STATUS: IDLE / OFF</span>
           </div>
         </div>
 
-        <div class="stats-row-carbon">
-          <div class="stat-tile">
+        <div class="stats-row-claude">
+          <div class="stat-card-claude">
             <span class="val" id="st0Queue" style="color: var(--colors-primary);">0</span>
             <span class="lbl">📥 Antrean</span>
           </div>
-          <div class="stat-tile">
-            <span class="val" id="st0Success" style="color: var(--colors-semantic-success);">0</span>
+          <div class="stat-card-claude">
+            <span class="val" id="st0Success" style="color: var(--colors-success);">0</span>
             <span class="lbl">✅ Remix Selesai</span>
           </div>
-          <div class="stat-tile">
-            <span class="val" id="st0Failed" style="color: var(--colors-semantic-error);">0</span>
+          <div class="stat-card-claude">
+            <span class="val" id="st0Failed" style="color: var(--colors-error);">0</span>
             <span class="lbl">❌ Gagal</span>
           </div>
         </div>
 
-        <div class="carbon-dropzone" onclick="document.getElementById('st0FileInput').click()">
-          <i class="fas fa-cloud-upload-alt"></i> Upload Gambar Acuan & Referensi Gaya (Locals)
+        <div class="claude-dropzone" onclick="document.getElementById('st0FileInput').click()">
+          <i class="fas fa-cloud-upload-alt text-primary"></i> Upload Gambar Acuan & Referensi Gaya (File Lokal)
           <input type="file" id="st0FileInput" accept="image/jpeg, image/png, image/webp" multiple style="display: none;" onchange="uploadFiles(this.files, '/api/upload_station_0')">
         </div>
 
         <div>
-          <label class="carbon-label">🔗 Link HTTP Gambar (Pinterest / Web Direct):</label>
+          <label class="claude-label">🔗 Link HTTP Gambar (Pinterest / Web Direct):</label>
           <textarea id="st0HttpUrls" rows="2" placeholder="Masukkan link HTTP/HTTPS di sini... (Pisahkan dengan Enter)"></textarea>
         </div>
 
         <div>
-          <label class="carbon-label">Deskripsi Konsep / Prompt Remixer:</label>
+          <label class="claude-label">Deskripsi Konsep / Prompt Remixer:</label>
           <input type="text" id="st0Prompt" placeholder="Contoh: Gambar ilustrasi vektor karakter astronot gaya retro, warna pastel solid...">
         </div>
 
         <div class="form-grid-2">
           <div>
-            <label class="carbon-label">Tingkat Peniruan Gaya:</label>
+            <label class="claude-label">Tingkat Peniruan Gaya:</label>
             <select id="st0StyleLevel">
               <option value="Easy" selected>Easy (Aman Stock)</option>
               <option value="Off">Off (Jiplak Ref)</option>
@@ -683,7 +716,7 @@
             </select>
           </div>
           <div>
-            <label class="carbon-label">Akurasi Warna Desain:</label>
+            <label class="claude-label">Akurasi Warna Desain:</label>
             <select id="st0ColorMatch">
               <option value="Kunci" selected>Kunci (Palet Asli)</option>
               <option value="Moderat">Moderat</option>
@@ -694,7 +727,7 @@
 
         <div class="form-grid-2">
           <div>
-            <label class="carbon-label">Ukuran Kanvas / Output Ratio:</label>
+            <label class="claude-label">Ukuran Kanvas / Output Ratio:</label>
             <select id="st0CanvasRatio">
               <option value="1:1" selected>Persegi (1:1)</option>
               <option value="16:9">Melebar (16:9)</option>
@@ -702,7 +735,7 @@
             </select>
           </div>
           <div>
-            <label class="carbon-label">Theme Color Palette:</label>
+            <label class="claude-label">Theme Color Palette:</label>
             <select id="st0ColorTheme">
               <option value="" selected>Tanpa Tema</option>
               <option value="Vintage">Vintage Collection</option>
@@ -731,11 +764,11 @@
           </button>
         </div>
 
-        <div class="carbon-log-box" id="st0Log">[NODE 0] AI Remixer Engine Ready.</div>
+        <div class="code-log-card" id="st0Log">[NODE 0] AI Remixer Engine Ready.</div>
       </div>
 
-      <!-- Connector Arrow -->
-      <div class="node-flow-arrow"><i class="fas fa-chevron-down"></i></div>
+      <!-- Arrow Down -->
+      <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
 
 
       <!-- ==========================================
@@ -747,35 +780,35 @@
             <h2><i class="fas fa-key text-primary"></i> NODE 1: CHROMIUM AUTH</h2>
             <span>System Chromium Profile & Authentication Session</span>
           </div>
-          <span class="node-badge">NODE 1</span>
+          <span class="badge-node-tag">NODE 1</span>
         </div>
 
-        <div class="indicator-strip">
-          <span class="carbon-label" style="margin:0;">SESI CHROMIUM:</span>
-          <div class="indicator-status">
-            <div id="sessionDot" class="status-indicator-dot"></div>
-            <span id="sessionText" style="color: var(--colors-semantic-error);">STATUS: OFFLINE</span>
+        <div class="status-strip-claude">
+          <span class="claude-label" style="margin:0;">SESI CHROMIUM:</span>
+          <div class="status-indicator-group">
+            <div id="sessionDot" class="status-dot-pulse"></div>
+            <span id="sessionText" style="color: var(--colors-error);">STATUS: OFFLINE</span>
           </div>
         </div>
 
-        <div style="font-family: var(--font-mono); font-size: 0.8125rem; color: var(--colors-ink-muted);">
+        <div style="font-family: var(--font-mono); font-size: 0.8125rem; color: var(--colors-muted);">
           Profile Path: <code>/home/panjikali/snap/chromium/common/chromium</code>
         </div>
 
         <div class="pipeline-actions">
-          <button class="btn btn-secondary btn-full" onclick="triggerLoginSession()">
+          <button class="btn btn-dark btn-full" onclick="triggerLoginSession()">
             <i class="fas fa-sign-in-alt"></i> Buka Sesi Login Chromium
           </button>
-          <button class="btn btn-ghost" onclick="resetProfile()">
+          <button class="btn btn-secondary" onclick="resetProfile()">
             <i class="fas fa-trash-alt"></i> Reset Profil
           </button>
         </div>
 
-        <div class="carbon-log-box" id="st1Log">[NODE 1] Chromium Auth Node Ready.</div>
+        <div class="code-log-card" id="st1Log">[NODE 1] Chromium Auth Node Ready.</div>
       </div>
 
-      <!-- Connector Arrow -->
-      <div class="node-flow-arrow"><i class="fas fa-chevron-down"></i></div>
+      <!-- Arrow Down -->
+      <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
 
 
       <!-- ==========================================
@@ -787,28 +820,28 @@
             <h2><i class="fas fa-vector-square text-primary"></i> NODE 2: VECTORIZER HEADLESS</h2>
             <span>Raster PNG/JPG ➔ SVG Vector Converter</span>
           </div>
-          <span class="node-badge">NODE 2</span>
+          <span class="badge-node-tag">NODE 2</span>
         </div>
 
-        <div class="indicator-strip">
-          <span class="carbon-label" style="margin:0;">INDICATOR STATUS:</span>
-          <div class="indicator-status">
-            <div id="node2StatusDot" class="status-indicator-dot"></div>
-            <span id="node2StatusText" style="color: var(--colors-semantic-error);">STATUS: IDLE / OFF</span>
+        <div class="status-strip-claude">
+          <span class="claude-label" style="margin:0;">INDICATOR STATUS:</span>
+          <div class="status-indicator-group">
+            <div id="node2StatusDot" class="status-dot-pulse"></div>
+            <span id="node2StatusText" style="color: var(--colors-error);">STATUS: IDLE / OFF</span>
           </div>
         </div>
 
-        <div class="stats-row-carbon">
-          <div class="stat-tile">
+        <div class="stats-row-claude">
+          <div class="stat-card-claude">
             <span class="val" id="st2Queue" style="color: var(--colors-primary);">0</span>
             <span class="lbl">📥 Antrean File</span>
           </div>
-          <div class="stat-tile">
-            <span class="val" id="st2Success" style="color: var(--colors-semantic-success);">0</span>
+          <div class="stat-card-claude">
+            <span class="val" id="st2Success" style="color: var(--colors-success);">0</span>
             <span class="lbl">✅ Konversi Selesai</span>
           </div>
-          <div class="stat-tile">
-            <span class="val" id="st2Failed" style="color: var(--colors-semantic-error);">0</span>
+          <div class="stat-card-claude">
+            <span class="val" id="st2Failed" style="color: var(--colors-error);">0</span>
             <span class="lbl">❌ Gagal</span>
           </div>
         </div>
@@ -823,27 +856,27 @@
         </div>
 
         <!-- CAPTCHA Alert Box -->
-        <div id="captchaAlertBox" style="display: none; background: #331f00; border: 1px solid var(--colors-semantic-warning); padding: 16px;">
-          <h4 style="color: var(--colors-semantic-warning); font-size: 0.9375rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <div id="captchaAlertBox" style="display: none; background: #fff8e6; border: 1px solid var(--colors-warning); border-radius: var(--radius-md); padding: 20px;">
+          <h4 style="color: var(--colors-warning); font-size: 1.05rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-exclamation-triangle"></i> TERDETEKSI CAPTCHA / CLOUDFLARE!
           </h4>
-          <p style="font-size: 0.8125rem; color: #fff; margin-top: 6px;">Sistem menjeda pemrosesan otomatis. Silakan buka browser GUI untuk menyelesaikan verifikasi CAPTCHA.</p>
+          <p style="font-size: 0.875rem; color: var(--colors-body); margin-top: 6px;">Sistem menjeda pemrosesan otomatis. Silakan buka browser GUI untuk menyelesaikan verifikasi CAPTCHA.</p>
           
-          <div style="margin-top: 10px; text-align: center;">
-            <img id="captchaPreviewImg" src="/captcha_screenshot.png" style="width: 100%; max-height: 350px; object-fit: contain; border: 1px solid var(--colors-hairline-strong);" alt="Captcha Screenshot Preview">
+          <div style="margin-top: 12px; text-align: center;">
+            <img id="captchaPreviewImg" src="/captcha_screenshot.png" style="width: 100%; max-height: 350px; object-fit: contain; border-radius: var(--radius-sm); border: 1px solid var(--colors-hairline);" alt="Captcha Screenshot Preview">
           </div>
 
-          <div style="margin-top: 12px; display: flex; gap: 10px;">
-            <button class="btn" style="background: var(--colors-semantic-warning); color: #000;" onclick="triggerLoginSession()">🔑 Selesaikan CAPTCHA</button>
-            <button class="btn btn-success" onclick="runStation2()">▶️ Resume Stasiun 2</button>
+          <div style="margin-top: 14px; display: flex; gap: 12px;">
+            <button class="btn" style="background: var(--colors-warning); color: #000; border-color: var(--colors-warning);" onclick="triggerLoginSession()">🔑 Selesaikan CAPTCHA</button>
+            <button class="btn btn-secondary" onclick="runStation2()">▶️ Resume Stasiun 2</button>
           </div>
         </div>
 
-        <div class="carbon-log-box" id="st2Log">[NODE 2] Headless Converter Ready.</div>
+        <div class="code-log-card" id="st2Log">[NODE 2] Headless Converter Ready.</div>
       </div>
 
-      <!-- Connector Arrow -->
-      <div class="node-flow-arrow"><i class="fas fa-chevron-down"></i></div>
+      <!-- Arrow Down -->
+      <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
 
 
       <!-- ==========================================
@@ -855,34 +888,34 @@
             <h2><i class="fas fa-microchip text-primary"></i> NODE 3: VECTOR GEOMETRY ENGINE</h2>
             <span>Rust Simplify ➔ Seamless Pattern ➔ EPS & JPG Deliverables</span>
           </div>
-          <span class="node-badge">NODE 3</span>
+          <span class="badge-node-tag">NODE 3</span>
         </div>
 
-        <div class="indicator-strip">
-          <span class="carbon-label" style="margin:0;">INDICATOR STATUS:</span>
-          <div class="indicator-status">
-            <div id="node3StatusDot" class="status-indicator-dot"></div>
-            <span id="node3StatusText" style="color: var(--colors-semantic-error);">STATUS: IDLE / OFF</span>
+        <div class="status-strip-claude">
+          <span class="claude-label" style="margin:0;">INDICATOR STATUS:</span>
+          <div class="status-indicator-group">
+            <div id="node3StatusDot" class="status-dot-pulse"></div>
+            <span id="node3StatusText" style="color: var(--colors-error);">STATUS: IDLE / OFF</span>
           </div>
         </div>
 
-        <div class="stats-row-carbon">
-          <div class="stat-tile">
+        <div class="stats-row-claude">
+          <div class="stat-card-claude">
             <span class="val" id="st3Queue" style="color: var(--colors-primary);">0</span>
             <span class="lbl">📄 Antrean SVG</span>
           </div>
-          <div class="stat-tile">
-            <span class="val" id="st3Success" style="color: var(--colors-semantic-success);">0</span>
+          <div class="stat-card-claude">
+            <span class="val" id="st3Success" style="color: var(--colors-success);">0</span>
             <span class="lbl">✅ EPS & JPG Selesai</span>
           </div>
-          <div class="stat-tile">
-            <span class="val" id="st3Failed" style="color: var(--colors-semantic-error);">0</span>
+          <div class="stat-card-claude">
+            <span class="val" id="st3Failed" style="color: var(--colors-error);">0</span>
             <span class="lbl">❌ Gagal</span>
           </div>
         </div>
 
         <div>
-          <label class="carbon-label">Mode Ekspor Deliverables:</label>
+          <label class="claude-label">Mode Ekspor Deliverables:</label>
           <select id="exportModeSelect">
             <option value="auto" selected>🤖 Auto Profile (config_silhouette.json: Pattern & 3-Panel)</option>
             <option value="pattern">🎨 Seamless Pattern Only (--pattern)</option>
@@ -892,7 +925,7 @@
         </div>
 
         <div>
-          <label class="carbon-label">Pilih Style Seamless Pattern (Phase 5):</label>
+          <label class="claude-label">Pilih Style Seamless Pattern (Phase 5):</label>
           <select id="patternStyleSelect">
             <option value="brick_wall" selected>brick_wall (Susunan Bata Horizontal)</option>
             <option value="slanted_left">slanted_left (Miring Kiri -50%)</option>
@@ -909,26 +942,26 @@
         </div>
 
         <!-- Advanced Engine Profile Config Details -->
-        <details open style="background: var(--colors-canvas); border: 1px solid var(--colors-hairline); padding: 16px;">
-          <summary style="font-size: 0.875rem; font-weight: 500; color: var(--colors-ink); cursor: pointer; user-select: none;">
+        <details open style="background: var(--colors-canvas); border: 1px solid var(--colors-hairline); border-radius: var(--radius-md); padding: 20px;">
+          <summary style="font-size: 0.9375rem; font-weight: 600; color: var(--colors-ink); cursor: pointer; user-select: none;">
             <i class="fas fa-sliders-h text-primary mr-2"></i> Konfigurasi Lengkap Profil (config_silhouette.json)
           </summary>
 
-          <div class="cfg-tabs" style="margin-top: 12px;">
+          <div class="cfg-tab-bar" style="margin-top: 14px;">
             <button type="button" class="cfg-tab-btn active" id="tabBtnLow" onclick="switchCfgTab('low')">🎨 Low-Color (≤ 5)</button>
             <button type="button" class="cfg-tab-btn" id="tabBtnMulti" onclick="switchCfgTab('multi')">📊 Multi-Color (≥ 6)</button>
             <button type="button" class="cfg-tab-btn" id="tabBtnJson" onclick="switchCfgTab('json')">📝 Raw JSON Editor</button>
           </div>
 
           <!-- TAB 1: LOW-COLOR PROFILE -->
-          <div id="cfgPanelLow" style="display: flex; flex-direction: column; gap: 12px;">
+          <div id="cfgPanelLow" style="display: flex; flex-direction: column; gap: 14px;">
             <div class="form-grid-2">
               <div>
-                <label class="carbon-label">Max Colors:</label>
+                <label class="claude-label">Max Colors:</label>
                 <input type="number" id="lowMaxColorsInput" value="5" min="1" max="100">
               </div>
               <div>
-                <label class="carbon-label">Edge Threshold:</label>
+                <label class="claude-label">Edge Threshold:</label>
                 <input type="number" id="lowThresholdInput" value="0.50" step="0.05" min="0" max="1">
               </div>
             </div>
@@ -945,11 +978,11 @@
 
             <div class="form-grid-2">
               <div>
-                <label class="carbon-label">Grid Repeat X (Kolom):</label>
+                <label class="claude-label">Grid Repeat X (Kolom):</label>
                 <input type="number" id="gridXInput" value="3" min="1" max="10">
               </div>
               <div>
-                <label class="carbon-label">Grid Repeat Y (Baris):</label>
+                <label class="claude-label">Grid Repeat Y (Baris):</label>
                 <input type="number" id="gridYInput" value="3" min="1" max="10">
               </div>
             </div>
@@ -961,13 +994,13 @@
 
             <div class="form-grid-2">
               <div>
-                <label class="carbon-label">Tile Gap Margin (px):</label>
+                <label class="claude-label">Tile Gap Margin (px):</label>
                 <input type="number" id="gapInput" value="50.0" step="5">
               </div>
               <div>
-                <label class="carbon-label">Background Color (HEX):</label>
+                <label class="claude-label">Background Color (HEX):</label>
                 <div style="display: flex; gap: 8px;">
-                  <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 50px; min-height: 48px; padding: 2px;">
+                  <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 54px; min-height: 48px; padding: 2px;">
                   <input type="text" id="bgColorText" value="#FFFFFF">
                 </div>
               </div>
@@ -975,14 +1008,14 @@
           </div>
 
           <!-- TAB 2: MULTI-COLOR PROFILE -->
-          <div id="cfgPanelMulti" style="display: none; flex-direction: column; gap: 12px;">
+          <div id="cfgPanelMulti" style="display: none; flex-direction: column; gap: 14px;">
             <div class="form-grid-2">
               <div>
-                <label class="carbon-label">Min Colors:</label>
+                <label class="claude-label">Min Colors:</label>
                 <input type="number" id="multiMinColorsInput" value="6" min="1" max="100">
               </div>
               <div>
-                <label class="carbon-label">Simplify Threshold:</label>
+                <label class="claude-label">Simplify Threshold:</label>
                 <input type="number" id="multiThresholdInput" value="0.95" step="0.05" min="0" max="1">
               </div>
             </div>
@@ -992,16 +1025,16 @@
               <span>Enable Pattern Export for Multi-Color</span>
             </label>
 
-            <div style="border-top: 1px dashed var(--colors-hairline-strong); padding-top: 10px;">
-              <label class="carbon-label" style="color: var(--colors-primary);">Board Panel 2 (Middle - Greyscale Luminance):</label>
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 12px;">
+              <label class="claude-label" style="color: var(--colors-primary);">Board Panel 2 (Middle - Greyscale Luminance):</label>
               <div class="form-grid-2">
                 <input type="number" id="midMinLumInput" value="0.20" step="0.05" min="0" max="1" placeholder="Min Lum">
                 <input type="number" id="midMaxLumInput" value="0.62" step="0.05" min="0" max="1" placeholder="Max Lum">
               </div>
             </div>
 
-            <div style="border-top: 1px dashed var(--colors-hairline-strong); padding-top: 10px;">
-              <label class="carbon-label" style="color: var(--colors-semantic-warning);">Board Panel 3 (Right - Dominant Color):</label>
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 12px;">
+              <label class="claude-label" style="color: var(--colors-warning);">Board Panel 3 (Right - Dominant Color):</label>
               <div class="form-grid-2">
                 <input type="number" id="rightMinLumInput" value="0.20" step="0.05" min="0" max="1" placeholder="Min Lum">
                 <input type="number" id="rightMaxLumInput" value="0.62" step="0.05" min="0" max="1" placeholder="Max Lum">
@@ -1014,13 +1047,13 @@
           </div>
 
           <!-- TAB 3: RAW JSON EDITOR -->
-          <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 10px;">
+          <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 12px;">
             <textarea id="rawJsonArea" style="height: 180px;"></textarea>
             <button type="button" class="btn btn-secondary" onclick="saveRawJsonConfig()">💾 Simpan JSON Direct</button>
           </div>
 
-          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--colors-hairline); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <span id="cfgSaveNotice" style="font-size: 0.8125rem; color: var(--colors-semantic-success); display: none;">✅ Settings tersimpan</span>
+          <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--colors-hairline); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <span id="cfgSaveNotice" style="font-size: 0.875rem; color: var(--colors-success); display: none;">✅ Settings tersimpan</span>
             <button type="button" class="btn btn-secondary" onclick="saveAllSilhouetteConfig()">💾 Simpan Settings Profile</button>
           </div>
         </details>
@@ -1034,19 +1067,19 @@
           </button>
         </div>
 
-        <div class="carbon-log-box" id="st3Log">[NODE 3] Rust Engine Ready.</div>
+        <div class="code-log-card" id="st3Log">[NODE 3] Rust Engine Ready.</div>
 
         <!-- Deliverables Output Gallery -->
         <div>
-          <label class="carbon-label" style="font-weight: 500;">Hasil Paket Deliverables (EPS & JPG):</label>
-          <div class="output-grid-carbon" id="st3OutputGrid">
+          <label class="claude-label" style="font-weight: 600;">Hasil Paket Deliverables (EPS & JPG):</label>
+          <div class="output-gallery-grid" id="st3OutputGrid">
             <!-- Populated dynamically -->
           </div>
         </div>
       </div>
 
-      <!-- Connector Arrow -->
-      <div class="node-flow-arrow"><i class="fas fa-chevron-down"></i></div>
+      <!-- Arrow Down -->
+      <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
 
 
       <!-- ==========================================
@@ -1058,39 +1091,39 @@
             <h2><i class="fas fa-tags text-primary"></i> NODE 4: AI METADATA & EXIFTOOL</h2>
             <span>Gemini Canvas AI ➔ ExifTool Metadata Ingestion</span>
           </div>
-          <span class="node-badge">NODE 4</span>
+          <span class="badge-node-tag">NODE 4</span>
         </div>
 
-        <div class="indicator-strip">
-          <span class="carbon-label" style="margin:0;">INDICATOR STATUS:</span>
-          <div class="indicator-status">
-            <div id="node4StatusDot" class="status-indicator-dot"></div>
-            <span id="node4StatusText" style="color: var(--colors-semantic-error);">STATUS: IDLE / OFF</span>
+        <div class="status-strip-claude">
+          <span class="claude-label" style="margin:0;">INDICATOR STATUS:</span>
+          <div class="status-indicator-group">
+            <div id="node4StatusDot" class="status-dot-pulse"></div>
+            <span id="node4StatusText" style="color: var(--colors-error);">STATUS: IDLE / OFF</span>
           </div>
         </div>
 
-        <div class="stats-row-carbon">
-          <div class="stat-tile">
+        <div class="stats-row-claude">
+          <div class="stat-card-claude">
             <span class="val" id="st4Queue" style="color: var(--colors-primary);">0</span>
             <span class="lbl">📄 Pasangan File</span>
           </div>
-          <div class="stat-tile">
-            <span class="val" id="st4Success" style="color: var(--colors-semantic-success);">0</span>
+          <div class="stat-card-claude">
+            <span class="val" id="st4Success" style="color: var(--colors-success);">0</span>
             <span class="lbl">✅ Injeksi Selesai</span>
           </div>
-          <div class="stat-tile">
-            <span class="val" id="st4Failed" style="color: var(--colors-semantic-error);">0</span>
+          <div class="stat-card-claude">
+            <span class="val" id="st4Failed" style="color: var(--colors-error);">0</span>
             <span class="lbl">❌ Gagal</span>
           </div>
         </div>
 
         <div>
-          <label class="carbon-label">Gemini Canvas AI Target Link:</label>
+          <label class="claude-label">Gemini Canvas AI Target Link:</label>
           <input type="text" id="geminiUrlInput" value="https://gemini.google.com/app/4f103880bda96c54">
         </div>
 
         <div>
-          <label class="carbon-label">Ukuran Batch File (Target Processing):</label>
+          <label class="claude-label">Ukuran Batch File (Target Processing):</label>
           <input type="number" id="batchSizeInput" value="5" min="1" max="50">
         </div>
 
@@ -1103,11 +1136,11 @@
           </button>
         </div>
 
-        <a href="/api/download_master_csv" target="_blank" class="btn btn-ghost btn-full">
-          <i class="fas fa-file-csv mr-2"></i> Download Master Katalog CSV
+        <a href="/api/download_master_csv" target="_blank" class="btn btn-secondary btn-full">
+          <i class="fas fa-file-csv text-primary mr-2"></i> Download Master Katalog CSV
         </a>
 
-        <div class="carbon-log-box" id="st4Log">[NODE 4] AI Metadata Engine Ready.</div>
+        <div class="code-log-card" id="st4Log">[NODE 4] AI Metadata Engine Ready.</div>
       </div>
 
     </div>
@@ -1308,10 +1341,10 @@
         const st0Running = data.job && data.job.station_0 && data.job.station_0.running;
         if (st0Running) {
           if (n0Dot) { n0Dot.classList.add('online'); }
-          if (n0Text) { n0Text.innerText = 'STATUS: RUNNING (REMIXING)'; n0Text.style.color = 'var(--colors-semantic-success)'; }
+          if (n0Text) { n0Text.innerText = 'STATUS: RUNNING (REMIXING)'; n0Text.style.color = 'var(--colors-success)'; }
         } else {
           if (n0Dot) { n0Dot.classList.remove('online'); }
-          if (n0Text) { n0Text.innerText = 'STATUS: IDLE / OFF'; n0Text.style.color = 'var(--colors-semantic-error)'; }
+          if (n0Text) { n0Text.innerText = 'STATUS: IDLE / OFF'; n0Text.style.color = 'var(--colors-error)'; }
         }
 
         // Node 1 Status (Auth Node)
@@ -1319,10 +1352,10 @@
         const n1Text = document.getElementById('sessionText');
         if (data.has_login_session) {
           if (n1Dot) { n1Dot.classList.add('online'); }
-          if (n1Text) { n1Text.innerText = 'STATUS: ONLINE (LOGGED IN)'; n1Text.style.color = 'var(--colors-semantic-success)'; }
+          if (n1Text) { n1Text.innerText = 'STATUS: ONLINE (LOGGED IN)'; n1Text.style.color = 'var(--colors-success)'; }
         } else {
           if (n1Dot) { n1Dot.classList.remove('online'); }
-          if (n1Text) { n1Text.innerText = 'STATUS: OFFLINE'; n1Text.style.color = 'var(--colors-semantic-error)'; }
+          if (n1Text) { n1Text.innerText = 'STATUS: OFFLINE'; n1Text.style.color = 'var(--colors-error)'; }
         }
 
         // Node 2 Status (Headless Node)
@@ -1331,10 +1364,10 @@
         const st2Running = data.job && data.job.station_2 && data.job.station_2.running;
         if (st2Running) {
           if (n2Dot) { n2Dot.classList.add('online'); }
-          if (n2Text) { n2Text.innerText = 'STATUS: RUNNING (CONVERTING)'; n2Text.style.color = 'var(--colors-semantic-success)'; }
+          if (n2Text) { n2Text.innerText = 'STATUS: RUNNING (CONVERTING)'; n2Text.style.color = 'var(--colors-success)'; }
         } else {
           if (n2Dot) { n2Dot.classList.remove('online'); }
-          if (n2Text) { n2Text.innerText = 'STATUS: IDLE / OFF'; n2Text.style.color = 'var(--colors-semantic-error)'; }
+          if (n2Text) { n2Text.innerText = 'STATUS: IDLE / OFF'; n2Text.style.color = 'var(--colors-error)'; }
         }
 
         // Node 3 Status (Rust Engine Node)
@@ -1343,10 +1376,10 @@
         const st3Running = data.job && data.job.station_3 && data.job.station_3.running;
         if (st3Running) {
           if (n3Dot) { n3Dot.classList.add('online'); }
-          if (n3Text) { n3Text.innerText = 'STATUS: RUNNING (PROCESSING)'; n3Text.style.color = 'var(--colors-semantic-success)'; }
+          if (n3Text) { n3Text.innerText = 'STATUS: RUNNING (PROCESSING)'; n3Text.style.color = 'var(--colors-success)'; }
         } else {
           if (n3Dot) { n3Dot.classList.remove('online'); }
-          if (n3Text) { n3Text.innerText = 'STATUS: IDLE / OFF'; n3Text.style.color = 'var(--colors-semantic-error)'; }
+          if (n3Text) { n3Text.innerText = 'STATUS: IDLE / OFF'; n3Text.style.color = 'var(--colors-error)'; }
         }
 
         // Node 4 Status (AI Metadata Node)
@@ -1355,10 +1388,10 @@
         const st4Running = data.job && data.job.station_4 && data.job.station_4.running;
         if (st4Running) {
           if (n4Dot) { n4Dot.classList.add('online'); }
-          if (n4Text) { n4Text.innerText = 'STATUS: RUNNING (AI INJECTING)'; n4Text.style.color = 'var(--colors-semantic-warning)'; }
+          if (n4Text) { n4Text.innerText = 'STATUS: RUNNING (AI INJECTING)'; n4Text.style.color = 'var(--colors-warning)'; }
         } else {
           if (n4Dot) { n4Dot.classList.remove('online'); }
-          if (n4Text) { n4Text.innerText = 'STATUS: IDLE / OFF'; n4Text.style.color = 'var(--colors-semantic-error)'; }
+          if (n4Text) { n4Text.innerText = 'STATUS: IDLE / OFF'; n4Text.style.color = 'var(--colors-error)'; }
         }
 
         // Update Node 0 Live Stats
@@ -1386,10 +1419,10 @@
           outGrid.innerHTML = data.output_files.map(f => {
             const isImg = f.endsWith('.jpg') || f.endsWith('.png');
             return `
-              <div class="output-card-carbon">
-                ${isImg ? `<img src="/api/preview?file=${encodeURIComponent(f)}" alt="${f}">` : `<div style="height:120px; display:flex; align-items:center; justify-content:center; background:var(--colors-surface-2); font-family:var(--font-mono); font-weight:600; color:var(--colors-primary);">EPS DELIVERABLE</div>`}
-                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:var(--font-mono); font-size:0.75rem;">${f}</span>
-                <a class="btn btn-ghost" style="min-height:36px; padding:6px 12px; font-size:0.75rem;" href="/api/download?file=${encodeURIComponent(f)}"><i class="fas fa-download"></i> Download</a>
+              <div class="output-item-card">
+                ${isImg ? `<img src="/api/preview?file=${encodeURIComponent(f)}" alt="${f}">` : `<div style="height:130px; display:flex; align-items:center; justify-content:center; background:var(--colors-surface-dark); border-radius:var(--radius-sm); font-family:var(--font-mono); font-size:0.8125rem; font-weight:600; color:var(--colors-primary);">EPS DELIVERABLE</div>`}
+                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:var(--font-mono); font-size:0.75rem; color:var(--colors-body);">${f}</span>
+                <a class="btn btn-secondary" style="min-height:38px; padding:6px 12px; font-size:0.75rem;" href="/api/download?file=${encodeURIComponent(f)}"><i class="fas fa-download text-primary"></i> Download</a>
               </div>
             `;
           }).join('');
