@@ -269,19 +269,14 @@ async function main() {
             if (btn) btn.click();
         });
 
-        // Monitor batch rendering & downloads
-        console.log("-> 📡 Memantau AI Canvas Processing & Batch Downloads (Maks 15 Menit)...");
-        let isDone = false;
-        for (let w = 1; w <= 90; w++) {
+        const targetBatchCount = urls.length + localFiles.length;
+
+        // Monitor batch rendering & downloads directly from input/
+        console.log(`-> 📡 Memantau folder input/ hingga ${targetBatchCount} berkas fisik mendarat (Maks 20 Menit)...`);
+        for (let w = 1; w <= 120; w++) {
             await wait(10000);
 
-            // Check if frame reports done
-            isDone = await targetFrame.evaluate(() => {
-                const elements = Array.from(document.querySelectorAll('button, div, p, span'));
-                return elements.some(el => el.innerText && (el.innerText.includes('Proses Selesai') || el.innerText.includes('Selesai')));
-            });
-
-            // Scan input/ directory for new files
+            // Scan input/ directory for newly downloaded files from Gemini Canvas
             const currentFiles = fs.readdirSync(INPUT_DIR);
             const newFiles = currentFiles.filter(f => !initialInputFiles.has(f) && f.match(/\.(jpg|jpeg|png|webp)$/i) && !f.startsWith("vector_stock_"));
 
@@ -296,11 +291,11 @@ async function main() {
                 successCount++;
             }
 
-            if (isDone) {
-                console.log(`-> ✅ AI Remixer Canvas Selesai dalam ${((w * 10) / 60).toFixed(1)} menit!`);
+            if (successCount >= targetBatchCount) {
+                console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik telah mendarat di input/ dalam ${((w * 10) / 60).toFixed(1)} menit!`);
                 break;
             } else {
-                console.log(`   [...] Merender AI Remix... (${w * 10}s | ${successCount} berkas fisik terverifikasi)`);
+                console.log(`   [...] Memantau unduhan Gemini Canvas... (${w * 10}s | ${successCount}/${targetBatchCount} berkas fisik mendarat di input/)`);
             }
         }
 
