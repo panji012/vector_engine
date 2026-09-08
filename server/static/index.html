@@ -12,7 +12,7 @@
   <link rel="manifest" href="/site.webmanifest">
   <link rel="apple-touch-icon" href="/captcha_screenshot.png">
   
-  <title>Vector Engine — Claude Warm Editorial Dashboard (2-Tab Nodes)</title>
+  <title>Vector Engine — Claude Warm Editorial Dashboard (2-Column Grid)</title>
   
   <!-- Claude Design Typography: Cormorant Garamond (Serif Display), Inter (Sans Body), JetBrains Mono (Code) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -86,7 +86,7 @@
     }
 
     .app-container {
-      max-width: 1100px;
+      max-width: 1280px;
       margin: 0 auto;
       padding: 32px 20px;
       display: flex;
@@ -270,7 +270,6 @@
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-pill);
       transition: all 0.2s ease;
-      cursor: pointer;
     }
 
     .step-pill.active {
@@ -279,52 +278,12 @@
       border-color: var(--colors-primary);
     }
 
-    /* 2 Main Sequential Tabs Bar */
-    .node-tabs-bar {
-      display: flex;
-      gap: 12px;
-      background: var(--colors-surface-card);
-      border: 1px solid var(--colors-hairline);
-      border-radius: var(--radius-lg);
-      padding: 8px;
-      box-shadow: 0 4px 16px rgba(20, 20, 19, 0.03);
-    }
-
-    .node-tab-btn {
-      flex: 1;
-      background: transparent;
-      color: var(--colors-muted);
-      border: 1px solid transparent;
-      border-radius: var(--radius-md);
-      padding: 14px 20px;
-      font-family: var(--font-sans);
-      font-size: 0.9375rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    .node-tab-btn:hover {
-      background: var(--colors-canvas);
-      color: var(--colors-ink);
-    }
-
-    .node-tab-btn.active {
-      background: var(--colors-canvas);
-      color: var(--colors-ink);
-      border-color: var(--colors-hairline);
-      box-shadow: 0 2px 8px rgba(20, 20, 19, 0.05);
-    }
-
-    /* Tab Content Group Containers */
-    .node-tab-content {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
+    /* 2-Column Grid Layout (Kiri & Kanan, Stacking Downward) */
+    .nodes-2col-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
     }
 
     /* Claude Warm Card for Nodes */
@@ -332,10 +291,10 @@
       background: var(--colors-surface-card);
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-lg);
-      padding: 32px;
+      padding: 28px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 20px;
       transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: 0 4px 16px rgba(20, 20, 19, 0.03);
     }
@@ -348,7 +307,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 20px;
+      padding-bottom: 16px;
       border-bottom: 1px solid var(--colors-hairline);
       flex-wrap: wrap;
       gap: 12px;
@@ -356,16 +315,16 @@
 
     .node-title-group h2 {
       font-family: var(--font-serif);
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 600;
       color: var(--colors-ink);
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
     .node-title-group span {
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       color: var(--colors-muted);
     }
 
@@ -385,7 +344,7 @@
       background: var(--colors-canvas);
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-md);
-      padding: 14px 20px;
+      padding: 12px 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -394,8 +353,8 @@
     .status-indicator-group {
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-size: 0.875rem;
+      gap: 10px;
+      font-size: 0.8125rem;
       font-weight: 500;
     }
 
@@ -417,14 +376,14 @@
     .stats-row-claude {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
+      gap: 12px;
     }
 
     .stat-card-claude {
       background: var(--colors-canvas);
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-md);
-      padding: 16px;
+      padding: 14px;
       text-align: center;
       display: flex;
       flex-direction: column;
@@ -433,7 +392,7 @@
 
     .stat-card-claude .val {
       font-family: var(--font-mono);
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 600;
       color: var(--colors-ink);
     }
@@ -449,10 +408,10 @@
     /* Form Controls & Inputs */
     label.claude-label {
       display: block;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
       color: var(--colors-body);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     input[type="text"],
@@ -460,23 +419,23 @@
     textarea,
     select {
       width: 100%;
-      min-height: 48px;
+      min-height: 44px;
       background: var(--colors-canvas);
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-md);
       color: var(--colors-ink);
       font-family: var(--font-sans);
-      font-size: 0.9375rem;
-      padding: 12px 18px;
+      font-size: 0.875rem;
+      padding: 10px 16px;
       outline: none;
       transition: all 0.2s ease;
       box-shadow: inset 0 1px 3px rgba(20, 20, 19, 0.02);
     }
 
     textarea {
-      min-height: 90px;
+      min-height: 80px;
       font-family: var(--font-mono);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       resize: vertical;
     }
 
@@ -493,16 +452,16 @@
       background: var(--colors-canvas);
       border: 2px dashed var(--colors-hairline);
       border-radius: var(--radius-md);
-      padding: 24px;
+      padding: 20px;
       text-align: center;
       cursor: pointer;
       color: var(--colors-body);
-      font-size: 0.9375rem;
+      font-size: 0.875rem;
       font-weight: 500;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 10px;
       transition: all 0.2s ease;
     }
 
@@ -516,25 +475,25 @@
     .form-grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      gap: 12px;
     }
 
     .checkbox-group {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       cursor: pointer;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
       color: var(--colors-body);
       user-select: none;
-      min-height: 40px;
+      min-height: 36px;
     }
 
     .checkbox-group input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      min-height: 20px;
+      width: 18px;
+      height: 18px;
+      min-height: 18px;
       accent-color: var(--colors-primary);
       cursor: pointer;
       border-radius: var(--radius-sm);
@@ -545,50 +504,39 @@
       background: var(--colors-surface-dark);
       border: 1px solid var(--colors-surface-dark-elevated);
       border-radius: var(--radius-md);
-      padding: 16px 20px;
+      padding: 14px 18px;
       font-family: var(--font-mono);
-      font-size: 0.8125rem;
+      font-size: 0.78rem;
       color: #5db8a6; /* Accent Teal text on dark navy */
-      height: 130px;
+      height: 120px;
       overflow-y: auto;
       white-space: pre-wrap;
-      line-height: 1.6;
+      line-height: 1.5;
       box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
-    }
-
-    /* Connector Flow Down Arrow */
-    .flow-arrow-down {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 4px 0;
-      color: var(--colors-primary);
-      font-size: 1.25rem;
-      opacity: 0.7;
     }
 
     /* Output Deliverables Gallery Grid */
     .output-gallery-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
     }
 
     .output-item-card {
       background: var(--colors-canvas);
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-md);
-      padding: 14px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
       box-shadow: 0 2px 8px rgba(20, 20, 19, 0.02);
     }
 
     .output-item-card img {
       width: 100%;
-      height: 130px;
+      height: 120px;
       object-fit: contain;
       background: #ffffff;
       border: 1px solid var(--colors-hairline);
@@ -598,9 +546,9 @@
     /* Config Sub-Tabs */
     .cfg-tab-bar {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       border-bottom: 1px solid var(--colors-hairline);
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
 
     .cfg-tab-btn {
@@ -608,9 +556,9 @@
       color: var(--colors-muted);
       border: none;
       border-bottom: 2px solid transparent;
-      padding: 10px 16px;
+      padding: 8px 14px;
       font-family: var(--font-sans);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -622,7 +570,7 @@
     }
 
     /* Responsive adjustments */
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
       .app-container {
         padding: 16px 12px;
         gap: 20px;
@@ -631,8 +579,8 @@
         padding: 20px;
         border-radius: var(--radius-md);
       }
-      .node-tabs-bar {
-        flex-direction: column;
+      .nodes-2col-grid {
+        grid-template-columns: 1fr;
       }
       .form-grid-2 {
         grid-template-columns: 1fr;
@@ -685,34 +633,24 @@
       </div>
 
       <div class="flow-stepper">
-        <span class="step-pill active" onclick="switchMainNodeTab('phase1')">Node 0: AI Remixer</span>
+        <span class="step-pill active">Node 0: AI Remixer</span>
         <span>➔</span>
-        <span class="step-pill active" onclick="switchMainNodeTab('phase1')">Node 1: Chromium Auth</span>
+        <span class="step-pill active">Node 1: Chromium Auth</span>
         <span>➔</span>
-        <span class="step-pill active" onclick="switchMainNodeTab('phase1')">Node 2: Headless Vectorizer</span>
+        <span class="step-pill active">Node 2: Headless Vectorizer</span>
         <span>➔</span>
-        <span class="step-pill active" onclick="switchMainNodeTab('phase2')">Node 3: Rust Geometry</span>
+        <span class="step-pill active">Node 3: Rust Geometry</span>
         <span>➔</span>
-        <span class="step-pill active" onclick="switchMainNodeTab('phase2')">Node 4: ExifTool Metadata</span>
+        <span class="step-pill active">Node 4: ExifTool Metadata</span>
       </div>
     </div>
 
-    <!-- MAIN NODE SEQUENTIAL TABS NAVIGATION -->
-    <div class="node-tabs-bar">
-      <button type="button" class="node-tab-btn active" id="mainTabBtnPhase1" onclick="switchMainNodeTab('phase1')">
-        <i class="fas fa-layer-group text-primary"></i> TAB 1: STASIUN INPUT & KONVERSI (NODE 0 ➔ 1 ➔ 2)
-      </button>
-      <button type="button" class="node-tab-btn" id="mainTabBtnPhase2" onclick="switchMainNodeTab('phase2')">
-        <i class="fas fa-cogs text-primary"></i> TAB 2: STASIUN GEOMETRI & METADATA (NODE 3 ➔ 4)
-      </button>
-    </div>
+    <!-- 2-COLUMN GRID LAYOUT FOR NODES (KIRI & KANAN, STACKING DOWNWARD) -->
+    <div class="nodes-2col-grid">
 
-    <!-- ==========================================================================
-         TAB 1: PHASE 1 (NODE 0 ➔ NODE 1 ➔ NODE 2)
-         ========================================================================== -->
-    <div class="node-tab-content" id="mainNodeTabPhase1" style="display: flex;">
-
-      <!-- NODE 0: AI CONCEPT REMIXER PRO -->
+      <!-- ==========================================
+           COLUMN 1 (LEFT): NODE 0 - AI REMIXER PRO
+           ========================================== -->
       <div class="station-node-card" id="node0Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -746,18 +684,18 @@
         </div>
 
         <div class="claude-dropzone" onclick="document.getElementById('st0FileInput').click()">
-          <i class="fas fa-cloud-upload-alt text-primary"></i> Upload Gambar Acuan & Referensi Gaya (File Lokal)
+          <i class="fas fa-cloud-upload-alt text-primary"></i> Upload Gambar Acuan & Style Ref (File Lokal)
           <input type="file" id="st0FileInput" accept="image/jpeg, image/png, image/webp" multiple style="display: none;" onchange="uploadFiles(this.files, '/api/upload_station_0')">
         </div>
 
         <div>
           <label class="claude-label">🔗 Link HTTP Gambar (Pinterest / Web Direct):</label>
-          <textarea id="st0HttpUrls" rows="2" placeholder="Masukkan link HTTP/HTTPS di sini... (Pisahkan dengan Enter)"></textarea>
+          <textarea id="st0HttpUrls" rows="2" placeholder="Masukkan link HTTP/HTTPS di sini... (Enter)"></textarea>
         </div>
 
         <div>
           <label class="claude-label">Deskripsi Konsep / Prompt Remixer:</label>
-          <input type="text" id="st0Prompt" placeholder="Contoh: Gambar ilustrasi vektor karakter astronot gaya retro, warna pastel solid...">
+          <input type="text" id="st0Prompt" placeholder="Contoh: Gambar ilustrasi vektor karakter astronot gaya retro...">
         </div>
 
         <div class="form-grid-2">
@@ -782,7 +720,7 @@
 
         <div class="form-grid-2">
           <div>
-            <label class="claude-label">Ukuran Kanvas / Output Ratio:</label>
+            <label class="claude-label">Ukuran Kanvas Ratio:</label>
             <select id="st0CanvasRatio">
               <option value="1:1" selected>Persegi (1:1)</option>
               <option value="16:9">Melebar (16:9)</option>
@@ -802,11 +740,11 @@
         <div class="form-grid-2">
           <label class="checkbox-group">
             <input type="checkbox" id="st0Tool1" checked>
-            <span>Tool 1: Anti-Gelap (Kunci Kecerahan Asli)</span>
+            <span>Tool 1: Anti-Gelap</span>
           </label>
           <label class="checkbox-group">
             <input type="checkbox" id="st0Tool2" checked>
-            <span>Tool 2: Mode Background (Bersihkan Warna BG)</span>
+            <span>Tool 2: Mode Background</span>
           </label>
         </div>
 
@@ -822,10 +760,9 @@
         <div class="code-log-card" id="st0Log">[NODE 0] AI Remixer Engine Ready.</div>
       </div>
 
-      <!-- Arrow Down -->
-      <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
-
-      <!-- NODE 1: CHROMIUM SESSION AUTH -->
+      <!-- ==========================================
+           COLUMN 2 (RIGHT): NODE 1 - CHROMIUM AUTH
+           ========================================== -->
       <div class="station-node-card" id="node1Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -859,10 +796,9 @@
         <div class="code-log-card" id="st1Log">[NODE 1] Chromium Auth Node Ready.</div>
       </div>
 
-      <!-- Arrow Down -->
-      <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
-
-      <!-- NODE 2: VECTORIZER HEADLESS CONVERTER -->
+      <!-- ==========================================
+           COLUMN 1 (LEFT): NODE 2 - VECTORIZER HEADLESS
+           ========================================== -->
       <div class="station-node-card" id="node2Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -905,18 +841,18 @@
         </div>
 
         <!-- CAPTCHA Alert Box -->
-        <div id="captchaAlertBox" style="display: none; background: #fff8e6; border: 1px solid var(--colors-warning); border-radius: var(--radius-md); padding: 20px;">
-          <h4 style="color: var(--colors-warning); font-size: 1.05rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+        <div id="captchaAlertBox" style="display: none; background: #fff8e6; border: 1px solid var(--colors-warning); border-radius: var(--radius-md); padding: 18px;">
+          <h4 style="color: var(--colors-warning); font-size: 0.9375rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-exclamation-triangle"></i> TERDETEKSI CAPTCHA / CLOUDFLARE!
           </h4>
-          <p style="font-size: 0.875rem; color: var(--colors-body); margin-top: 6px;">Sistem menjeda pemrosesan otomatis. Silakan buka browser GUI untuk menyelesaikan verifikasi CAPTCHA.</p>
+          <p style="font-size: 0.8125rem; color: var(--colors-body); margin-top: 4px;">Sistem menjeda pemrosesan otomatis. Silakan buka browser GUI untuk menyelesaikan verifikasi CAPTCHA.</p>
           
-          <div style="margin-top: 12px; text-align: center;">
-            <img id="captchaPreviewImg" src="/captcha_screenshot.png" style="width: 100%; max-height: 350px; object-fit: contain; border-radius: var(--radius-sm); border: 1px solid var(--colors-hairline);" alt="Captcha Screenshot Preview">
+          <div style="margin-top: 10px; text-align: center;">
+            <img id="captchaPreviewImg" src="/captcha_screenshot.png" style="width: 100%; max-height: 280px; object-fit: contain; border-radius: var(--radius-sm); border: 1px solid var(--colors-hairline);" alt="Captcha Screenshot Preview">
           </div>
 
-          <div style="margin-top: 14px; display: flex; gap: 12px;">
-            <button class="btn" style="background: var(--colors-warning); color: #000; border-color: var(--colors-warning);" onclick="triggerLoginSession()">🔑 Selesaikan CAPTCHA</button>
+          <div style="margin-top: 12px; display: flex; gap: 10px;">
+            <button class="btn" style="background: var(--colors-warning); color: #000; border-color: var(--colors-warning);" onclick="triggerLoginSession()">🔑 CAPTCHA</button>
             <button class="btn btn-secondary" onclick="runStation2()">▶️ Resume Stasiun 2</button>
           </div>
         </div>
@@ -924,20 +860,14 @@
         <div class="code-log-card" id="st2Log">[NODE 2] Headless Converter Ready.</div>
       </div>
 
-    </div>
-
-
-    <!-- ==========================================================================
-         TAB 2: PHASE 2 (NODE 3 ➔ NODE 4)
-         ========================================================================== -->
-    <div class="node-tab-content" id="mainNodeTabPhase2" style="display: none;">
-
-      <!-- NODE 3: VECTOR GEOMETRY RUST ENGINE -->
+      <!-- ==========================================
+           COLUMN 2 (RIGHT): NODE 3 - RUST GEOMETRY & DELIVERABLES PREVIEW
+           ========================================== -->
       <div class="station-node-card" id="node3Card">
         <div class="node-header">
           <div class="node-title-group">
-            <h2><i class="fas fa-microchip text-primary"></i> NODE 3: VECTOR GEOMETRY ENGINE</h2>
-            <span>Rust Simplify ➔ Seamless Pattern ➔ EPS & JPG Deliverables</span>
+            <h2><i class="fas fa-microchip text-primary"></i> NODE 3: RUST GEOMETRY ENGINE</h2>
+            <span>Rust Simplify ➔ Seamless Pattern ➔ EPS & JPG</span>
           </div>
           <span class="badge-node-tag">NODE 3</span>
         </div>
@@ -957,7 +887,7 @@
           </div>
           <div class="stat-card-claude">
             <span class="val" id="st3Success" style="color: var(--colors-success);">0</span>
-            <span class="lbl">✅ EPS & JPG Selesai</span>
+            <span class="lbl">✅ EPS/JPG Selesai</span>
           </div>
           <div class="stat-card-claude">
             <span class="val" id="st3Failed" style="color: var(--colors-error);">0</span>
@@ -993,19 +923,19 @@
         </div>
 
         <!-- Advanced Engine Profile Config Details -->
-        <details open style="background: var(--colors-canvas); border: 1px solid var(--colors-hairline); border-radius: var(--radius-md); padding: 20px;">
-          <summary style="font-size: 0.9375rem; font-weight: 600; color: var(--colors-ink); cursor: pointer; user-select: none;">
-            <i class="fas fa-sliders-h text-primary mr-2"></i> Konfigurasi Lengkap Profil (config_silhouette.json)
+        <details style="background: var(--colors-canvas); border: 1px solid var(--colors-hairline); border-radius: var(--radius-md); padding: 16px;">
+          <summary style="font-size: 0.875rem; font-weight: 600; color: var(--colors-ink); cursor: pointer; user-select: none;">
+            <i class="fas fa-sliders-h text-primary mr-2"></i> Profil (config_silhouette.json)
           </summary>
 
-          <div class="cfg-tab-bar" style="margin-top: 14px;">
-            <button type="button" class="cfg-tab-btn active" id="tabBtnLow" onclick="switchCfgTab('low')">🎨 Low-Color (≤ 5)</button>
-            <button type="button" class="cfg-tab-btn" id="tabBtnMulti" onclick="switchCfgTab('multi')">📊 Multi-Color (≥ 6)</button>
-            <button type="button" class="cfg-tab-btn" id="tabBtnJson" onclick="switchCfgTab('json')">📝 Raw JSON Editor</button>
+          <div class="cfg-tab-bar" style="margin-top: 12px;">
+            <button type="button" class="cfg-tab-btn active" id="tabBtnLow" onclick="switchCfgTab('low')">🎨 Low-Color</button>
+            <button type="button" class="cfg-tab-btn" id="tabBtnMulti" onclick="switchCfgTab('multi')">📊 Multi-Color</button>
+            <button type="button" class="cfg-tab-btn" id="tabBtnJson" onclick="switchCfgTab('json')">📝 JSON Editor</button>
           </div>
 
           <!-- TAB 1: LOW-COLOR PROFILE -->
-          <div id="cfgPanelLow" style="display: flex; flex-direction: column; gap: 14px;">
+          <div id="cfgPanelLow" style="display: flex; flex-direction: column; gap: 12px;">
             <div class="form-grid-2">
               <div>
                 <label class="claude-label">Max Colors:</label>
@@ -1019,39 +949,39 @@
 
             <label class="checkbox-group">
               <input type="checkbox" id="lineArtCheck">
-              <span>Mode Line Art / Silhouette Only</span>
+              <span>Mode Line Art Only</span>
             </label>
 
             <label class="checkbox-group">
               <input type="checkbox" id="lowPatternEnableCheck" checked>
-              <span>Enable Pattern Export (Ubin Seamless)</span>
+              <span>Enable Pattern Export</span>
             </label>
 
             <div class="form-grid-2">
               <div>
-                <label class="claude-label">Grid Repeat X (Kolom):</label>
+                <label class="claude-label">Grid Repeat X:</label>
                 <input type="number" id="gridXInput" value="3" min="1" max="10">
               </div>
               <div>
-                <label class="claude-label">Grid Repeat Y (Baris):</label>
+                <label class="claude-label">Grid Repeat Y:</label>
                 <input type="number" id="gridYInput" value="3" min="1" max="10">
               </div>
             </div>
 
             <label class="checkbox-group">
               <input type="checkbox" id="wraparoundCheck" checked>
-              <span>Wraparound Seamless (Tepi Melingkar Canvas)</span>
+              <span>Wraparound Seamless</span>
             </label>
 
             <div class="form-grid-2">
               <div>
-                <label class="claude-label">Tile Gap Margin (px):</label>
+                <label class="claude-label">Tile Gap (px):</label>
                 <input type="number" id="gapInput" value="50.0" step="5">
               </div>
               <div>
-                <label class="claude-label">Background Color (HEX):</label>
+                <label class="claude-label">Background Color:</label>
                 <div style="display: flex; gap: 8px;">
-                  <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 54px; min-height: 48px; padding: 2px;">
+                  <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 50px; min-height: 44px; padding: 2px;">
                   <input type="text" id="bgColorText" value="#FFFFFF">
                 </div>
               </div>
@@ -1059,7 +989,7 @@
           </div>
 
           <!-- TAB 2: MULTI-COLOR PROFILE -->
-          <div id="cfgPanelMulti" style="display: none; flex-direction: column; gap: 14px;">
+          <div id="cfgPanelMulti" style="display: none; flex-direction: column; gap: 12px;">
             <div class="form-grid-2">
               <div>
                 <label class="claude-label">Min Colors:</label>
@@ -1076,21 +1006,21 @@
               <span>Enable Pattern Export for Multi-Color</span>
             </label>
 
-            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 12px;">
-              <label class="claude-label" style="color: var(--colors-primary);">Board Panel 2 (Middle - Greyscale Luminance):</label>
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 10px;">
+              <label class="claude-label" style="color: var(--colors-primary);">Board Panel 2 (Greyscale Lum):</label>
               <div class="form-grid-2">
                 <input type="number" id="midMinLumInput" value="0.20" step="0.05" min="0" max="1" placeholder="Min Lum">
                 <input type="number" id="midMaxLumInput" value="0.62" step="0.05" min="0" max="1" placeholder="Max Lum">
               </div>
             </div>
 
-            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 12px;">
-              <label class="claude-label" style="color: var(--colors-warning);">Board Panel 3 (Right - Dominant Color):</label>
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 10px;">
+              <label class="claude-label" style="color: var(--colors-warning);">Board Panel 3 (Dominant Color):</label>
               <div class="form-grid-2">
                 <input type="number" id="rightMinLumInput" value="0.20" step="0.05" min="0" max="1" placeholder="Min Lum">
                 <input type="number" id="rightMaxLumInput" value="0.62" step="0.05" min="0" max="1" placeholder="Max Lum">
               </div>
-              <label class="checkbox-group" style="margin-top: 8px;">
+              <label class="checkbox-group" style="margin-top: 6px;">
                 <input type="checkbox" id="rightExcludeBgCheck" checked>
                 <span>Exclude Background Color</span>
               </label>
@@ -1098,14 +1028,14 @@
           </div>
 
           <!-- TAB 3: RAW JSON EDITOR -->
-          <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 14px;">
-            <textarea id="rawJsonArea" style="height: 180px;"></textarea>
+          <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 10px;">
+            <textarea id="rawJsonArea" style="height: 160px;"></textarea>
             <button type="button" class="btn btn-secondary" onclick="saveRawJsonConfig()">💾 Simpan JSON Direct</button>
           </div>
 
-          <div style="margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--colors-hairline); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <span id="cfgSaveNotice" style="font-size: 0.875rem; color: var(--colors-success); display: none;">✅ Settings tersimpan</span>
-            <button type="button" class="btn btn-secondary" onclick="saveAllSilhouetteConfig()">💾 Simpan Settings Profile</button>
+          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--colors-hairline); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <span id="cfgSaveNotice" style="font-size: 0.8125rem; color: var(--colors-success); display: none;">✅ Settings tersimpan</span>
+            <button type="button" class="btn btn-secondary" onclick="saveAllSilhouetteConfig()">💾 Simpan Settings</button>
           </div>
         </details>
 
@@ -1120,19 +1050,20 @@
 
         <div class="code-log-card" id="st3Log">[NODE 3] Rust Engine Ready.</div>
 
-        <!-- Deliverables Output Gallery -->
+        <!-- DELIVERABLES OUTPUT PREVIEW GALLERY -->
         <div>
-          <label class="claude-label" style="font-weight: 600;">Hasil Paket Deliverables (EPS & JPG):</label>
+          <label class="claude-label" style="font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+            <span><i class="fas fa-images text-primary mr-1"></i> Preview Hasil Deliverables (EPS & JPG):</span>
+          </label>
           <div class="output-gallery-grid" id="st3OutputGrid">
             <!-- Populated dynamically -->
           </div>
         </div>
       </div>
 
-      <!-- Arrow Down -->
-      <div class="flow-arrow-down"><i class="fas fa-chevron-down"></i></div>
-
-      <!-- NODE 4: AI METADATA & EXIFTOOL INJECTOR -->
+      <!-- ==========================================
+           COLUMN 1 (LEFT): NODE 4 - AI METADATA & EXIFTOOL
+           ========================================== -->
       <div class="station-node-card" id="node4Card">
         <div class="node-header">
           <div class="node-title-group">
@@ -1171,7 +1102,7 @@
         </div>
 
         <div>
-          <label class="claude-label">Ukuran Batch File (Target Processing):</label>
+          <label class="claude-label">Ukuran Batch File Target:</label>
           <input type="number" id="batchSizeInput" value="5" min="1" max="50">
         </div>
 
@@ -1209,22 +1140,6 @@
       }
       loadConfigSilhouette();
     });
-
-    function switchMainNodeTab(tabName) {
-      const p1 = document.getElementById('mainNodeTabPhase1');
-      const p2 = document.getElementById('mainNodeTabPhase2');
-      const b1 = document.getElementById('mainTabBtnPhase1');
-      const b2 = document.getElementById('mainTabBtnPhase2');
-
-      if (p1 && p2) {
-        p1.style.display = (tabName === 'phase1') ? 'flex' : 'none';
-        p2.style.display = (tabName === 'phase2') ? 'flex' : 'none';
-      }
-      if (b1 && b2) {
-        b1.classList.toggle('active', tabName === 'phase1');
-        b2.classList.toggle('active', tabName === 'phase2');
-      }
-    }
 
     async function loadConfigSilhouette() {
       try {
@@ -1485,7 +1400,7 @@
             const isImg = f.endsWith('.jpg') || f.endsWith('.png');
             return `
               <div class="output-item-card">
-                ${isImg ? `<img src="/api/preview?file=${encodeURIComponent(f)}" alt="${f}">` : `<div style="height:130px; display:flex; align-items:center; justify-content:center; background:var(--colors-surface-dark); border-radius:var(--radius-sm); font-family:var(--font-mono); font-size:0.8125rem; font-weight:600; color:var(--colors-primary);">EPS DELIVERABLE</div>`}
+                ${isImg ? `<img src="/api/preview?file=${encodeURIComponent(f)}" alt="${f}">` : `<div style="height:120px; display:flex; align-items:center; justify-content:center; background:var(--colors-surface-dark); border-radius:var(--radius-sm); font-family:var(--font-mono); font-size:0.8125rem; font-weight:600; color:var(--colors-primary);">EPS DELIVERABLE</div>`}
                 <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:var(--font-mono); font-size:0.75rem; color:var(--colors-body);">${f}</span>
                 <a class="btn btn-secondary" style="min-height:38px; padding:6px 12px; font-size:0.75rem;" href="/api/download?file=${encodeURIComponent(f)}"><i class="fas fa-download text-primary"></i> Download</a>
               </div>
@@ -1564,7 +1479,6 @@
     }
 
     async function runStation3() {
-      switchMainNodeTab('phase2');
       const config = getStation3Config();
       const res = await fetch('/api/run_station_3', {
         method: 'POST',
@@ -1576,7 +1490,6 @@
     }
 
     async function runStation4() {
-      switchMainNodeTab('phase2');
       const geminiUrl = document.getElementById('geminiUrlInput').value.trim();
       const batchSize = parseInt(document.getElementById('batchSizeInput').value) || 5;
       const res = await fetch('/api/run_station_4', {
