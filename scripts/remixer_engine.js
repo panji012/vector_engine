@@ -18,7 +18,7 @@ const PROFILE = "/home/panjikali/snap/chromium/common/chromium";
 const ERROR_SCREENSHOT_DIR = path.join(ENGINE_ROOT, "error_logs");
 const MANIFEST_PATH = path.join(ENGINE_ROOT, "manifest.json");
 
-const TARGET_LINK = process.env.TARGET_LINK || "https://gemini.google.com/app/1c8f6f7e10330ba6";
+const TARGET_LINK = process.env.TARGET_LINK || "https://gemini.google.com/app/4f103880bda96c54";
 const STYLE_LEVEL = process.env.STYLE_LEVEL || "Easy";
 const COLOR_MATCH = process.env.COLOR_MATCH || "Kunci";
 const CANVAS_RATIO = process.env.CANVAS_RATIO || "1:1";
@@ -27,6 +27,7 @@ const TOOL_ANTI_GELAP = process.env.TOOL_ANTI_GELAP === "true";
 const TOOL_BG_BERSIH = process.env.TOOL_BG_BERSIH === "true";
 const COLOR_THEME = process.env.COLOR_THEME || "";
 const HTTP_URLS_RAW = process.env.HTTP_URLS || "";
+const COOLDOWN_MS = 20000; // 20 detik jeda diskusi & pendinginan AI Canvas
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
@@ -276,16 +277,22 @@ async function main() {
                 fs.renameSync(path.join(INPUT_DIR, downloadedJpg), targetPath);
             }
 
-            console.log(`Downloaded: Remix Output Saved to input/${targetFilename}`);
+            console.log(`[ITEM_REMIX_SUCCESS] Downloaded: Remix Output Saved to input/${targetFilename}`);
             successCount++;
 
         } catch (err) {
-            console.error(`❌ [ERROR Batch ${i + 1}] ${err.message}`);
+            console.error(`[ITEM_REMIX_FAILED] ❌ [ERROR Batch ${i + 1}] ${err.message}`);
             failedCount++;
         }
 
         // Clean processed source file from temp_remix/
         try { fs.unlinkSync(imagePath); } catch (e) {}
+
+        // Jeda 20 detik antar-proses gambar (simulasi diskusi & pendinginan AI Canvas)
+        if (i < localFiles.length - 1) {
+            console.log(`\n⏳ [NODE 0] Mengambil jeda 20 detik (simulasi diskusi & pendinginan AI Canvas)...`);
+            await wait(COOLDOWN_MS);
+        }
     }
 
     await browser.close();

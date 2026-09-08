@@ -812,9 +812,9 @@ def execute_station_0(payload=None):
             line_clean = line.strip()
             if line_clean:
                 current_job["station_0"]["log"] = f"[Remixer AI] {line_clean}"
-                if "Downloaded:" in line_clean or "Selesai" in line_clean:
+                if "[ITEM_REMIX_SUCCESS]" in line_clean:
                     stock_stats["station_0_success"] += 1
-                elif "ERROR" in line_clean or "Gagal" in line_clean:
+                elif "[ITEM_REMIX_FAILED]" in line_clean:
                     stock_stats["station_0_failed"] += 1
                 broadcast_sse("update", {"job": current_job, "stats": stock_stats})
 
