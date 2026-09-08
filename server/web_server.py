@@ -782,7 +782,7 @@ def execute_station_0(payload=None):
     if payload is None: payload = {}
 
     # Kill duplicate Node 0 processes to prevent concurrent instances
-    subprocess.run(["pkill", "-f", "remixer_engine.js"], stderr=subprocess.DEVNULL)
+    subprocess.run(["pkill", "-9", "-f", "remixer_engine.js"], stderr=subprocess.DEVNULL)
 
     # Clean old leftover temporary files from temp_remix/
     temp_remix_dir = os.path.join(PROJECT_ROOT, "temp_remix")

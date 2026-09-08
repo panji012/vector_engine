@@ -256,24 +256,38 @@ async function main() {
             if (btn) btn.click();
         });
 
+        // Baseline count of JPG/image files in input/ before processing
+        const initialJpgFiles = fs.readdirSync(INPUT_DIR).filter(f => f.match(/\.(jpg|jpeg|png|webp)$/i));
+        const initialJpgCount = initialJpgFiles.length;
+        const initialFileSet = new Set(initialJpgFiles);
+
         // Monitor batch rendering & downloads directly from input/ every 25 seconds
-        console.log(`-> 📡 Memantau folder input/ setiap 25 detik hingga ${targetBatchCount} berkas fisik mendarat (Maks 20 Menit)...`);
+        console.log(`-> 📡 Memantau folder input/ (Baseline: ${initialJpgCount} file) setiap 25 detik hingga ${targetBatchCount} berkas fisik baru mendarat...`);
         for (let w = 1; w <= 48; w++) {
             await wait(25000);
 
-            // Scan input/ directory for newly downloaded files from Gemini Canvas
+            // Scan input/ directory for newly downloaded files from Gemini Canvas and rename them
             const currentFiles = fs.readdirSync(INPUT_DIR);
-            const newFiles = currentFiles.filter(f => !initialInputFiles.has(f) && f.match(/\.(jpg|jpeg|png|webp)$/i) && !f.startsWith("vector_stock_"));
+            const unrenamedNewFiles = currentFiles.filter(f => !initialFileSet.has(f) && f.match(/\.(jpg|jpeg|png|webp)$/i) && !f.startsWith("vector_stock_"));
 
-            for (const nf of newFiles) {
+            for (const nf of unrenamedNewFiles) {
                 const targetFilename = getNextSequentialName();
                 const oldPath = path.join(INPUT_DIR, nf);
                 const newPath = path.join(INPUT_DIR, targetFilename);
                 fs.renameSync(oldPath, newPath);
-                initialInputFiles.add(targetFilename);
+                initialFileSet.add(targetFilename);
+            }
 
-                console.log(`[ITEM_REMIX_SUCCESS] Downloaded: Remix Output Saved to input/${targetFilename}`);
-                successCount++;
+            // Calculate current total new arrivals in input/
+            const currentJpgs = fs.readdirSync(INPUT_DIR).filter(f => f.match(/\.(jpg|jpeg|png|webp)$/i));
+            const newArrivals = Math.max(0, currentJpgs.length - initialJpgCount);
+
+            if (newArrivals > successCount) {
+                const justArrived = newArrivals - successCount;
+                for (let k = 0; k < justArrived; k++) {
+                    console.log(`[ITEM_REMIX_SUCCESS] Downloaded: Remix Output Saved to input/`);
+                }
+                successCount = newArrivals;
             }
 
             if (successCount >= targetBatchCount) {
