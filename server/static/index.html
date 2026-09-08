@@ -12,7 +12,7 @@
   <link rel="manifest" href="/site.webmanifest">
   <link rel="apple-touch-icon" href="/captcha_screenshot.png">
   
-  <title>Vector Engine — Claude Warm Editorial Dashboard (Balanced 2-Column Grid)</title>
+  <title>Vector Engine — Claude Warm Editorial Dashboard (Dark & Light Theme)</title>
   
   <!-- Claude Design Typography: Cormorant Garamond (Serif Display), Inter (Sans Body), JetBrains Mono (Code) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -23,6 +23,8 @@
   <style>
     /* ==========================================================================
        CLAUDE ANTHROPIC DESIGN SYSTEM TOKENS (DESIGN-claude.md)
+       - Light Mode: Warm Tinted Cream Canvas (#faf9f5) & Coral Accent (#cc785c)
+       - Dark Mode: Warm Charcoal Dark Canvas (#141413) & Soft Cream Cards (#252320)
        ========================================================================== */
 
     :root {
@@ -55,6 +57,27 @@
       --radius-lg: 16px;
       --radius-xl: 24px;
       --radius-pill: 9999px;
+
+      --theme-transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    html[data-theme="dark"] {
+      --colors-canvas: #141413;
+      --colors-surface-soft: #1f1e1b;
+      --colors-surface-card: #252320;
+      --colors-surface-dark: #0d0c0b;
+      --colors-surface-dark-elevated: #1a1917;
+      --colors-hairline: #383530;
+      --colors-hairline-soft: #2e2b27;
+      --colors-primary: #d9856c;
+      --colors-primary-hover: #e0947c;
+      --colors-primary-active: #c5765f;
+      --colors-ink: #faf9f5;
+      --colors-body: #e8e0d2;
+      --colors-muted: #a09d96;
+      --colors-on-primary: #ffffff;
+      --colors-on-dark: #faf9f5;
+      --colors-on-dark-soft: #c6c3bc;
     }
 
     * {
@@ -74,6 +97,7 @@
       line-height: 1.55;
       -webkit-font-smoothing: antialiased;
       padding-bottom: env(safe-area-inset-bottom);
+      transition: var(--theme-transition);
     }
 
     .app-container {
@@ -97,6 +121,7 @@
       flex-wrap: wrap;
       gap: 16px;
       box-shadow: 0 4px 20px rgba(20, 20, 19, 0.03);
+      transition: var(--theme-transition);
     }
 
     .header-title h1 {
@@ -106,12 +131,46 @@
       color: var(--colors-ink);
       letter-spacing: -0.5px;
       line-height: 1.15;
+      transition: var(--theme-transition);
     }
 
     .header-title p {
       font-size: 0.9375rem;
       color: var(--colors-muted);
       margin-top: 4px;
+      transition: var(--theme-transition);
+    }
+
+    .header-badge-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .theme-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 8px 18px;
+      font-family: var(--font-sans);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--colors-ink);
+      background-color: var(--colors-canvas);
+      border: 1px solid var(--colors-hairline);
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: var(--theme-transition);
+      box-shadow: 0 2px 6px rgba(20, 20, 19, 0.04);
+      user-select: none;
+    }
+
+    .theme-toggle-btn:hover {
+      background-color: var(--colors-surface-soft);
+      border-color: var(--colors-primary);
+      color: var(--colors-primary);
     }
 
     .brand-spike-badge {
@@ -126,6 +185,7 @@
       padding: 8px 16px;
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-pill);
+      transition: var(--theme-transition);
     }
 
     /* Button Styles (Claude Warm Coral & Soft Surfaces) */
@@ -210,6 +270,7 @@
       flex-direction: column;
       gap: 20px;
       box-shadow: 0 6px 24px rgba(20, 20, 19, 0.04);
+      transition: var(--theme-transition);
     }
 
     .pipeline-header {
@@ -228,12 +289,14 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      transition: var(--theme-transition);
     }
 
     .pipeline-header p {
       font-size: 0.9375rem;
       color: var(--colors-body);
       margin-top: 4px;
+      transition: var(--theme-transition);
     }
 
     .pipeline-actions {
@@ -260,7 +323,7 @@
       padding: 6px 14px;
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-pill);
-      transition: all 0.2s ease;
+      transition: var(--theme-transition);
     }
 
     .step-pill.active {
@@ -274,7 +337,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
-      align-items: stretch; /* Cards stretch to equal height per row! */
+      align-items: stretch;
     }
 
     /* Claude Warm Card for Nodes */
@@ -287,14 +350,13 @@
       flex-direction: column;
       justify-content: flex-start;
       gap: 20px;
-      height: 100%; /* Stretches to row height */
-      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      height: 100%;
+      transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), var(--theme-transition);
       box-shadow: 0 4px 16px rgba(20, 20, 19, 0.03);
     }
 
-    /* Odd Node (Node 4) Full-Width Banner Treatment */
     .station-node-card.full-width {
-      grid-column: 1 / -1; /* Spans across both columns cleanly */
+      grid-column: 1 / -1;
     }
 
     .station-node-card:hover {
@@ -319,11 +381,13 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      transition: var(--theme-transition);
     }
 
     .node-title-group span {
       font-size: 0.8125rem;
       color: var(--colors-muted);
+      transition: var(--theme-transition);
     }
 
     .badge-node-tag {
@@ -335,6 +399,7 @@
       color: var(--colors-primary);
       border: 1px solid var(--colors-hairline);
       border-radius: var(--radius-pill);
+      transition: var(--theme-transition);
     }
 
     /* Status Strip */
@@ -346,6 +411,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      transition: var(--theme-transition);
     }
 
     .status-indicator-group {
@@ -386,6 +452,7 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
+      transition: var(--theme-transition);
     }
 
     .stat-card-claude .val {
@@ -393,6 +460,7 @@
       font-size: 1.5rem;
       font-weight: 600;
       color: var(--colors-ink);
+      transition: var(--theme-transition);
     }
 
     .stat-card-claude .lbl {
@@ -401,6 +469,7 @@
       font-weight: 500;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      transition: var(--theme-transition);
     }
 
     /* Form Controls & Inputs */
@@ -410,6 +479,7 @@
       font-weight: 500;
       color: var(--colors-body);
       margin-bottom: 6px;
+      transition: var(--theme-transition);
     }
 
     input[type="text"],
@@ -426,7 +496,7 @@
       font-size: 0.875rem;
       padding: 10px 16px;
       outline: none;
-      transition: all 0.2s ease;
+      transition: var(--theme-transition);
       box-shadow: inset 0 1px 3px rgba(20, 20, 19, 0.02);
     }
 
@@ -460,7 +530,7 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      transition: all 0.2s ease;
+      transition: var(--theme-transition);
     }
 
     .claude-dropzone:hover {
@@ -486,6 +556,7 @@
       color: var(--colors-body);
       user-select: none;
       min-height: 36px;
+      transition: var(--theme-transition);
     }
 
     .checkbox-group input[type="checkbox"] {
@@ -510,8 +581,9 @@
       overflow-y: auto;
       white-space: pre-wrap;
       line-height: 1.5;
-      margin-top: auto; /* Aligns log box at the bottom of every card! */
+      margin-top: auto;
       box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+      transition: var(--theme-transition);
     }
 
     /* Config Sub-Tabs */
@@ -578,8 +650,13 @@
         <h1>Vector Engine Studio</h1>
         <p>Warm Humanist Editorial Architecture — 5-Node ComfyUI Modular Pipeline</p>
       </div>
-      <div class="brand-spike-badge">
-        <i class="fas fa-asterisk text-primary"></i> Server: <strong>8000</strong>
+      <div class="header-badge-group">
+        <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()">
+          <i class="fas fa-moon text-primary"></i> <span>Mode Gelap</span>
+        </button>
+        <div class="brand-spike-badge">
+          <i class="fas fa-asterisk text-primary"></i> Server: <strong>8000</strong>
+        </div>
       </div>
     </header>
 
@@ -809,7 +886,7 @@
         </div>
 
         <!-- CAPTCHA Alert Box -->
-        <div id="captchaAlertBox" style="display: none; background: #fff8e6; border: 1px solid var(--colors-warning); border-radius: var(--radius-md); padding: 18px;">
+        <div id="captchaAlertBox" style="display: none; background: var(--colors-surface-soft); border: 1px solid var(--colors-warning); border-radius: var(--radius-md); padding: 18px;">
           <h4 style="color: var(--colors-warning); font-size: 0.9375rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
             <i class="fas fa-exclamation-triangle"></i> TERDETEKSI CAPTCHA / CLOUDFLARE!
           </h4>
@@ -1091,8 +1168,43 @@
   </div>
 
 
-  <!-- SCRIPT LOGIC (Fully Preserved Endpoints & Functions) -->
+  <!-- SCRIPT LOGIC (Fully Preserved Endpoints & Theme Switcher) -->
   <script>
+    // Theme Switcher Logic (Light Warm Cream vs Dark Warm Charcoal)
+    function initTheme() {
+      const savedTheme = localStorage.getItem('vector_engine_theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      setTheme(theme);
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('vector_engine_theme', theme);
+      
+      const btn = document.getElementById('themeToggleBtn');
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (btn) {
+        if (theme === 'dark') {
+          btn.innerHTML = '<i class="fas fa-sun text-primary"></i> <span>Mode Terang</span>';
+        } else {
+          btn.innerHTML = '<i class="fas fa-moon text-primary"></i> <span>Mode Gelap</span>';
+        }
+      }
+      if (metaTheme) {
+        metaTheme.setAttribute('content', theme === 'dark' ? '#141413' : '#faf9f5');
+      }
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'light';
+      const next = current === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+    }
+
+    // Call initTheme on load
+    initTheme();
+
     document.addEventListener('DOMContentLoaded', () => {
       const picker = document.getElementById('bgColorPicker');
       const txt = document.getElementById('bgColorText');
@@ -1357,20 +1469,6 @@
         if (document.getElementById('st4Success')) document.getElementById('st4Success').innerText = data.stats ? data.stats.station_4_success : 0;
         if (document.getElementById('st4Failed')) document.getElementById('st4Failed').innerText = data.stats ? data.stats.station_4_failed : 0;
 
-        // Update Outputs Gallery if element is present
-        const outGrid = document.getElementById('st3OutputGrid');
-        if (outGrid && data.output_files && data.output_files.length > 0) {
-          outGrid.innerHTML = data.output_files.map(f => {
-            const isImg = f.endsWith('.jpg') || f.endsWith('.png');
-            return `
-              <div class="output-item-card">
-                ${isImg ? `<img src="/api/preview?file=${encodeURIComponent(f)}" alt="${f}">` : `<div style="height:120px; display:flex; align-items:center; justify-content:center; background:var(--colors-surface-dark); border-radius:var(--radius-sm); font-family:var(--font-mono); font-size:0.8125rem; font-weight:600; color:var(--colors-primary);">EPS DELIVERABLE</div>`}
-                <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-family:var(--font-mono); font-size:0.75rem; color:var(--colors-body);">${f}</span>
-                <a class="btn btn-secondary" style="min-height:38px; padding:6px 12px; font-size:0.75rem;" href="/api/download?file=${encodeURIComponent(f)}"><i class="fas fa-download text-primary"></i> Download</a>
-              </div>
-            `;
-          }).join('');
-        }
       } catch (err) {
         console.error('Update status error:', err);
       }
