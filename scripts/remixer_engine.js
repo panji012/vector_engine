@@ -137,28 +137,18 @@ async function main() {
         localFiles = files.filter(f => f.match(/\.(jpg|jpeg|png|webp)$/i)).map(f => path.join(TEMP_REMIX_DIR, f));
     }
 
-    // Download HTTP URLs into temp_remix/
+    // Determine input mode and target batch count
+    let targetBatchCount = 0;
     if (urls.length > 0) {
-        console.log(`-> Unduh ${urls.length} link HTTP gambar acuan...`);
-        for (let i = 0; i < urls.length; i++) {
-            const url = urls[i];
-            const dest = path.join(TEMP_REMIX_DIR, `http_source_${Date.now()}_${i + 1}.jpg`);
-            try {
-                await downloadHttpImage(url, dest);
-                localFiles.push(dest);
-                console.log(`   [HTTP] Berhasil mengunduh: ${path.basename(dest)}`);
-            } catch (err) {
-                console.error(`   [!] Gagal mengunduh HTTP URL: ${url} (${err.message})`);
-            }
-        }
-    }
-
-    if (localFiles.length === 0) {
+        targetBatchCount = urls.length;
+        console.log(`-> Target: ${urls.length} gambar dari link HTTP siap diremix ke Gemini Canvas...`);
+    } else if (localFiles.length > 0) {
+        targetBatchCount = localFiles.length;
+        console.log(`-> Target: ${localFiles.length} gambar lokal siap diremix ke Gemini Canvas...`);
+    } else {
         console.log("⚠️ [NODE 0] Antrean gambar acuan (HTTP / Lokal) kosong!");
         process.exit(0);
     }
-
-    console.log(`-> Total ${localFiles.length} gambar acuan siap diremix ke Gemini Canvas...`);
 
     // Clean profile lock if present
     ["SingletonLock", "SingletonSocket", "SingletonCookie"].forEach(f => {
@@ -213,20 +203,9 @@ async function main() {
             throw new Error(`Gagal menemukan Iframe Gemini Canvas AI! Screenshot disimpan di ${ssPath}`);
         }
 
-        // Single-Pass Batch Upload: Upload all local image files at once
-        if (localFiles.length > 0) {
-            console.log(`-> 📤 Mengunggah ${localFiles.length} berkas gambar acuan sekaligus ke Canvas AI...`);
-            let fileInputEl = await targetFrame.$('#fileInput');
-            if (!fileInputEl) fileInputEl = await targetFrame.$('input[type="file"]');
-            if (fileInputEl) {
-                await fileInputEl.uploadFile(...localFiles);
-                await wait(3000);
-            }
-        }
-
-        // Single-Pass Batch Paste: Input HTTP URLs if provided
+        // Anti-Duplication Input: Separate HTTP URLs vs Local Uploads
         if (urls.length > 0) {
-            console.log(`-> 🔗 Menginput ${urls.length} link HTTP gambar ke Canvas...`);
+            console.log(`-> 🔗 Menginput ${urls.length} link HTTP gambar sekaligus ke #urlInput Canvas...`);
             await targetFrame.evaluate((urlList) => {
                 let httpBox = document.getElementById('urlInput');
                 if (!httpBox) {
@@ -240,6 +219,14 @@ async function main() {
                 }
             }, urls);
             await wait(1500);
+        } else if (localFiles.length > 0) {
+            console.log(`-> 📤 Mengunggah ${localFiles.length} berkas gambar acuan lokal ke Canvas AI...`);
+            let fileInputEl = await targetFrame.$('#fileInput');
+            if (!fileInputEl) fileInputEl = await targetFrame.$('input[type="file"]');
+            if (fileInputEl) {
+                await fileInputEl.uploadFile(...localFiles);
+                await wait(3000);
+            }
         }
 
         // Inject master prompt directive
@@ -269,12 +256,10 @@ async function main() {
             if (btn) btn.click();
         });
 
-        const targetBatchCount = urls.length > 0 ? urls.length : localFiles.length;
-
-        // Monitor batch rendering & downloads directly from input/ every 60 seconds (1 minute)
-        console.log(`-> 📡 Memantau folder input/ setiap 60 detik hingga ${targetBatchCount} berkas fisik mendarat (Maks 20 Menit)...`);
-        for (let w = 1; w <= 20; w++) {
-            await wait(60000);
+        // Monitor batch rendering & downloads directly from input/ every 25 seconds
+        console.log(`-> 📡 Memantau folder input/ setiap 25 detik hingga ${targetBatchCount} berkas fisik mendarat (Maks 20 Menit)...`);
+        for (let w = 1; w <= 48; w++) {
+            await wait(25000);
 
             // Scan input/ directory for newly downloaded files from Gemini Canvas
             const currentFiles = fs.readdirSync(INPUT_DIR);
@@ -292,10 +277,10 @@ async function main() {
             }
 
             if (successCount >= targetBatchCount) {
-                console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik telah mendarat di input/ dalam ${w} menit!`);
+                console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik telah mendarat di input/ dalam ${((w * 25) / 60).toFixed(1)} menit!`);
                 break;
             } else {
-                console.log(`   [...] Memantau unduhan fisik di folder input/... (${w * 60}s | ${successCount}/${targetBatchCount} berkas mendarat)`);
+                console.log(`   [...] Memantau unduhan fisik di folder input/... (${w * 25}s | ${successCount}/${targetBatchCount} berkas mendarat)`);
             }
         }
 
