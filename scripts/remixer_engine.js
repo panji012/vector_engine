@@ -271,10 +271,10 @@ async function main() {
 
         const targetBatchCount = urls.length > 0 ? urls.length : localFiles.length;
 
-        // Monitor batch rendering & downloads directly from input/
-        console.log(`-> 📡 Memantau folder input/ hingga ${targetBatchCount} berkas fisik mendarat (Maks 20 Menit)...`);
-        for (let w = 1; w <= 120; w++) {
-            await wait(10000);
+        // Monitor batch rendering & downloads directly from input/ every 60 seconds (1 minute)
+        console.log(`-> 📡 Memantau folder input/ setiap 60 detik hingga ${targetBatchCount} berkas fisik mendarat (Maks 20 Menit)...`);
+        for (let w = 1; w <= 20; w++) {
+            await wait(60000);
 
             // Scan input/ directory for newly downloaded files from Gemini Canvas
             const currentFiles = fs.readdirSync(INPUT_DIR);
@@ -292,10 +292,10 @@ async function main() {
             }
 
             if (successCount >= targetBatchCount) {
-                console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik telah mendarat di input/ dalam ${((w * 10) / 60).toFixed(1)} menit!`);
+                console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik telah mendarat di input/ dalam ${w} menit!`);
                 break;
             } else {
-                console.log(`   [...] Memantau unduhan Gemini Canvas... (${w * 10}s | ${successCount}/${targetBatchCount} berkas fisik mendarat di input/)`);
+                console.log(`   [...] Memantau unduhan fisik di folder input/... (${w * 60}s | ${successCount}/${targetBatchCount} berkas mendarat)`);
             }
         }
 

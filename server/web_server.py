@@ -781,6 +781,16 @@ def execute_station_0(payload=None):
     global current_job, stock_stats, current_proc_st0
     if payload is None: payload = {}
 
+    # Kill duplicate Node 0 processes to prevent concurrent instances
+    subprocess.run(["pkill", "-f", "remixer_engine.js"], stderr=subprocess.DEVNULL)
+
+    # Clean old leftover temporary files from temp_remix/
+    temp_remix_dir = os.path.join(PROJECT_ROOT, "temp_remix")
+    if os.path.exists(temp_remix_dir):
+        for f in os.listdir(temp_remix_dir):
+            try: os.remove(os.path.join(temp_remix_dir, f))
+            except Exception: pass
+
     clean_profile_locks()
 
     current_job["station_0"]["running"] = True
