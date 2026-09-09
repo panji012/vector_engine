@@ -833,7 +833,7 @@ def execute_station_0(payload=None):
         current_proc_st0 = None
 
     current_job["station_0"]["running"] = False
-    current_job["station_0"]["log"] = "Stasiun 0: Selesai! Gambar JPG hasil remix tersimpan ke Stasiun 2."
+    current_job["station_0"]["log"] = f"Stasiun 0: Selesai! {stock_stats.get('station_0_success', 0)} Gambar Selesai terverifikasi & tersimpan ke Stasiun 2."
     broadcast_sse("update", {"job": current_job, "stats": stock_stats})
 
 def execute_chained_pipeline(config_params=None):

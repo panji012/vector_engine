@@ -833,7 +833,7 @@
           </div>
           <div class="stat-card-claude">
             <span class="val" id="st0Success" style="color: var(--colors-success);">0</span>
-            <span class="lbl">✅ Remix Selesai</span>
+            <span class="lbl">✅ Gambar Selesai</span>
           </div>
           <div class="stat-card-claude">
             <span class="val" id="st0Failed" style="color: var(--colors-error);">0</span>
@@ -1248,7 +1248,7 @@
 
             <div>
               <label class="claude-label">Gemini Canvas AI Target Link:</label>
-              <input type="text" id="geminiUrlInput" value="https://gemini.google.com/app/4f103880bda96c54">
+              <input type="text" id="geminiUrlInput" value="https://share.gemini.google/eSESkPvM47rw">
             </div>
 
             <div>
@@ -1626,7 +1626,7 @@
       const colorTheme = document.getElementById('st0ColorTheme').value;
       const tool1 = document.getElementById('st0Tool1').checked;
       const tool2 = document.getElementById('st0Tool2').checked;
-      const geminiUrl = "https://gemini.google.com/app/4f103880bda96c54";
+      const geminiUrl = "https://share.gemini.google/eSESkPvM47rw";
 
       const res = await fetch('/api/run_station_0', {
         method: 'POST',

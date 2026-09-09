@@ -14,6 +14,7 @@ const PROFILE = "/home/panjikali/snap/chromium/common/chromium";
   try { fs.rmSync(p, { force: true, recursive: true }); } catch (e) {}
 });
 
+process.env.DISPLAY = process.env.DISPLAY || ":0";
 (async () => {
   const browser = await puppeteer.launch({
     headless: false,
@@ -24,6 +25,11 @@ const PROFILE = "/home/panjikali/snap/chromium/common/chromium";
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
+      `--user-data-dir=${PROFILE}`,
+      "--profile-directory=Default",
+      "--disable-profile-picker",
+      "--no-first-run",
+      "--no-default-browser-check",
       "--disable-blink-features=AutomationControlled",
       "--disable-infobars",
       "--start-maximized"

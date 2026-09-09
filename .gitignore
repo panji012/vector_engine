@@ -41,3 +41,4 @@ input/*.svg
 # OS specific
 .DS_Store
 Thumbs.db
+server/static/captcha_screenshot.png

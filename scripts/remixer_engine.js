@@ -6,6 +6,7 @@ const https = require("https");
 const http = require("http");
 const { execSync } = require("child_process");
 
+process.env.DISPLAY = process.env.DISPLAY || ":0";
 puppeteer.use(StealthPlugin());
 
 // ==========================================
@@ -18,7 +19,13 @@ const PROFILE = "/home/panjikali/snap/chromium/common/chromium";
 const ERROR_SCREENSHOT_DIR = path.join(ENGINE_ROOT, "error_logs");
 const MANIFEST_PATH = path.join(ENGINE_ROOT, "manifest.json");
 
-const TARGET_LINK = process.env.TARGET_LINK || "https://gemini.google.com/app/4f103880bda96c54";
+const LINK_FILE_PATH = path.join(ENGINE_ROOT, "link", "gemini_canvas.txt");
+let defaultCanvasUrl = "https://share.gemini.google/eSESkPvM47rw";
+if (fs.existsSync(LINK_FILE_PATH)) {
+    const savedUrl = fs.readFileSync(LINK_FILE_PATH, "utf8").trim();
+    if (savedUrl) defaultCanvasUrl = savedUrl;
+}
+const TARGET_LINK = process.env.TARGET_LINK || defaultCanvasUrl;
 const STYLE_LEVEL = process.env.STYLE_LEVEL || "Easy";
 const COLOR_MATCH = process.env.COLOR_MATCH || "Kunci";
 const CANVAS_RATIO = process.env.CANVAS_RATIO || "1:1";
@@ -78,50 +85,19 @@ function getNextSequentialName(prefix = "vector_stock") {
     return `${prefix}_${formattedNum}.jpg`;
 }
 
-// Build system prompt master rules
+// Build system prompt master rules (Priority 1: Manual User Prompt, Priority 2: Preset Prompt 1 file)
 function buildMasterPrompt() {
-    let styleInstruction = "";
-    if (STYLE_LEVEL === 'Off') {
-        styleInstruction = "STYLE INSTRUCTION (OFF): Do not apply standard stylistic mimicry. Focus purely on rules below and STRICTLY CLONE style from Style Reference Image.";
-    } else if (STYLE_LEVEL === 'Hard') {
-        styleInstruction = "HARD MODE: Completely change and redesign ALL objects so they do not look copied. DO NOT TRACE. Create new objects fitting the exact same theme. Mimic font style with new text.";
-    } else if (STYLE_LEVEL === 'Easy') {
-        styleInstruction = "EASY MODE: Maintain theme, vibe, and visual atmosphere. DO NOT TRACE. Recreate main object from scratch with unique shape & pose. Mimic typography with new words. Microstock safe.";
-    } else {
-        styleInstruction = "Maintain artistic feel but add fresh touch.";
+    if (CUSTOM_PROMPT && CUSTOM_PROMPT.trim().length > 0) {
+        return CUSTOM_PROMPT.trim();
     }
 
-    const colorInstruction = COLOR_MATCH === 'Kunci'
-        ? "CRITICAL DESIGN COLOR RULE: Extract exact HEX color codes, luminance, and palette from original design. Reuse exact same color grading."
-        : (COLOR_MATCH === 'Moderat' ? "Maintain base colors of design with adjusted nuances." : "Create a new color style fitting prompt.");
-
-    const lightingInstruction = TOOL_ANTI_GELAP
-        ? "\n<RULE: EXACT LUMINANCE & BRIGHTNESS>\nLock luminance. Maintain 100% brightness and exact shading ratios.\n</RULE>" : "";
-
-    const bgCleanInstruction = !TOOL_BG_BERSIH
-        ? "\n<RULE: CLEAN ORIGINAL BACKGROUND>\nExtract background color, force a completely clean, smooth, solid background.\n</RULE>" : "";
-
-    const canvasInstruction = CANVAS_RATIO === '16:9'
-        ? "\n<RULE: CANVAS RATIO>\nOutput MUST be in WIDE 16:9 aspect ratio.\n</RULE>"
-        : (CANVAS_RATIO === '5:6' ? "\n<RULE: CANVAS RATIO>\nOutput MUST be in VERTICAL 5:6 aspect ratio.\n</RULE>"
-        : "\n<RULE: CANVAS RATIO>\nOutput MUST be in SQUARE 1:1 aspect ratio.\n</RULE>");
-
-    let paletteInstruction = "";
-    if (COLOR_THEME === 'Vintage' || COLOR_THEME === 'Retro') {
-        paletteInstruction = `\n<RULE: DYNAMIC ${COLOR_THEME.toUpperCase()} COLOR PALETTE>\nGenerate aesthetic 4-color ${COLOR_THEME.toUpperCase()} palette. 1 solid background color, remaining 3 colors for main objects.\n</RULE>`;
+    const presetPath = path.join(ENGINE_ROOT, "prompt", "1_spot_illustration.txt");
+    if (fs.existsSync(presetPath)) {
+        const presetContent = fs.readFileSync(presetPath, "utf8").trim();
+        if (presetContent) return presetContent;
     }
 
-    return `<MASTER DIRECTIVE>
-1. Style Rule: ${styleInstruction}
-2. Design Color Rule: ${colorInstruction}
-3. Custom Prompt: ${CUSTOM_PROMPT || 'Follow instructions perfectly.'}
-<RULE: NO WATERMARKS>Completely ignore and remove usernames, watermarks, or text stamps.</RULE>
-${lightingInstruction}
-${bgCleanInstruction}
-${canvasInstruction}
-${paletteInstruction}
-<RULE: SINGLE OUTPUT ONLY>Generate EXACTLY ONE (1) final image. Do NOT split into grids.</RULE>
-</MASTER DIRECTIVE>`;
+    return "";
 }
 
 async function main() {
@@ -150,14 +126,18 @@ async function main() {
         process.exit(0);
     }
 
-    // Clean profile lock if present
+    // Single-instance process cleanup to avoid Chromium lock file conflicts & orphan windows
+    try {
+        execSync("pkill -f 'chromium.*--type=renderer' || true");
+    } catch (e) {}
     ["SingletonLock", "SingletonSocket", "SingletonCookie"].forEach(f => {
         const p = path.join(PROFILE, f);
         try { fs.rmSync(p, { force: true, recursive: true }); } catch (e) {}
     });
 
+    const isHeadless = process.env.HEADLESS === "true";
     const browser = await puppeteer.launch({
-        headless: "new",
+        headless: isHeadless ? "new" : false,
         executablePath: "/snap/bin/chromium",
         userDataDir: PROFILE,
         defaultViewport: null,
@@ -165,7 +145,11 @@ async function main() {
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--start-maximized",
-            "--disable-web-security",
+            `--user-data-dir=${PROFILE}`,
+            "--profile-directory=Default",
+            "--disable-profile-picker",
+            "--no-first-run",
+            "--no-default-browser-check",
             "--disable-popup-blocking",
             "--disable-features=IsolateOrigins,site-per-process"
         ]
@@ -248,7 +232,24 @@ async function main() {
                 promptBox.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }, masterPrompt);
-        await wait(1500);
+        // Click parameter UI buttons directly on Canvas Gemini page
+        await targetFrame.evaluate(({ styleLvl, colorMtch, canvasRat, t1, t2 }) => {
+            if (typeof setStyle === 'function') setStyle(styleLvl);
+            if (typeof setColor === 'function') setColor(colorMtch);
+            if (typeof setCanvas === 'function') setCanvas(canvasRat);
+
+            const tool1El = document.getElementById('tool1');
+            if (tool1El) tool1El.checked = t1;
+            const tool2El = document.getElementById('tool2');
+            if (tool2El) tool2El.checked = t2;
+        }, {
+            styleLvl: STYLE_LEVEL,
+            colorMtch: COLOR_MATCH,
+            canvasRat: CANVAS_RATIO,
+            t1: TOOL_ANTI_GELAP,
+            t2: TOOL_BG_BERSIH
+        }).catch(() => {});
+        await wait(1000);
 
         // Click "Mulai Proses (Batch)" button (#btnStart)
         console.log("-> 🚀 Memerintahkan robot menekan 'Mulai Proses (Batch)' (#btnStart)...");
@@ -261,79 +262,126 @@ async function main() {
             if (btn) btn.click();
         });
 
-        // Baseline count of JPG/image files in input/ before processing
+        // Snapshot file lama di input/ dan Downloads/ sebelum batch dijalankan
+        const DOWNLOADS_DIR = path.join(require("os").homedir(), "Downloads");
         const initialJpgFiles = fs.readdirSync(INPUT_DIR).filter(f => f.match(/\.(jpg|jpeg|png|webp)$/i));
         const initialJpgCount = initialJpgFiles.length;
         const initialFileSet = new Set(initialJpgFiles);
+        const initialDownloadsFiles = new Set(fs.existsSync(DOWNLOADS_DIR) ? fs.readdirSync(DOWNLOADS_DIR) : []);
 
-        // Monitor batch rendering & downloads directly from input/ every 25 seconds
-        console.log(`-> 📡 Memantau folder input/ (Baseline: ${initialJpgCount} file) setiap 25 detik hingga ${targetBatchCount} berkas fisik baru mendarat...`);
-        for (let w = 1; w <= 48; w++) {
-            await wait(25000);
+        console.log(`-> 📡 Memantau folder input/ & auto-sync Downloads/ via Event Watcher (Baseline file lama: ${initialJpgCount} berkas)...`);
+        console.log(`-> ⏱️ Mode Watcher Inaktivitas: Jika tidak ada unduhan baru selama 30 detik, Gemini Canvas otomatis ditutup.`);
 
-            // Scan input/ directory for newly downloaded files from Gemini Canvas and rename them
+        // Helper untuk memproses file unduhan baru
+        function processNewFiles() {
+            let processedAny = false;
+
+            // 1. Auto-sync file baru dari Downloads/ ke input/
+            if (fs.existsSync(DOWNLOADS_DIR)) {
+                const dlFiles = fs.readdirSync(DOWNLOADS_DIR);
+                const newDlFiles = dlFiles.filter(f => !initialDownloadsFiles.has(f) && f.match(/^Remix_.*\.(jpg|jpeg|png|webp)$/i) && !f.endsWith('.crdownload'));
+                
+                for (const dlf of newDlFiles) {
+                    const srcPath = path.join(DOWNLOADS_DIR, dlf);
+                    const destPath = path.join(INPUT_DIR, dlf);
+                    try {
+                        fs.renameSync(srcPath, destPath);
+                        initialDownloadsFiles.add(dlf);
+                    } catch (e) {
+                        try {
+                            fs.copyFileSync(srcPath, destPath);
+                            fs.unlinkSync(srcPath);
+                            initialDownloadsFiles.add(dlf);
+                        } catch (err) {}
+                    }
+                }
+            }
+
+            // 2. Scan input/ directory untuk file baru dan rename secara sekuensial
             const currentFiles = fs.readdirSync(INPUT_DIR);
-            const unrenamedNewFiles = currentFiles.filter(f => !initialFileSet.has(f) && f.match(/\.(jpg|jpeg|png|webp)$/i) && !f.startsWith("vector_stock_"));
+            const unrenamedNewFiles = currentFiles.filter(f => !initialFileSet.has(f) && f.match(/\.(jpg|jpeg|png|webp)$/i) && !f.startsWith("vector_stock_") && !f.endsWith('.crdownload'));
 
             for (const nf of unrenamedNewFiles) {
                 const targetFilename = getNextSequentialName();
                 const oldPath = path.join(INPUT_DIR, nf);
                 const newPath = path.join(INPUT_DIR, targetFilename);
-                fs.renameSync(oldPath, newPath);
-                initialFileSet.add(targetFilename);
-            }
-
-            // Calculate current total new arrivals in input/
-            const currentJpgs = fs.readdirSync(INPUT_DIR).filter(f => f.match(/\.(jpg|jpeg|png|webp)$/i));
-            const newArrivals = Math.max(0, currentJpgs.length - initialJpgCount);
-
-            if (newArrivals > successCount) {
-                const justArrived = newArrivals - successCount;
-                for (let k = 0; k < justArrived; k++) {
-                    console.log(`[ITEM_REMIX_SUCCESS] Downloaded: Remix Output Saved to input/`);
+                try {
+                    fs.renameSync(oldPath, newPath);
+                } catch (e) {
+                    continue;
                 }
-                successCount = newArrivals;
-            }
-
-            // Check if Canvas queue in DOM has finished processing (Exact match, not partial 'Selesai')
-            const isCanvasFinished = await targetFrame.evaluate(() => {
-                const btnCancel = document.getElementById('btnCancel');
-                const counter = document.getElementById('queueCounter');
-                const counterText = counter ? counter.innerText.trim() : '';
                 
-                const match = counterText.match(/^(\d+)\/(\d+)\s+Selesai$/i);
-                const isCounterDone = match ? (parseInt(match[1], 10) > 0 && match[1] === match[2]) : false;
-                const isCancelled = counterText.includes('DIBATALKAN');
-                const isCancelBtnHidden = btnCancel ? btnCancel.classList.contains('hidden') : false;
+                initialFileSet.add(targetFilename);
+                initialFileSet.add(nf);
+                successCount++;
+                processedAny = true;
 
-                return (isCounterDone || isCancelled) && isCancelBtnHidden;
-            }).catch(() => false);
-
-            if (successCount >= targetBatchCount) {
-                console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik telah mendarat di input/ dalam ${((w * 25) / 60).toFixed(1)} menit!`);
-                break;
-            } else if (isCanvasFinished && w > 1) {
-                console.log(`-> ℹ️ Canvas Gemini telah menyelesaikan seluruh antrean (${successCount}/${targetBatchCount} berhasil terverifikasi). Mengakhiri stasiun...`);
-                break;
-            } else {
-                console.log(`   [...] Memantau unduhan fisik di folder input/... (${w * 25}s | ${successCount}/${targetBatchCount} berkas mendarat)`);
+                console.log(`[ITEM_REMIX_SUCCESS] Absen Berkas Baru (#${successCount}/${targetBatchCount}): ${nf} -> ${targetFilename}`);
             }
+
+            return processedAny;
         }
 
-        // Final check after completion wait
-        await wait(5000);
-        const finalFiles = fs.readdirSync(INPUT_DIR);
-        const remainingNew = finalFiles.filter(f => !initialInputFiles.has(f) && f.match(/\.(jpg|jpeg|png|webp)$/i) && !f.startsWith("vector_stock_"));
-        for (const nf of remainingNew) {
-            const targetFilename = getNextSequentialName();
-            const oldPath = path.join(INPUT_DIR, nf);
-            const newPath = path.join(INPUT_DIR, targetFilename);
-            fs.renameSync(oldPath, newPath);
-            initialInputFiles.add(targetFilename);
+        // Jalankan Event Watcher + 30 Detik Inactivity Timer
+        await new Promise((resolve) => {
+            let inactivityTimeout = null;
 
-            console.log(`[ITEM_REMIX_SUCCESS] Downloaded: Remix Output Saved to input/${targetFilename}`);
-            successCount++;
-        }
+            const resetInactivityTimer = () => {
+                if (inactivityTimeout) clearTimeout(inactivityTimeout);
+                inactivityTimeout = setTimeout(() => {
+                    console.log(`-> ℹ️ Watcher terdeteksi 30 detik tanpa aktivitas unduhan baru. Gemini Canvas selesai & ditutup!`);
+                    cleanup();
+                    resolve();
+                }, 30000);
+            };
+
+            const handleFileEvent = () => {
+                const newFound = processNewFiles();
+                if (newFound) {
+                    resetInactivityTimer(); // Reset 30s timer karena ada aktivitas download baru!
+                    if (targetBatchCount > 0 && successCount >= targetBatchCount) {
+                        console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik baru telah terverifikasi mendarat di input/!`);
+                        cleanup();
+                        resolve();
+                    }
+                }
+            };
+
+            // Pasang fs.watch di Downloads dan input
+            const watchers = [];
+            try {
+                if (fs.existsSync(DOWNLOADS_DIR)) {
+                    watchers.push(fs.watch(DOWNLOADS_DIR, (eventType, filename) => {
+                        if (filename && !filename.endsWith('.crdownload')) {
+                            handleFileEvent();
+                        }
+                    }));
+                }
+            } catch (e) {}
+
+            try {
+                watchers.push(fs.watch(INPUT_DIR, (eventType, filename) => {
+                    if (filename && !filename.endsWith('.crdownload')) {
+                        handleFileEvent();
+                    }
+                }));
+            } catch (e) {}
+
+            const cleanup = () => {
+                if (inactivityTimeout) clearTimeout(inactivityTimeout);
+                watchers.forEach(w => {
+                    try { w.close(); } catch (e) {}
+                });
+            };
+
+            // Cek awal & mulai timer 30 detik pertama
+            handleFileEvent();
+            resetInactivityTimer();
+        });
+
+        // Final sync check
+        await wait(1000);
+        processNewFiles();
 
     } catch (err) {
         console.error(`[ITEM_REMIX_FAILED] ❌ [ERROR Node 0] ${err.message}`);
