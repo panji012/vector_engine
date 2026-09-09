@@ -295,13 +295,18 @@ async function main() {
                 successCount = newArrivals;
             }
 
-            // Check if Canvas queue in DOM has finished processing
+            // Check if Canvas queue in DOM has finished processing (Exact match, not partial 'Selesai')
             const isCanvasFinished = await targetFrame.evaluate(() => {
-                const btnStart = document.getElementById('btnStart');
+                const btnCancel = document.getElementById('btnCancel');
                 const counter = document.getElementById('queueCounter');
-                const isBtnVisible = btnStart && !btnStart.classList.contains('hidden');
-                const counterText = counter ? counter.innerText : '';
-                return isBtnVisible || counterText.includes('Selesai') || counterText.includes('DIBATALKAN');
+                const counterText = counter ? counter.innerText.trim() : '';
+                
+                const match = counterText.match(/^(\d+)\/(\d+)\s+Selesai$/i);
+                const isCounterDone = match ? (parseInt(match[1], 10) > 0 && match[1] === match[2]) : false;
+                const isCancelled = counterText.includes('DIBATALKAN');
+                const isCancelBtnHidden = btnCancel ? btnCancel.classList.contains('hidden') : false;
+
+                return (isCounterDone || isCancelled) && isCancelBtnHidden;
             }).catch(() => false);
 
             if (successCount >= targetBatchCount) {
