@@ -108,47 +108,6 @@
                 </div>
             </div>
 
-            <!-- Pilihan Palet Warna Akhir -->
-            <div class="mt-6 pt-6 border-t border-slate-700">
-                <label class="block text-sm font-semibold text-teal-400 mb-3">Pilihan Tema Warna Color Hunt (Dianalisis AI Berdasarkan Tema Gambar)</label>
-                
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="themeOptions">
-                    <!-- Tema Vintage -->
-                    <button onclick="selectTheme('Vintage')" id="themeBtnVintage" class="theme-btn p-4 bg-slate-800 border-2 border-slate-600 rounded-xl text-sm font-semibold text-slate-300 transition-all hover:border-teal-500 relative flex flex-col items-center gap-3">
-                        <i class="fas fa-camera-retro text-2xl mb-1"></i>
-                        <span class="text-base">Vintage Collection</span>
-                        <div class="flex w-full h-4 rounded overflow-hidden opacity-80">
-                            <div class="flex-1 bg-[#cb997e]"></div>
-                            <div class="flex-1 bg-[#ddbea9]"></div>
-                            <div class="flex-1 bg-[#ffe8d6]"></div>
-                            <div class="flex-1 bg-[#b7b7a4]"></div>
-                        </div>
-                        <span class="text-[10px] text-slate-400 font-normal text-center">Warna Kusam, Hangat. AI meracik otomatis.</span>
-                    </button>
-
-                    <!-- Tema Retro -->
-                    <button onclick="selectTheme('Retro')" id="themeBtnRetro" class="theme-btn p-4 bg-slate-800 border-2 border-slate-600 rounded-xl text-sm font-semibold text-slate-300 transition-all hover:border-teal-500 relative flex flex-col items-center gap-3">
-                        <i class="fas fa-record-vinyl text-2xl mb-1"></i>
-                        <span class="text-base">Retro Collection</span>
-                        <div class="flex w-full h-4 rounded overflow-hidden opacity-80">
-                            <div class="flex-1 bg-[#f4a261]"></div>
-                            <div class="flex-1 bg-[#e76f51]"></div>
-                            <div class="flex-1 bg-[#2a9d8f]"></div>
-                            <div class="flex-1 bg-[#e9c46a]"></div>
-                        </div>
-                        <span class="text-[10px] text-slate-400 font-normal text-center">Warna Tajam, Berani. AI meracik otomatis.</span>
-                    </button>
-
-                    <!-- Tanpa Filter -->
-                    <button onclick="selectTheme('')" id="themeBtnNone" class="theme-btn p-4 bg-slate-800 border-2 border-teal-500 rounded-xl text-sm font-semibold text-teal-400 transition-all flex flex-col items-center justify-center gap-2">
-                        <i class="fas fa-ban text-2xl"></i>
-                        <span class="text-base">Tanpa Tema</span>
-                        <span class="text-[10px] text-slate-400 font-normal text-center">Gunakan warna bawaan dari Prompt atau referensi Anda.</span>
-                    </button>
-                </div>
-                <p class="text-xs text-slate-400 mt-3"><i class="fas fa-magic text-teal-400 mr-1"></i><strong>Dinamis & Solid:</strong> Saat merender, AI akan memilih 1 warna murni untuk background datar (Solid), dan sisa warnanya dibagikan ke objek. Kecerahan gradasi (Luminance) asli dikunci 100%.</p>
-            </div>
-
             <!-- Action Buttons -->
             <div class="flex gap-4 mt-6">
                 <button id="btnStart" onclick="startQueue()" class="flex-1 py-4 bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-400 hover:to-blue-500 rounded-xl font-bold text-lg shadow-lg transition-all transform hover:scale-[1.02]">
@@ -178,7 +137,6 @@
         let currentStyle = 'Easy';
         let currentColor = 'Kunci';
         let currentCanvas = '1:1';
-        let selectedTheme = ''; // 'Vintage', 'Retro', atau ''
         let urlQueue = [];
         let currentIndex = 0;
         let isProcessing = false;
@@ -247,19 +205,6 @@
             descEl.className = level === 'Kunci' ? 'text-xs text-teal-400 mt-2 text-center h-14' : 'text-xs text-slate-400 mt-2 text-center h-14';
         }
 
-        // Theme Selection UI
-        function selectTheme(themeName) {
-            selectedTheme = themeName;
-            document.querySelectorAll('.theme-btn').forEach(btn => {
-                btn.classList.remove('border-teal-500', 'text-teal-400');
-                btn.classList.add('border-slate-600', 'text-slate-300');
-            });
-            const activeId = themeName === 'Vintage' ? 'themeBtnVintage' : (themeName === 'Retro' ? 'themeBtnRetro' : 'themeBtnNone');
-            const activeBtn = document.getElementById(activeId);
-            activeBtn.classList.remove('border-slate-600', 'text-slate-300');
-            activeBtn.classList.add('border-teal-500', 'text-teal-400');
-        }
-
         function delay(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
@@ -275,12 +220,6 @@
         async function fetchImageAsBase64(url) {
             const secureUrl = url.replace(/^http:\/\//i, 'https://');
             const encodedUrl = encodeURIComponent(secureUrl);
-            
-            // Anti-Rate Limit Pinterest
-            if (secureUrl.includes('pinimg.com')) {
-                updateStatus(`Jeda anti-blokir Pinterest...`, null);
-                await delay(2500); 
-            }
             
             const proxies = [
                 `https://wsrv.nl/?url=${encodedUrl}&output=jpg`, 
@@ -336,7 +275,7 @@
             document.body.removeChild(a);
         }
 
-        async function callGeminiAPI(base64Image, mimeType, userPrompt, activePaletteColors) {
+        async function callGeminiAPI(base64Image, mimeType, userPrompt) {
             const tool1_AntiGelap = document.getElementById('tool1').checked;
             const tool2_BgBersih = document.getElementById('tool2').checked;
 
@@ -378,18 +317,7 @@
                 canvasInstruction = `\n<RULE 7: CANVAS SIZE & RATIO>\n- Output MUST be generated in a SQUARE 1:1 aspect ratio.\n</RULE 7>`;
             }
 
-            // 4. Color Hunt Dynamic Palette & High-Contrast Negative Space
-            let paletteInstruction = "";
-            if (activePaletteColors === 'Vintage' || activePaletteColors === 'Retro') {
-                paletteInstruction = `\n<RULE 10: DYNAMIC ${activePaletteColors.toUpperCase()} COLOR HUNT & HIGH-CONTRAST SOLID BACKGROUND (LOCKED)>
-- 1. ANALYZE CONTEXT: Analyze the theme of the generated image (e.g., Summer, Cyberpunk, Forest, Space, Vintage Badges).
-- 2. GENERATE ON-THE-FLY: Based on that exact context, dynamically generate a masterful, aesthetic 4-color **${activePaletteColors.toUpperCase()}** palette (like Color Hunt).
-- 3. SOLID BACKGROUND SPLIT (CRITICAL): You MUST choose 1 specific color from your generated 4-color palette to be the BACKGROUND. This background MUST be a 100% SOLID, FLAT color (ABSOLUTELY NO gradients, NO vignettes, NO shadows).
-- 4. OBJECT COLORING & NEGATIVE SPACE: Recolor the main objects (or 4 badges) using ONLY the remaining 3 colors. CRITICAL: The solid background color MUST NEVER be used inside the objects. They must remain distinct to create a High-Contrast Negative Space "pop-out" effect, while keeping the original 3D luminance shading intact on the objects.
-</RULE 10>`;
-            }
-
-            // 5. Dual Image Prompt (Style Reference)
+            // 4. Dual Image Prompt (Style Reference)
             let promptParts = [];
             let styleRefInstruction = "";
             
@@ -428,7 +356,6 @@ ${canvasInstruction}
 
 <RULE 8: SINGLE OUTPUT ONLY>
 - Generate EXACTLY ONE (1) final image. Do NOT split into grids.
-${paletteInstruction}
 ${styleRefInstruction}
 </MASTER DIRECTIVE>`;
 
@@ -467,7 +394,6 @@ ${styleRefInstruction}
 
             const currentItem = urlQueue[currentIndex];
             const customPrompt = document.getElementById('promptInput').value.trim();
-            const activeTheme = selectedTheme;
             
             document.getElementById('queueCounter').innerText = `${currentIndex}/${urlQueue.length} Selesai`;
             const progress = (currentIndex / urlQueue.length) * 100;
@@ -502,7 +428,7 @@ ${styleRefInstruction}
                 for (let i = 0; i < retries; i++) {
                     try {
                         if (isCancelled) throw new Error("Dibatalkan");
-                        resultImage = await callGeminiAPI(imageData.data, imageData.mimeType, customPrompt, activeTheme);
+                        resultImage = await callGeminiAPI(imageData.data, imageData.mimeType, customPrompt);
                         break; 
                     } catch (e) {
                         if (i === retries - 1 || isCancelled) throw e;

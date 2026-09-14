@@ -20,7 +20,7 @@ const ERROR_SCREENSHOT_DIR = path.join(ENGINE_ROOT, "error_logs");
 const MANIFEST_PATH = path.join(ENGINE_ROOT, "manifest.json");
 
 const LINK_FILE_PATH = path.join(ENGINE_ROOT, "link", "gemini_canvas.txt");
-let defaultCanvasUrl = "https://share.gemini.google/eSESkPvM47rw";
+let defaultCanvasUrl = "https://gemini.google.com/share/80c4d817d15e?skid=e8d4950a-3a47-49c1-8dbf-c7da8d47cfdb";
 if (fs.existsSync(LINK_FILE_PATH)) {
     const savedUrl = fs.readFileSync(LINK_FILE_PATH, "utf8").trim();
     if (savedUrl) defaultCanvasUrl = savedUrl;
@@ -135,7 +135,7 @@ async function main() {
         try { fs.rmSync(p, { force: true, recursive: true }); } catch (e) {}
     });
 
-    const isHeadless = process.env.HEADLESS === "true";
+    const isHeadless = process.env.HEADLESS !== "false"; // Default: HEADLESS MODE (Tanpa jendela GUI)
     const browser = await puppeteer.launch({
         headless: isHeadless ? "new" : false,
         executablePath: "/snap/bin/chromium",
@@ -270,7 +270,7 @@ async function main() {
         const initialDownloadsFiles = new Set(fs.existsSync(DOWNLOADS_DIR) ? fs.readdirSync(DOWNLOADS_DIR) : []);
 
         console.log(`-> 📡 Memantau folder input/ & auto-sync Downloads/ via Event Watcher (Baseline file lama: ${initialJpgCount} berkas)...`);
-        console.log(`-> ⏱️ Mode Watcher Inaktivitas: Jika tidak ada unduhan baru selama 30 detik, Gemini Canvas otomatis ditutup.`);
+        console.log(`-> ⏱️ Mode Watcher Inaktivitas: Jika tidak ada unduhan baru selama 60 detik, Gemini Canvas otomatis ditutup.`);
 
         // Helper untuk memproses file unduhan baru
         function processNewFiles() {
@@ -322,23 +322,23 @@ async function main() {
             return processedAny;
         }
 
-        // Jalankan Event Watcher + 30 Detik Inactivity Timer
+        // Jalankan Event Watcher + 60 Detik Inactivity Timer
         await new Promise((resolve) => {
             let inactivityTimeout = null;
 
             const resetInactivityTimer = () => {
                 if (inactivityTimeout) clearTimeout(inactivityTimeout);
                 inactivityTimeout = setTimeout(() => {
-                    console.log(`-> ℹ️ Watcher terdeteksi 30 detik tanpa aktivitas unduhan baru. Gemini Canvas selesai & ditutup!`);
+                    console.log(`-> ℹ️ Watcher terdeteksi 60 detik tanpa aktivitas unduhan baru. Gemini Canvas selesai & ditutup!`);
                     cleanup();
                     resolve();
-                }, 30000);
+                }, 60000);
             };
 
             const handleFileEvent = () => {
                 const newFound = processNewFiles();
                 if (newFound) {
-                    resetInactivityTimer(); // Reset 30s timer karena ada aktivitas download baru!
+                    resetInactivityTimer(); // Reset 60s timer karena ada aktivitas download baru!
                     if (targetBatchCount > 0 && successCount >= targetBatchCount) {
                         console.log(`-> ✅ LENGKAP! Seluruh ${successCount}/${targetBatchCount} berkas fisik baru telah terverifikasi mendarat di input/!`);
                         cleanup();
@@ -374,7 +374,7 @@ async function main() {
                 });
             };
 
-            // Cek awal & mulai timer 30 detik pertama
+            // Cek awal & mulai timer 60 detik pertama
             handleFileEvent();
             resetInactivityTimer();
         });

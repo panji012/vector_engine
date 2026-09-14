@@ -110,13 +110,26 @@ async function nativeClickText(page, text) {
     return false;
 }
 
-async function processFile(page, filePath) {
+async function processFile(page, filePath, isFirstFile = false) {
     const fileName = path.basename(filePath);
     const fileBaseName = path.parse(fileName).name;
     console.log(`\nProcessing: ${fileName}`);
 
-    await page.goto(SITE, { waitUntil: "networkidle2", timeout: 0 });
-    await wait(4000);
+    const oldUrl = page.url();
+
+    if (isFirstFile || !page.url().includes("vectorizer.ai")) {
+        console.log("   [+] Membuka halaman awal Vectorizer.ai...");
+        await page.goto(SITE, { waitUntil: "networkidle2", timeout: 0 });
+        await wait(4000);
+    } else {
+        console.log("   [+] Menggulir ke #app-starter-drop-zone (DRAG NEXT IMAGE HERE)...");
+        await page.evaluate(() => {
+            const dropZone = document.querySelector('#app-starter-drop-zone') || document.querySelector('.drop_target');
+            if (dropZone) dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            else window.scrollTo(0, document.body.scrollHeight || 600);
+        }).catch(() => {});
+        await wait(6500);
+    }
 
     if (await checkForCaptcha(page)) {
         const captchaPath = path.join(ENGINE_ROOT, "server", "static", "captcha_screenshot.png");
@@ -125,15 +138,25 @@ async function processFile(page, filePath) {
         throw new Error("CAPTCHA_DETECTED: Terdeteksi CAPTCHA di Vectorizer.ai");
     }
 
-    const input = await page.waitForSelector('input[type="file"]', { timeout: 60000 });
+    let input = await page.$('#app-starter-drop-zone input[type="file"]');
+    if (!input) input = await page.$('input[type="file"]');
+    if (!input) {
+        input = await page.waitForSelector('input[type="file"]', { timeout: 60000 });
+    }
     await input.uploadFile(filePath);
     console.log("Uploading...");
+    await wait(5000);
+
+    if (!isFirstFile && oldUrl.includes("vectorizer.ai")) {
+        console.log("   [+] Menunggu perpindahan ke URL gambar baru...");
+        await page.waitForFunction(prev => location.href !== prev, { timeout: 60000 }, oldUrl).catch(() => {});
+    }
 
     await page.waitForFunction(() => location.pathname.includes("/edit"), { timeout: 0 });
     console.log("Vectorization complete.");
     
-    // EKSTRA SABAR: Jeda 6 detik sebelum mengeklik apa pun agar halaman stabil
-    await wait(6000);
+    // EKSTRA SABAR: Jeda 11 detik sebelum mengeklik apa pun agar halaman stabil
+    await wait(11000);
 
     if (await checkForCaptcha(page)) {
         const captchaPath = path.join(ENGINE_ROOT, "server", "static", "captcha_screenshot.png");
@@ -158,11 +181,25 @@ async function processFile(page, filePath) {
     }
     
     // Waktu tunggu agar panel/halaman download sempurna terbuka
-    await wait(6000); 
+    await wait(11000); 
+
+    // 🎯 Snapshot foto folder SEBELUM tombol download diklik agar deteksi instan 100%
+    const before = new Set(fs.readdirSync(OUTPUT));
 
     console.log("Downloading SVG...");
-    // 🎯 KLIK FINAL DOWNLOAD: Utamakan ikon gambar paling akhir di panel pop-up
+    // 🎯 KLIK FINAL DOWNLOAD: Tembak tombol biru '⬇ Download' / #App-DownloadButton
     let downloadClicked = await page.evaluate(() => {
+        const btn = document.querySelector('#App-DownloadButton');
+        if (btn) {
+            btn.click();
+            return true;
+        }
+        const buttons = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
+        const dlBtn = buttons.find(b => b.innerText && (b.innerText.toLowerCase().includes('download') || b.innerText.toLowerCase().includes('unduh')));
+        if (dlBtn) {
+            dlBtn.click();
+            return true;
+        }
         const icons = document.querySelectorAll('img[alt="download icon"], img[alt*="download"], img[alt*="unduh"]');
         if (icons.length > 0) {
             icons[icons.length - 1].click();
@@ -172,15 +209,14 @@ async function processFile(page, filePath) {
     });
 
     if (!downloadClicked) {
-        console.log("   [!] Ikon tidak ditemukan, menggunakan klik teks cadangan (Unduh/Download)...");
+        console.log("   [!] Tombol/ID tidak ditemukan, menggunakan klik teks cadangan (Unduh/Download)...");
         downloadClicked = await nativeClickText(page, "Unduh") || await nativeClickText(page, "Download");
     }
 
-    const before = new Set(fs.readdirSync(OUTPUT));
     let downloaded = false;
     let downloadedFile = null;
 
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 20; i++) {
         await wait(2000);
         const after = fs.readdirSync(OUTPUT);
         const newFiles = after.filter(f => !before.has(f) && !f.endsWith(".crdownload"));
@@ -232,20 +268,26 @@ async function processFile(page, filePath) {
         console.log(`[MODE UJI COBA] File ${fileName} tetap tersimpan di folder input/ (tidak dipindahkan).`);
     }
 
-    // 🎯 JEDA 12 DETIK SEBELUM MEMPROSES GAMBAR BENIKUTNYA
-    console.log(`[JEDA SABAR 12s] ⏳ Menunggu 12 detik sebelum memasukkan gambar berikutnya ke Vectorizer...`);
-    await wait(12000);
+    // 🎯 JEDA 17 DETIK SEBELUM MEMPROSES GAMBAR BENIKUTNYA
+    console.log(`[JEDA SABAR 17s] ⏳ Menunggu 17 detik sebelum memasukkan gambar berikutnya ke Vectorizer...`);
+    await wait(17000);
 }
 
 (async () => {
+    const { execSync } = require("child_process");
+    try {
+        execSync("pkill -9 -f chromium || true");
+    } catch (e) {}
+
     // Clear stale lock files / symlinks if left over from previous process
     ["SingletonLock", "SingletonSocket", "SingletonCookie"].forEach(f => {
         const p = path.join(PROFILE, f);
         try { fs.rmSync(p, { force: true, recursive: true }); } catch (e) {}
     });
 
+    const isHeadless = process.env.HEADLESS === "true";
     const browser = await puppeteer.launch({
-        headless: "new",
+        headless: isHeadless ? "new" : false, // Default: GUI VISUAL MODE (Dapat dilihat di layar)
         executablePath: "/snap/bin/chromium",
         userDataDir: PROFILE,
         defaultViewport: null,
@@ -255,8 +297,12 @@ async function processFile(page, filePath) {
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--disable-blink-features=AutomationControlled",
-            "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-            "--window-size=1920,1080"
+            `--user-data-dir=${PROFILE}`,
+            "--profile-directory=Default",
+            "--disable-profile-picker",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--start-maximized"
         ]
     });
 
@@ -282,6 +328,7 @@ async function processFile(page, filePath) {
     const page = await browser.newPage();
     await setDownload(page, OUTPUT);
 
+    let isFirst = true;
     for (const file of files) {
         const fileBaseName = path.parse(file).name;
         const targetSvgName = `${fileBaseName}.svg`;
@@ -313,10 +360,12 @@ async function processFile(page, filePath) {
 
         const filePath = path.join(INPUT, file);
         try {
-            await processFile(page, filePath);
+            await processFile(page, filePath, isFirst);
+            isFirst = false;
         } catch (err) {
             console.error(`Failed: ${file} | ${err.message}`);
             updateManifestRecord(file, "failed", err.message);
+            isFirst = true; // Reset jika terjadi kesalahan agar gambar berikutnya memuat ulang halaman awal
             
             // KARANTINA FILE GAGAL (HANYA JIKA MODE ABSENSI AKTIF)
             if (!disableManifest) {

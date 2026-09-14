@@ -847,6 +847,11 @@
         </div>
 
         <div>
+          <label class="claude-label">🌐 Link Target Gemini Canvas AI:</label>
+          <input type="text" id="st0GeminiUrl" value="https://gemini.google.com/share/80c4d817d15e?skid=e8d4950a-3a47-49c1-8dbf-c7da8d47cfdb" placeholder="https://gemini.google.com/share/...">
+        </div>
+
+        <div>
           <label class="claude-label">🔗 Link HTTP Gambar (Pinterest / Web Direct):</label>
           <textarea id="st0HttpUrls" rows="2" placeholder="Masukkan link HTTP/HTTPS di sini... (Enter)"></textarea>
         </div>
@@ -1248,7 +1253,7 @@
 
             <div>
               <label class="claude-label">Gemini Canvas AI Target Link:</label>
-              <input type="text" id="geminiUrlInput" value="https://share.gemini.google/eSESkPvM47rw">
+              <input type="text" id="geminiUrlInput" value="https://gemini.google.com/share/80c4d817d15e?skid=e8d4950a-3a47-49c1-8dbf-c7da8d47cfdb">
             </div>
 
             <div>
@@ -1626,7 +1631,7 @@
       const colorTheme = document.getElementById('st0ColorTheme').value;
       const tool1 = document.getElementById('st0Tool1').checked;
       const tool2 = document.getElementById('st0Tool2').checked;
-      const geminiUrl = "https://share.gemini.google/eSESkPvM47rw";
+      const geminiUrl = document.getElementById('st0GeminiUrl') ? document.getElementById('st0GeminiUrl').value.trim() : "";
 
       const res = await fetch('/api/run_station_0', {
         method: 'POST',

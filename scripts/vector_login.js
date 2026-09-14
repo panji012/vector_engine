@@ -2,11 +2,17 @@ const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const fs = require("fs");
 const path = require("path");
+const { execSync } = require("child_process");
 
 puppeteer.use(StealthPlugin());
 
 const ENGINE_ROOT = "/home/panjikali/Projects/vector_engine";
 const PROFILE = "/home/panjikali/snap/chromium/common/chromium";
+
+// Kill orphan background chromium processes to release database locks
+try {
+  execSync("pkill -9 -f chromium || true");
+} catch (e) {}
 
 // Clear lock file if left over from previous process
 ["SingletonLock", "SingletonSocket", "SingletonCookie"].forEach(f => {
