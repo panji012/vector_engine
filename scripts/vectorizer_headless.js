@@ -9,19 +9,15 @@ if (!process.env.DISPLAY) {
 
 const ENGINE_ROOT = "/home/panjikali/Projects/vector_engine";
 const INPUT = path.join(ENGINE_ROOT, "input");
-const OUTPUT = path.join(ENGINE_ROOT, "vectorizer_svg");
+const STOCK_READY = path.join(ENGINE_ROOT, "stock_ready");
 const PROFILE = "/home/panjikali/snap/chromium/common/chromium";
 const MANIFEST_PATH = path.join(ENGINE_ROOT, "manifest.json");
-const PROCESSED_DIR = path.join(ENGINE_ROOT, "input_processed");
-const FAILED_DIR = path.join(ENGINE_ROOT, "input_failed");
 const SITE = "https://vectorizer.ai";
 
 // Ensure directories exist
 if (!fs.existsSync(INPUT)) fs.mkdirSync(INPUT, { recursive: true });
-if (!fs.existsSync(OUTPUT)) fs.mkdirSync(OUTPUT, { recursive: true });
+if (!fs.existsSync(STOCK_READY)) fs.mkdirSync(STOCK_READY, { recursive: true });
 if (!fs.existsSync(PROFILE)) fs.mkdirSync(PROFILE, { recursive: true });
-if (!fs.existsSync(PROCESSED_DIR)) fs.mkdirSync(PROCESSED_DIR, { recursive: true });
-if (!fs.existsSync(FAILED_DIR)) fs.mkdirSync(FAILED_DIR, { recursive: true });
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
@@ -186,7 +182,7 @@ async function processFile(page, filePath, isFirstFile = false) {
     await wait(13000); 
 
     // 🎯 Snapshot foto folder SEBELUM tombol download diklik agar deteksi instan 100%
-    const before = new Set(fs.readdirSync(OUTPUT));
+    const before = new Set(fs.readdirSync(INPUT));
 
     console.log("Downloading SVG...");
     // 🎯 KLIK FINAL DOWNLOAD: Tembak tombol biru '⬇ Download' / #App-DownloadButton
@@ -220,8 +216,8 @@ async function processFile(page, filePath, isFirstFile = false) {
 
     for (let i = 0; i < 20; i++) {
         await wait(2000);
-        const after = fs.readdirSync(OUTPUT);
-        const newFiles = after.filter(f => !before.has(f) && !f.endsWith(".crdownload"));
+        const after = fs.readdirSync(INPUT);
+        const newFiles = after.filter(f => !before.has(f) && !f.endsWith(".crdownload") && f.endsWith(".svg"));
         if (newFiles.length > 0) {
             downloaded = true;
             downloadedFile = newFiles[0];
@@ -248,27 +244,22 @@ async function processFile(page, filePath, isFirstFile = false) {
         }
     }
 
-    // ENSURE SVG FILE IS RENAMED TO MATCH INPUT FILE EXACTLY
+    // ENSURE SVG FILE IS RENAMED TO MATCH INPUT FILE EXACTLY IN INPUT FOLDER
     const targetSvgName = `${fileBaseName}.svg`;
-    const actualSvgPath = path.join(OUTPUT, downloadedFile);
-    const targetSvgPath = path.join(OUTPUT, targetSvgName);
+    const actualSvgPath = path.join(INPUT, downloadedFile);
+    const targetSvgPath = path.join(INPUT, targetSvgName);
 
     if (downloadedFile !== targetSvgName && fs.existsSync(actualSvgPath)) {
         if (fs.existsSync(targetSvgPath)) fs.unlinkSync(targetSvgPath);
         fs.renameSync(actualSvgPath, targetSvgPath);
     }
-    console.log(`Downloaded: ${targetSvgName}`);
+    console.log(`Downloaded SVG to input/: ${targetSvgName}`);
 
-    // JIKA MODE ABSENSI AKTIF: ARSIPKAN FILE KE FOLDER PROCESSED
-    if (!disableManifest) {
-        const archivePath = path.join(PROCESSED_DIR, fileName);
-        if (fs.existsSync(archivePath)) fs.unlinkSync(archivePath);
-        if (fs.existsSync(filePath)) fs.renameSync(filePath, archivePath);
-        console.log(`Archived to input_processed: ${fileName}`);
-        updateManifestRecord(fileName, "success");
-    } else {
-        console.log(`[MODE UJI COBA] File ${fileName} tetap tersimpan di folder input/ (tidak dipindahkan).`);
+    // Hapus JPG mentah jika SVG sudah berhasil terbuat
+    if (fs.existsSync(filePath) && fs.existsSync(targetSvgPath)) {
+        try { fs.unlinkSync(filePath); } catch (e) {}
     }
+    updateManifestRecord(fileName, "success");
 
     // 🎯 JEDA 19 DETIK SEBELUM MEMPROSES GAMBAR BENIKUTNYA
     console.log(`[JEDA SABAR 19s] ⏳ Menunggu 19 detik sebelum memasukkan gambar berikutnya ke Vectorizer...`);
@@ -320,43 +311,27 @@ async function processFile(page, filePath, isFirstFile = false) {
     // STRICT NATURAL NUMERIC SORT (0001, 0002, 0003... 0046)
     files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
-    if (disableManifest) {
-        console.log(`[MODE UJI COBA / TRIAL] 🟡 Absensi Batch STATUS: OFF (Memproses ${files.length} file gambar secara berurutan tanpa skip)`);
-    } else {
-        console.log(`[ABSENSI BATCH] 🟢 Absensi Batch STATUS: ON (Memproses ${files.length} file gambar secara berurutan dalam 1 Tab)`);
-    }
+    console.log(`[ABSENSI BATCH] 🟢 Absensi Batch STATUS: ON (Memproses ${files.length} file gambar ke folder input/)`);
 
     // OPEN ONE SINGLE REUSED BROWSER TAB FOR THE ENTIRE BATCH
     const page = await browser.newPage();
-    await setDownload(page, OUTPUT);
+    await setDownload(page, INPUT);
 
     let isFirst = true;
     for (const file of files) {
         const fileBaseName = path.parse(file).name;
         const targetSvgName = `${fileBaseName}.svg`;
-        const svgInOutput = path.join(OUTPUT, targetSvgName);
         const svgInInput = path.join(INPUT, targetSvgName);
+        const svgInStock = path.join(STOCK_READY, targetSvgName);
 
-        // CEK ABSEN SVG: Jika file SVG sudah pernah terunduh (di folder OUTPUT atau INPUT), SKIP!
-        if (fs.existsSync(svgInOutput) || fs.existsSync(svgInInput)) {
+        // CEK ABSEN SVG: Jika file SVG sudah pernah terunduh (di folder input atau stock_ready), SKIP!
+        if (fs.existsSync(svgInInput) || fs.existsSync(svgInStock)) {
             console.log(`[SKIP ABSEN SVG] File ${targetSvgName} sudah ada. Melewati ${file}...`);
-            if (!disableManifest) {
-                const src = path.join(INPUT, file);
-                const dst = path.join(PROCESSED_DIR, file);
-                if (fs.existsSync(dst)) fs.unlinkSync(dst);
-                if (fs.existsSync(src)) fs.renameSync(src, dst);
-                updateManifestRecord(file, "success");
-            }
-            continue;
-        }
-
-        // Cek jika sudah pernah dicatat sukses di manifest (HANYA JIKA MODE ABSENSI AKTIF)
-        if (!disableManifest && manifest.files[file] && manifest.files[file].status === "success") {
-            console.log(`[SKIP ABSEN] File ${file} sudah pernah selesai sebelumnya. Memindahkan ke input_processed...`);
             const src = path.join(INPUT, file);
-            const dst = path.join(PROCESSED_DIR, file);
-            if (fs.existsSync(dst)) fs.unlinkSync(dst);
-            if (fs.existsSync(src)) fs.renameSync(src, dst);
+            if (fs.existsSync(src)) {
+                try { fs.unlinkSync(src); } catch (e) {}
+            }
+            updateManifestRecord(file, "success");
             continue;
         }
 
@@ -367,21 +342,7 @@ async function processFile(page, filePath, isFirstFile = false) {
         } catch (err) {
             console.error(`Failed: ${file} | ${err.message}`);
             updateManifestRecord(file, "failed", err.message);
-            isFirst = true; // Reset jika terjadi kesalahan agar gambar berikutnya memuat ulang halaman awal
-            
-            // KARANTINA FILE GAGAL (HANYA JIKA MODE ABSENSI AKTIF)
-            if (!disableManifest) {
-                try {
-                    const failDst = path.join(FAILED_DIR, file);
-                    if (fs.existsSync(failDst)) fs.unlinkSync(failDst);
-                    if (fs.existsSync(filePath)) fs.renameSync(filePath, failDst);
-                    console.log(`Quarantined to input_failed: ${file}`);
-                } catch (moveErr) {
-                    console.error(`Error quarantining ${file}:`, moveErr);
-                }
-            } else {
-                console.log(`[MODE UJI COBA] File gagal ${file} tetap tersimpan di folder input/.`);
-            }
+            isFirst = true;
         }
     }
     

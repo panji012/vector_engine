@@ -22,19 +22,15 @@ STATIC_DIR = os.path.join(PROJECT_ROOT, "server", "static")
 SCRIPTS_DIR = os.path.join(PROJECT_ROOT, "scripts")
 INPUT_DIR = os.path.join(PROJECT_ROOT, "input")
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, "output")
-PROCESSED_DIR = os.path.join(PROJECT_ROOT, "input_processed")
-FAILED_DIR = os.path.join(PROJECT_ROOT, "input_failed")
+STOCK_READY_DIR = os.path.join(PROJECT_ROOT, "stock_ready")
 MANIFEST_PATH = os.path.join(PROJECT_ROOT, "manifest.json")
-VECTORIZER_INPUT = os.path.join(PROJECT_ROOT, "input")        # sama dg INPUT_DIR (raster masuk sini)
+VECTORIZER_INPUT = os.path.join(PROJECT_ROOT, "input")
 VECTORIZER_PROFILE = "/home/panjikali/snap/chromium/common/chromium"
-VECTORIZER_OUTPUT = os.path.join(PROJECT_ROOT, "vectorizer_svg")   # hasil SVG dari Stasiun 2
 
 os.makedirs(INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-os.makedirs(PROCESSED_DIR, exist_ok=True)
-os.makedirs(FAILED_DIR, exist_ok=True)
+os.makedirs(STOCK_READY_DIR, exist_ok=True)
 os.makedirs(VECTORIZER_INPUT, exist_ok=True)
-os.makedirs(VECTORIZER_OUTPUT, exist_ok=True)
 os.makedirs(VECTORIZER_PROFILE, exist_ok=True)
 
 # Global State
@@ -157,20 +153,8 @@ def auto_rename_sequential(target_dir, prefix="vector_stock"):
 
 def sync_input_queues():
     """
-    1. Memindahkan SVG hasil download Stasiun 2 dari vectorizer_svg/ ke input/ (untuk Stasiun 3).
-    2. Auto-rename urut semua file di input/.
+    Auto-rename urut semua file di input/.
     """
-    # Pindahkan SVG hasil Stasiun 2 ke folder input/ (Stasiun 3)
-    if os.path.exists(VECTORIZER_OUTPUT):
-        for f in os.listdir(VECTORIZER_OUTPUT):
-            if f.lower().endswith(".svg"):
-                src = os.path.join(VECTORIZER_OUTPUT, f)
-                dst = os.path.join(INPUT_DIR, f)
-                if os.path.isfile(src):
-                    if os.path.exists(dst):
-                        os.remove(dst)
-                    shutil.move(src, dst)
-    # Auto-rename semua file input (raster & svg) secara urut
     auto_rename_sequential(INPUT_DIR)
 
 def get_manifest_summary():
@@ -180,13 +164,11 @@ def get_manifest_summary():
     
     pending_v_files = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))] if os.path.exists(INPUT_DIR) else []
     pending_i_files = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith(".svg")] if os.path.exists(INPUT_DIR) else []
-    processed_files = os.listdir(PROCESSED_DIR) if os.path.exists(PROCESSED_DIR) else []
-    failed_files = os.listdir(FAILED_DIR) if os.path.exists(FAILED_DIR) else []
+    ready_stock = os.listdir(STOCK_READY_DIR) if os.path.exists(STOCK_READY_DIR) else []
 
     total_pending = len(pending_v_files) + len(pending_i_files)
-    total_processed = len([f for f in processed_files if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".svg"))])
-    total_failed = len([f for f in failed_files if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".svg"))])
-    total_all = total_pending + total_processed + total_failed
+    total_processed = len([f for f in ready_stock if f.lower().endswith((".eps", ".jpg", ".jpeg", ".svg"))])
+    total_all = total_pending + total_processed
 
     progress_pct = round((total_processed / total_all * 100), 1) if total_all > 0 else (100.0 if total_processed > 0 else 0.0)
     eta_sec = total_pending * 15
@@ -194,12 +176,12 @@ def get_manifest_summary():
     return {
         "total": total_all,
         "processed": total_processed,
-        "failed": total_failed,
+        "failed": 0,
         "pending": total_pending,
         "progress_percent": progress_pct,
         "eta_seconds": eta_sec,
         "eta_formatted": f"{eta_sec // 60} min {eta_sec % 60} sec" if eta_sec >= 60 else f"{eta_sec} sec",
-        "failed_list": failed_files,
+        "failed_list": [],
         "manifest_files": files
     }
 
@@ -210,39 +192,28 @@ def get_pending_queues():
     
     rasters = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))] if os.path.exists(INPUT_DIR) else []
     svgs = [f for f in os.listdir(INPUT_DIR) if f.lower().endswith(".svg")] if os.path.exists(INPUT_DIR) else []
-    vec_svgs = [f for f in os.listdir(VECTORIZER_OUTPUT) if f.lower().endswith(".svg")] if os.path.exists(VECTORIZER_OUTPUT) else []
-    all_svg_stems = set([os.path.splitext(f)[0] for f in svgs + vec_svgs])
+    stock_files = os.listdir(STOCK_READY_DIR) if os.path.exists(STOCK_READY_DIR) else []
+    stock_stems = set([os.path.splitext(f)[0].replace("_bad_two", "").replace("_bad_three", "").replace("_pattern", "").replace("_single", "") for f in stock_files])
+    all_svg_stems = set([os.path.splitext(f)[0] for f in svgs]).union(stock_stems)
 
     outputs = os.listdir(OUTPUT_DIR) if os.path.exists(OUTPUT_DIR) else []
-    output_stems = set([os.path.splitext(f)[0].replace("_bad_two", "").replace("_bad_three", "").replace("_pattern", "").replace("_single", "") for f in outputs])
+    output_stems = set([os.path.splitext(f)[0].replace("_bad_two", "").replace("_bad_three", "").replace("_pattern", "").replace("_single", "") for f in outputs]).union(stock_stems)
 
-    # Pending for Stasiun 2: raster files without corresponding SVG
+    # Pending for Stasiun 2: raster files without corresponding SVG or Stock Ready
     st2_pending = [r for r in rasters if os.path.splitext(r)[0] not in all_svg_stems]
 
-    # Pending for Stasiun 3: SVG files without corresponding deliverables in output/
+    # Pending for Stasiun 3: SVG files in input/ without corresponding deliverables in output/ or stock_ready/
     st3_pending = [s for s in svgs if os.path.splitext(s)[0] not in output_stems]
 
-    # Pending for Stasiun 4: Deliverables in output/ not yet logged in master_katalog.csv
-    logged_files = set()
-    csv_path = os.path.join(PROJECT_ROOT, "master_katalog.csv")
-    if os.path.exists(csv_path):
-        try:
-            with open(csv_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    parts = line.strip().split(",")
-                    if parts:
-                        logged_files.add(parts[0].strip())
-        except Exception:
-            pass
-
-    st4_pending = [o for o in outputs if o.lower().endswith((".eps", ".jpg")) and o not in logged_files]
+    # Pending for Stasiun 4: Deliverables in output/ ready to be cataloged into stock_ready/
+    st4_pending = [o for o in outputs if o.lower().endswith((".eps", ".jpg"))]
 
     return {
         "st0_pending": sorted(st0_pending),
         "st2_pending": sorted(st2_pending),
         "st3_pending": sorted(st3_pending),
         "st4_pending": sorted(st4_pending),
-        "all_outputs": sorted(outputs)
+        "all_outputs": sorted(outputs + stock_files)
     }
 
 
@@ -905,6 +876,7 @@ def execute_station_2():
         return
 
     env = os.environ.copy()
+    env["DISPLAY"] = os.environ.get("DISPLAY", ":0.0")
     if not manifest_mode_enabled:
         env["DISABLE_MANIFEST"] = "true"
 
