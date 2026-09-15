@@ -317,15 +317,28 @@ async function processFile(page, filePath, isFirstFile = false) {
     const page = await browser.newPage();
     await setDownload(page, INPUT);
 
+function findFileInTree(dir, targetName) {
+    if (!fs.existsSync(dir)) return false;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+        if (entry.isDirectory()) {
+            if (findFileInTree(path.join(dir, entry.name), targetName)) return true;
+        } else if (entry.name.toLowerCase() === targetName.toLowerCase()) {
+            return true;
+        }
+    }
+    return false;
+}
+
     let isFirst = true;
     for (const file of files) {
         const fileBaseName = path.parse(file).name;
         const targetSvgName = `${fileBaseName}.svg`;
         const svgInInput = path.join(INPUT, targetSvgName);
-        const svgInStock = path.join(STOCK_READY, targetSvgName);
+        const existsInStock = findFileInTree(STOCK_READY, targetSvgName);
 
         // CEK ABSEN SVG: Jika file SVG sudah pernah terunduh (di folder input atau stock_ready), SKIP!
-        if (fs.existsSync(svgInInput) || fs.existsSync(svgInStock)) {
+        if (fs.existsSync(svgInInput) || existsInStock) {
             console.log(`[SKIP ABSEN SVG] File ${targetSvgName} sudah ada. Melewati ${file}...`);
             const src = path.join(INPUT, file);
             if (fs.existsSync(src)) {

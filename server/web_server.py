@@ -739,9 +739,64 @@ def execute_station_4(gemini_url=None, batch_size=5):
         current_proc_st4.wait()
         current_proc_st4 = None
 
+    organize_stock_ready_batches(items_per_batch=30)
+
     current_job["station_4"]["running"] = False
-    current_job["station_4"]["log"] = "Stasiun 4: Selesai! Metadata terinjeksi & Master CSV diperbarui."
+    current_job["station_4"]["log"] = "Stasiun 4: Selesai! Metadata terinjeksi & Berkas dikelompokkan ke stock_ready/ (Grup 30 Stock)."
     broadcast_sse("update", {"job": current_job, "stats": stock_stats})
+
+def organize_stock_ready_batches(items_per_batch=30):
+    """
+    Moves deliverables from output/ to stock_ready/batch_XXX/ (grouped into 30 stock items per subfolder).
+    """
+    if not os.path.exists(OUTPUT_DIR):
+        return
+
+    output_files = [f for f in os.listdir(OUTPUT_DIR) if f.lower().endswith((".eps", ".jpg", ".jpeg", ".svg"))]
+    if not output_files:
+        return
+
+    stem_groups = {}
+    for f in output_files:
+        stem = os.path.splitext(f)[0].replace("_bad_two", "").replace("_bad_three", "").replace("_pattern", "").replace("_single", "")
+        if stem not in stem_groups:
+            stem_groups[stem] = []
+        stem_groups[stem].append(f)
+
+    os.makedirs(STOCK_READY_DIR, exist_ok=True)
+    existing_batches = sorted([d for d in os.listdir(STOCK_READY_DIR) if os.path.isdir(os.path.join(STOCK_READY_DIR, d)) and d.startswith("batch_")])
+
+    batch_idx = 1
+    if existing_batches:
+        last_batch = existing_batches[-1]
+        try:
+            batch_idx = int(last_batch.split("batch_")[1])
+        except ValueError:
+            batch_idx = len(existing_batches)
+
+    def count_stems_in_batch(batch_path):
+        if not os.path.exists(batch_path): return 0
+        bfiles = os.listdir(batch_path)
+        stems = set([os.path.splitext(bf)[0].replace("_bad_two", "").replace("_bad_three", "").replace("_pattern", "").replace("_single", "") for bf in bfiles])
+        return len(stems)
+
+    current_batch_dir = os.path.join(STOCK_READY_DIR, f"batch_{batch_idx:03d}")
+    os.makedirs(current_batch_dir, exist_ok=True)
+
+    sorted_stems = sorted(stem_groups.keys(), key=lambda s: s.lower())
+
+    for stem in sorted_stems:
+        if count_stems_in_batch(current_batch_dir) >= items_per_batch:
+            batch_idx += 1
+            current_batch_dir = os.path.join(STOCK_READY_DIR, f"batch_{batch_idx:03d}")
+            os.makedirs(current_batch_dir, exist_ok=True)
+
+        for fname in stem_groups[stem]:
+            src = os.path.join(OUTPUT_DIR, fname)
+            dst = os.path.join(current_batch_dir, fname)
+            if os.path.isfile(src):
+                if os.path.exists(dst): os.remove(dst)
+                shutil.move(src, dst)
 
 current_proc_st0 = None
 current_proc_st2 = None
