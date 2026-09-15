@@ -3,7 +3,9 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const fs = require("fs");
 const path = require("path");
 
-puppeteer.use(StealthPlugin());
+if (!process.env.DISPLAY) {
+    process.env.DISPLAY = ":0.0";
+}
 
 const ENGINE_ROOT = "/home/panjikali/Projects/vector_engine";
 const INPUT = path.join(ENGINE_ROOT, "input");
@@ -120,7 +122,7 @@ async function processFile(page, filePath, isFirstFile = false) {
     if (isFirstFile || !page.url().includes("vectorizer.ai")) {
         console.log("   [+] Membuka halaman awal Vectorizer.ai...");
         await page.goto(SITE, { waitUntil: "networkidle2", timeout: 0 });
-        await wait(4000);
+        await wait(6000);
     } else {
         console.log("   [+] Menggulir ke #app-starter-drop-zone (DRAG NEXT IMAGE HERE)...");
         await page.evaluate(() => {
@@ -128,7 +130,7 @@ async function processFile(page, filePath, isFirstFile = false) {
             if (dropZone) dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
             else window.scrollTo(0, document.body.scrollHeight || 600);
         }).catch(() => {});
-        await wait(6500);
+        await wait(8500);
     }
 
     if (await checkForCaptcha(page)) {
@@ -145,7 +147,7 @@ async function processFile(page, filePath, isFirstFile = false) {
     }
     await input.uploadFile(filePath);
     console.log("Uploading...");
-    await wait(5000);
+    await wait(7000);
 
     if (!isFirstFile && oldUrl.includes("vectorizer.ai")) {
         console.log("   [+] Menunggu perpindahan ke URL gambar baru...");
@@ -155,8 +157,8 @@ async function processFile(page, filePath, isFirstFile = false) {
     await page.waitForFunction(() => location.pathname.includes("/edit"), { timeout: 0 });
     console.log("Vectorization complete.");
     
-    // EKSTRA SABAR: Jeda 11 detik sebelum mengeklik apa pun agar halaman stabil
-    await wait(11000);
+    // EKSTRA SABAR: Jeda 13 detik sebelum mengeklik apa pun agar halaman stabil
+    await wait(13000);
 
     if (await checkForCaptcha(page)) {
         const captchaPath = path.join(ENGINE_ROOT, "server", "static", "captcha_screenshot.png");
@@ -181,7 +183,7 @@ async function processFile(page, filePath, isFirstFile = false) {
     }
     
     // Waktu tunggu agar panel/halaman download sempurna terbuka
-    await wait(11000); 
+    await wait(13000); 
 
     // 🎯 Snapshot foto folder SEBELUM tombol download diklik agar deteksi instan 100%
     const before = new Set(fs.readdirSync(OUTPUT));
@@ -268,9 +270,9 @@ async function processFile(page, filePath, isFirstFile = false) {
         console.log(`[MODE UJI COBA] File ${fileName} tetap tersimpan di folder input/ (tidak dipindahkan).`);
     }
 
-    // 🎯 JEDA 17 DETIK SEBELUM MEMPROSES GAMBAR BENIKUTNYA
-    console.log(`[JEDA SABAR 17s] ⏳ Menunggu 17 detik sebelum memasukkan gambar berikutnya ke Vectorizer...`);
-    await wait(17000);
+    // 🎯 JEDA 19 DETIK SEBELUM MEMPROSES GAMBAR BENIKUTNYA
+    console.log(`[JEDA SABAR 19s] ⏳ Menunggu 19 detik sebelum memasukkan gambar berikutnya ke Vectorizer...`);
+    await wait(19000);
 }
 
 (async () => {
