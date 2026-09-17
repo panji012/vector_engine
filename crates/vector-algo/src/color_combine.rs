@@ -55,7 +55,7 @@ impl ColorCombiner {
 
         if enable_badge_grouping && !is_exploded_stencil {
             let clusters = crate::badge_cluster::BadgeDetector::detect_badges(doc, 12.0);
-            if !clusters.is_empty() {
+            if clusters.len() >= 2 {
                 let mut combined_doc = VectorDocument::new();
                 combined_doc.width = doc.width;
                 combined_doc.height = doc.height;
@@ -132,16 +132,12 @@ impl ColorCombiner {
                         (tier, idx)
                     });
 
-                    // Group sorted paths within this badge cluster by quantized dominant color key
-                    let mut color_order: Vec<String> = Vec::new();
-                    let mut color_map: std::collections::HashMap<String, VectorPath> =
-                        std::collections::HashMap::new();
+                    // Group sorted paths within this badge cluster by merging adjacent paths of identical color/stroke properties
+                    let mut cluster_paths: Vec<VectorPath> = Vec::new();
 
                     for &idx in &sorted_indices {
                         let path = &doc.paths[idx];
                         let bbox = path.bounding_box();
-                        let area = (bbox.2 - bbox.0).abs() * (bbox.3 - bbox.1).abs();
-                        let is_container = max_area > 0.0 && (area / max_area) >= 0.05;
 
                         let effective_fill = match path.fill.as_deref() {
                             Some(f) if !f.is_empty() && f != "none" => {
@@ -194,20 +190,23 @@ impl ColorCombiner {
                             }
                         }
 
-                        let color_key = format!(
-                            "fill:{}_stroke:{}_sw:{:?}_fr:{:?}",
-                            effective_fill.as_deref().unwrap_or("none").trim(),
-                            path.stroke.as_deref().unwrap_or("none").trim(),
-                            path.stroke_width,
-                            path.fill_rule
-                        );
+                        let norm_fill = effective_fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                        let norm_stroke = path.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
 
-                        if let Some(compound) = color_map.get_mut(&color_key) {
+                        let can_merge_with_last = if let Some(last_path) = cluster_paths.last_mut() {
+                            let last_fill = last_path.fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                            let last_stroke = last_path.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                            last_fill == norm_fill && last_stroke == norm_stroke && last_path.stroke_width == path.stroke_width
+                        } else {
+                            false
+                        };
+
+                        if can_merge_with_last {
+                            let last_path = cluster_paths.last_mut().unwrap();
                             for cmd in &path.commands {
-                                compound.add_command(cmd.clone());
+                                last_path.add_command(cmd.clone());
                             }
                         } else {
-                            color_order.push(color_key.clone());
                             let mut new_path = VectorPath::new(None);
                             new_path.fill = effective_fill;
                             new_path.stroke = path.stroke.clone();
@@ -218,20 +217,17 @@ impl ColorCombiner {
                             for cmd in &path.commands {
                                 new_path.add_command(cmd.clone());
                             }
-                            color_map.insert(color_key, new_path);
+                            cluster_paths.push(new_path);
                         }
                     }
 
-                    for (color_idx, color_key) in color_order.iter().enumerate() {
-                        if let Some(mut combined_path) = color_map.remove(color_key) {
-                            if combined_path.fill_rule.is_none() {
-                                combined_path.fill_rule = Some("evenodd".to_string());
-                            }
-                            combined_path.id =
-                                Some(format!("badge_{}_color_{}", cluster.badge_id, color_idx + 1));
-                            combined_doc.paths.push(combined_path);
-                            num_groups += 1;
+                    for (color_idx, mut combined_path) in cluster_paths.into_iter().enumerate() {
+                        if combined_path.fill_rule.is_none() {
+                            combined_path.fill_rule = Some("evenodd".to_string());
                         }
+                        combined_path.id = Some(format!("badge_{}_layer_{}", cluster.badge_id, color_idx + 1));
+                        combined_doc.paths.push(combined_path);
+                        num_groups += 1;
                     }
                 }
 
@@ -254,8 +250,6 @@ impl ColorCombiner {
         combined_doc.height = doc.height;
         combined_doc.view_box = doc.view_box;
 
-        let mut color_order: Vec<String> = Vec::new();
-        let mut color_map: std::collections::HashMap<String, VectorPath> = std::collections::HashMap::new();
         let mut input_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut num_groups = 0;
         let mut group_details = Vec::new();
@@ -291,32 +285,43 @@ impl ColorCombiner {
 
             let effective_fill = match path.fill.as_deref() {
                 Some(f) if !f.is_empty() && f != "none" => Some(f.to_string()),
-                _ => {
-                    if path.stroke.is_none() {
-                        bg_color_opt.clone()
-                    } else {
-                        path.fill.clone()
-                    }
-                }
+                _ => path.fill.clone(),
             };
 
+            let norm_fill = effective_fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+            let norm_stroke = path.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
             let color_key = format!(
                 "fill:{}_stroke:{}_sw:{:?}_fr:{:?}",
-                effective_fill.as_deref().unwrap_or("none").trim(),
-                path.stroke.as_deref().unwrap_or("none").trim(),
+                norm_fill,
+                norm_stroke,
                 path.stroke_width,
                 path.fill_rule
             );
 
             *input_counts.entry(color_key.clone()).or_insert(0) += 1;
 
-            if let Some(compound) = color_map.get_mut(&color_key) {
-                for cmd in &path.commands {
-                    compound.add_command(cmd.clone());
+            let can_merge_with_last = if let Some(last_path) = combined_doc.paths.last_mut() {
+                if last_path.group_id != usize::MAX {
+                    let last_fill = last_path.fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                    let last_stroke = last_path.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                    last_fill == norm_fill
+                        && last_stroke == norm_stroke
+                        && last_path.stroke_width == path.stroke_width
+                } else {
+                    false
                 }
             } else {
-                color_order.push(color_key.clone());
-                let mut new_path = VectorPath::new(None);
+                false
+            };
+
+            if can_merge_with_last {
+                let last_path = combined_doc.paths.last_mut().unwrap();
+                for cmd in &path.commands {
+                    last_path.add_command(cmd.clone());
+                }
+            } else {
+                num_groups += 1;
+                let mut new_path = VectorPath::new(Some(format!("layer_{}", num_groups)));
                 new_path.fill = effective_fill;
                 new_path.stroke = path.stroke.clone();
                 new_path.stroke_width = path.stroke_width;
@@ -325,23 +330,7 @@ impl ColorCombiner {
                 for cmd in &path.commands {
                     new_path.add_command(cmd.clone());
                 }
-                color_map.insert(color_key, new_path);
-            }
-        }
-
-        for (layer_idx, color_key) in color_order.iter().enumerate() {
-            if let Some(mut path) = color_map.remove(color_key) {
-                if path.fill_rule.is_none() {
-                    path.fill_rule = Some("evenodd".to_string());
-                }
-                path.id = Some(format!("layer_{}", layer_idx + 1));
-                combined_doc.paths.push(path.clone());
-                group_details.push(ColorGroupDetail {
-                    fill_color: path.fill.clone().unwrap_or_else(|| "none".to_string()),
-                    input_paths: *input_counts.get(color_key).unwrap_or(&0),
-                    output_paths: 1,
-                });
-                num_groups += 1;
+                combined_doc.paths.push(new_path);
             }
         }
 

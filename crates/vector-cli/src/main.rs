@@ -127,6 +127,8 @@ struct ProfileConfig {
     gap: f64,
     min_area_px: f64,
     max_area_px: f64,
+    export_single: bool,
+    export_trio: bool,
     pattern_enable: bool,
     pattern_style: String,
     pattern_slant_offset_ratio: f64,
@@ -305,9 +307,10 @@ fn process_file(
     let profile_msg = format!("Selected Profile: '{}' ({} Colors)", prof_name, color_count);
     println!("  🎨 {}", color_magenta(&profile_msg, args.clean));
 
-    // Extract variables with command overrides
-    let outset_distance = args.distance.unwrap_or(prof.distance);
-    let simplify_tolerance = args.tolerance.unwrap_or(prof.tolerance);
+    // Extract variables with command overrides (Default distance & tolerance to 0.0 in single mode to preserve pristine shapes)
+    let is_single_only = args.single && !args.double && !args.triple && !args.pattern;
+    let outset_distance = args.distance.unwrap_or(if is_single_only { 0.0 } else { prof.distance });
+    let simplify_tolerance = args.tolerance.unwrap_or(if is_single_only { 0.0 } else { prof.tolerance });
     let sil_threshold = args.silhouette_threshold.unwrap_or(prof.threshold);
     let min_nodes = args.min_nodes.unwrap_or(prof.min_nodes);
     let line_art = args.line_art.unwrap_or(prof.line_art);
@@ -380,8 +383,9 @@ fn process_file(
         // Phase 3: Color Isolation & Silhouette
         let p3_start = Instant::now();
         let mut original_doc = outset_doc.clone();
-        if prof.color_merge_threshold > 0.0 {
-            merge_similar_colors_in_doc(&mut original_doc, prof.color_merge_threshold);
+        let color_merge_thresh = if is_single_only { 0.0 } else { prof.color_merge_threshold };
+        if color_merge_thresh > 0.0 {
+            merge_similar_colors_in_doc(&mut original_doc, color_merge_thresh);
         }
 
         let mut sil_input_doc = original_doc.clone();
@@ -425,7 +429,8 @@ fn process_file(
 
         let mode_specified = args.single || args.double || args.triple || args.pattern;
         if !mode_specified {
-            do_double = true;
+            do_single = prof.export_single;
+            do_double = prof.export_trio;
             do_pattern = prof.pattern_enable;
         }
     }
@@ -626,6 +631,8 @@ fn load_profiles(config_path: Option<&PathBuf>) -> (ProfileConfig, ProfileConfig
         gap: 50.0,
         min_area_px: 19000000.0,
         max_area_px: 22000000.0,
+        export_single: true,
+        export_trio: true,
         pattern_enable: true,
         pattern_style: "brick_wall".to_string(),
         pattern_slant_offset_ratio: -0.5,
@@ -654,6 +661,8 @@ fn load_profiles(config_path: Option<&PathBuf>) -> (ProfileConfig, ProfileConfig
         gap: 50.0,
         min_area_px: 18000000.0,
         max_area_px: 22000000.0,
+        export_single: true,
+        export_trio: true,
         pattern_enable: false,
         pattern_style: "slanted_left".to_string(),
         pattern_slant_offset_ratio: -0.5,
@@ -740,6 +749,8 @@ fn load_profiles(config_path: Option<&PathBuf>) -> (ProfileConfig, ProfileConfig
                         "color_merge_threshold" => prof.color_merge_threshold = val.parse::<f64>().unwrap_or(prof.color_merge_threshold),
                         "min_nodes" => prof.min_nodes = val.parse::<usize>().unwrap_or(prof.min_nodes),
                         "line_art" => prof.line_art = val.parse::<bool>().unwrap_or(prof.line_art),
+                        "export_single" => prof.export_single = val.parse::<bool>().unwrap_or(prof.export_single),
+                        "export_trio" => prof.export_trio = val.parse::<bool>().unwrap_or(prof.export_trio),
                         "bg_color" => prof.bg_color = val.to_string(),
                         "fg_color" => prof.fg_color = val.to_string(),
                         "invert" => prof.invert = val.parse::<bool>().unwrap_or(prof.invert),

@@ -8,6 +8,7 @@ Dokumen ini memuat catatan lengkap progress pengembangan, pencapaian fitur, peng
 
 | Tanggal | Fitur / Komponen | Status | Hasil & Kecepatan |
 |---|---|---|---|
+| **2026-09-15** | **Arsitektur 3-Folder & Batch Grouping 30 Stock** | ✅ **Selesai** | Penyederhanaan arsitektur folder menjadi 3 folder murni (`input/`, `output/`, `stock_ready/`). Pengecekan Absensi mandiri di setiap Node via manifest/file check. Otomatisasi grouping 30 stok per sub-folder (`stock_ready/batch_001/`, `batch_002/`, dst.) siap upload microstock. Menghapus folder perantara `vectorizer_svg/`, `input_processed/`, dan `input_failed/`. |
 | **2026-09-08** | **Stasiun 0: AI Concept Remixer Pro** | ✅ **Selesai** | Integrasi Puppeteer Gemini AI Canvas untuk remiks gambar lokal/HTTP URL (Pinterest). Otomatis generate stok JPG berurutan ke `input/` (`vector_stock_XXXX.jpg`) untuk diproses Node 2. |
 | **2026-09-07** | **5-Node ComfyUI Web Dashboard Graph & UI Controls** | ✅ **Selesai** | Membangun UI visual 5-Node ComfyUI Graph (`http://localhost:8000`), mengintegrasikan Node 0-4, kontrol penuh `config_silhouette.json`, tombol penghenti darurat (`🛑 Cancel Queue`), serta perhitungan antrean real-time otomatis. |
 | **2026-09-07** | **Stasiun 4: AI Metadata & ExifTool Injector** | ✅ **Selesai** | Integrasi otomatisasi Puppeteer stealth Gemini AI Canvas untuk analisis visi batch gambar, ekstraksi Title/Description/Keywords, injeksi metadata fisik ke `.eps` & `.jpg` via ExifTool, dan pencatatan master log ke `master_katalog.csv`. |

@@ -1058,32 +1058,7 @@
           </div>
         </div>
 
-        <div>
-          <label class="claude-label">Mode Ekspor Deliverables:</label>
-          <select id="exportModeSelect">
-            <option value="auto" selected>🤖 Auto Profile (config_silhouette.json: Pattern & 3-Panel)</option>
-            <option value="pattern">🎨 Seamless Pattern Only (--pattern)</option>
-            <option value="double">📊 Stock Presentation Board Only (2/3 Panel bad_two)</option>
-            <option value="single">🖼️ Single Output Only (--single)</option>
-          </select>
-        </div>
 
-        <div>
-          <label class="claude-label">Pilih Style Seamless Pattern (Phase 5):</label>
-          <select id="patternStyleSelect">
-            <option value="brick_wall" selected>brick_wall (Susunan Bata Horizontal)</option>
-            <option value="slanted_left">slanted_left (Miring Kiri -50%)</option>
-            <option value="slanted_right">slanted_right (Miring Kanan +50%)</option>
-            <option value="half_drop_vertical">half_drop_vertical (Half-drop Kolom Vertikal)</option>
-            <option value="diamond_stagger">diamond_stagger (Matriks Belah Ketupat)</option>
-            <option value="checker_pinwheel">checker_pinwheel (Rotasi Kincir 90°)</option>
-            <option value="scale_rhythm">scale_rhythm (Irama Skala Ganda 100% & 75%)</option>
-            <option value="wave_sine_offset">wave_sine_offset (Gelombang Sinus)</option>
-            <option value="kaleidoscope_mirror">kaleidoscope_mirror (Simetri Cermin 4 Arah)</option>
-            <option value="grid">grid (Grid Lurus Sejajar NxM)</option>
-            <option value="alternating">alternating (Cermin Selang-Seling)</option>
-          </select>
-        </div>
 
         <!-- Advanced Engine Profile Config Details -->
         <details style="background: var(--colors-canvas); border: 1px solid var(--colors-hairline); border-radius: var(--radius-md); padding: 16px;">
@@ -1094,7 +1069,7 @@
           <div class="cfg-tab-bar" style="margin-top: 12px;">
             <button type="button" class="cfg-tab-btn active" id="tabBtnLow" onclick="switchCfgTab('low')">🎨 Low-Color</button>
             <button type="button" class="cfg-tab-btn" id="tabBtnMulti" onclick="switchCfgTab('multi')">📊 Multi-Color</button>
-            <button type="button" class="cfg-tab-btn" id="tabBtnJson" onclick="switchCfgTab('json')">📝 JSON Editor</button>
+            <button type="button" class="cfg-tab-btn" id="tabBtnBadge" onclick="switchCfgTab('badge')">🏷️ Badge Single</button>
           </div>
 
           <!-- TAB 1: LOW-COLOR PROFILE -->
@@ -1115,37 +1090,69 @@
               <span>Mode Line Art Only</span>
             </label>
 
-            <label class="checkbox-group">
-              <input type="checkbox" id="lowPatternEnableCheck" checked>
-              <span>Enable Pattern Export</span>
-            </label>
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 0.8125rem; font-weight: 600; color: var(--colors-primary);">📦 Mode Ekspor Hasil Node 3:</span>
+              <label class="checkbox-group">
+                <input type="checkbox" id="lowExportSingleCheck" checked>
+                <span>🖼️ Ekspor Single Image (Gambar Tunggal Vektor Asli)</span>
+              </label>
 
-            <div class="form-grid-2">
-              <div>
-                <label class="claude-label">Grid Repeat X:</label>
-                <input type="number" id="gridXInput" value="3" min="1" max="10">
-              </div>
-              <div>
-                <label class="claude-label">Grid Repeat Y:</label>
-                <input type="number" id="gridYInput" value="3" min="1" max="10">
-              </div>
+              <label class="checkbox-group">
+                <input type="checkbox" id="lowExportTrioCheck" checked>
+                <span>📐 Ekspor Trio 3-in-1 Set (Papan Trio 3-Panel Preview)</span>
+              </label>
+
+              <label class="checkbox-group">
+                <input type="checkbox" id="lowPatternEnableCheck" checked>
+                <span>🧩 Ekspor Seamless Pattern (Pola Ubin Repeat)</span>
+              </label>
             </div>
 
-            <label class="checkbox-group">
-              <input type="checkbox" id="wraparoundCheck" checked>
-              <span>Wraparound Seamless</span>
-            </label>
-
-            <div class="form-grid-2">
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 10px; display: flex; flex-direction: column; gap: 10px;">
               <div>
-                <label class="claude-label">Tile Gap (px):</label>
-                <input type="number" id="gapInput" value="50.0" step="5">
+                <label class="claude-label">Pattern Style:</label>
+                <select id="lowPatternStyleSelect" class="form-control" style="width: 100%;">
+                  <option value="brick_wall">Brick Wall (Half-Drop Horizontal)</option>
+                  <option value="half_drop_vertical">Half-Drop Vertikal</option>
+                  <option value="grid">Grid Lurus Sejajar</option>
+                  <option value="slanted_left">Miring Ke Kiri (Slanted Left)</option>
+                  <option value="slanted_right">Miring Ke Kanan (Slanted Right)</option>
+                  <option value="diamond_stagger">Diamond Matrix</option>
+                  <option value="checker_pinwheel">Rotasi Kincir 90° (Checker Pinwheel)</option>
+                  <option value="scale_rhythm">Irama Skala Ganda (Scale Rhythm)</option>
+                  <option value="wave_sine_offset">Gelombang Sinus (Wave Sine)</option>
+                  <option value="kaleidoscope_mirror">Quad Mirroring (Kaleidoscope)</option>
+                  <option value="alternating">Cermin Selang-Seling (Alternating)</option>
+                </select>
               </div>
-              <div>
-                <label class="claude-label">Background Color:</label>
-                <div style="display: flex; gap: 8px;">
-                  <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 50px; min-height: 44px; padding: 2px;">
-                  <input type="text" id="bgColorText" value="#FFFFFF">
+
+              <div class="form-grid-2">
+                <div>
+                  <label class="claude-label">Grid Repeat X:</label>
+                  <input type="number" id="gridXInput" value="3" min="1" max="10">
+                </div>
+                <div>
+                  <label class="claude-label">Grid Repeat Y:</label>
+                  <input type="number" id="gridYInput" value="3" min="1" max="10">
+                </div>
+              </div>
+
+              <label class="checkbox-group">
+                <input type="checkbox" id="wraparoundCheck" checked>
+                <span>Wraparound Seamless (Duplikasi Tepi)</span>
+              </label>
+
+              <div class="form-grid-2">
+                <div>
+                  <label class="claude-label">Tile Gap (px):</label>
+                  <input type="number" id="gapInput" value="50.0" step="5">
+                </div>
+                <div>
+                  <label class="claude-label">Background Color:</label>
+                  <div style="display: flex; gap: 8px;">
+                    <input type="color" id="bgColorPicker" value="#FFFFFF" style="width: 50px; min-height: 44px; padding: 2px;">
+                    <input type="text" id="bgColorText" value="#FFFFFF">
+                  </div>
                 </div>
               </div>
             </div>
@@ -1164,10 +1171,40 @@
               </div>
             </div>
 
-            <label class="checkbox-group">
-              <input type="checkbox" id="multiPatternEnableCheck">
-              <span>Enable Pattern Export for Multi-Color</span>
-            </label>
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 0.8125rem; font-weight: 600; color: var(--colors-primary);">📦 Mode Ekspor Hasil Multi-Color:</span>
+              <label class="checkbox-group">
+                <input type="checkbox" id="multiExportSingleCheck" checked>
+                <span>🖼️ Ekspor Single Image (Gambar Tunggal Vektor Asli)</span>
+              </label>
+
+              <label class="checkbox-group">
+                <input type="checkbox" id="multiExportTrioCheck" checked>
+                <span>📐 Ekspor Trio 3-in-1 Set (Papan Trio 3-Panel Preview)</span>
+              </label>
+
+              <label class="checkbox-group">
+                <input type="checkbox" id="multiPatternEnableCheck">
+                <span>🧩 Ekspor Seamless Pattern (Pola Ubin Repeat)</span>
+              </label>
+            </div>
+
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 10px;">
+              <label class="claude-label">Pattern Style Multi-Color:</label>
+              <select id="multiPatternStyleSelect" class="form-control" style="width: 100%;">
+                <option value="brick_wall">Brick Wall (Half-Drop Horizontal)</option>
+                <option value="half_drop_vertical">Half-Drop Vertikal</option>
+                <option value="grid">Grid Lurus Sejajar</option>
+                <option value="slanted_left">Miring Ke Kiri (Slanted Left)</option>
+                <option value="slanted_right">Miring Ke Kanan (Slanted Right)</option>
+                <option value="diamond_stagger">Diamond Matrix</option>
+                <option value="checker_pinwheel">Rotasi Kincir 90° (Checker Pinwheel)</option>
+                <option value="scale_rhythm">Irama Skala Ganda (Scale Rhythm)</option>
+                <option value="wave_sine_offset">Gelombang Sinus (Wave Sine)</option>
+                <option value="kaleidoscope_mirror">Quad Mirroring (Kaleidoscope)</option>
+                <option value="alternating">Cermin Selang-Seling (Alternating)</option>
+              </select>
+            </div>
 
             <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 10px;">
               <label class="claude-label" style="color: var(--colors-primary);">Board Panel 2 (Greyscale Lum):</label>
@@ -1190,10 +1227,46 @@
             </div>
           </div>
 
-          <!-- TAB 3: RAW JSON EDITOR -->
-          <div id="cfgPanelJson" style="display: none; flex-direction: column; gap: 10px;">
-            <textarea id="rawJsonArea" style="height: 160px;"></textarea>
-            <button type="button" class="btn btn-secondary" onclick="saveRawJsonConfig()">💾 Simpan JSON Direct</button>
+          <!-- TAB 3: BADGE SINGLE SETTINGS -->
+          <div id="cfgPanelBadge" style="display: none; flex-direction: column; gap: 12px;">
+            <div style="border-bottom: 1px dashed var(--colors-hairline); padding-bottom: 8px;">
+              <span style="font-size: 0.875rem; font-weight: 600; color: var(--colors-ink);">🏷️ Pengaturan Deteksi & Grouping Badge Single (Multi-Pulau):</span>
+            </div>
+
+            <label class="checkbox-group">
+              <input type="checkbox" id="badgeEnableGroupingCheck" checked>
+              <span>Aktifkan Deteksi Spasial & Grouping Badge Multi-Pulau</span>
+            </label>
+
+            <div class="form-grid-2">
+              <div>
+                <label class="claude-label">Margin Jarak Deteksi Pulau (px):</label>
+                <input type="number" id="badgeMarginInput" value="12.0" step="1" min="1" max="100">
+              </div>
+              <div>
+                <label class="claude-label">Minimal Path per Badge:</label>
+                <input type="number" id="badgeMinPathsInput" value="1" min="1" max="50">
+              </div>
+            </div>
+
+            <div style="border-top: 1px dashed var(--colors-hairline); padding-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+              <span style="font-size: 0.8125rem; font-weight: 600; color: var(--colors-primary);">🏷️ Fitur Output Layer Group Badge:</span>
+              
+              <label class="checkbox-group">
+                <input type="checkbox" id="badgeSvgGroupCheck" checked>
+                <span>Pemisahan Tag SVG &lt;g id="badge_X"&gt; per Pulau</span>
+              </label>
+
+              <label class="checkbox-group">
+                <input type="checkbox" id="badgeEpsGroupCheck" checked>
+                <span>Pemisahan Layer Group Adobe Illustrator (badge_X) di EPS</span>
+              </label>
+
+              <label class="checkbox-group">
+                <input type="checkbox" id="badgePreserveFontsCheck" checked>
+                <span>Jaga Mulus Teks / Font Khusus pada Layout Stiker Multi-Badge</span>
+              </label>
+            </div>
           </div>
 
           <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--colors-hairline); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -1349,6 +1422,8 @@
           if (document.getElementById('lowMaxColorsInput')) document.getElementById('lowMaxColorsInput').value = low.max_colors ?? 5;
           if (document.getElementById('lowThresholdInput')) document.getElementById('lowThresholdInput').value = low.threshold ?? 0.50;
           if (document.getElementById('lineArtCheck')) document.getElementById('lineArtCheck').checked = !!low.line_art;
+          if (document.getElementById('lowExportSingleCheck')) document.getElementById('lowExportSingleCheck').checked = low.export_single !== false;
+          if (document.getElementById('lowExportTrioCheck')) document.getElementById('lowExportTrioCheck').checked = low.export_trio !== false;
           if (document.getElementById('gapInput')) document.getElementById('gapInput').value = low.gap ?? 50.0;
           if (document.getElementById('bgColorText')) document.getElementById('bgColorText').value = low.bg_color || "#FFFFFF";
           if (document.getElementById('bgColorPicker')) document.getElementById('bgColorPicker').value = low.bg_color || "#FFFFFF";
@@ -1356,7 +1431,7 @@
           if (low.pattern_config) {
             const pc = low.pattern_config;
             if (document.getElementById('lowPatternEnableCheck')) document.getElementById('lowPatternEnableCheck').checked = !!pc.enable;
-            if (document.getElementById('patternStyleSelect')) document.getElementById('patternStyleSelect').value = pc.style || "brick_wall";
+            if (document.getElementById('lowPatternStyleSelect')) document.getElementById('lowPatternStyleSelect').value = pc.style || "brick_wall";
             if (document.getElementById('gridXInput')) document.getElementById('gridXInput').value = pc.grid_x ?? 3;
             if (document.getElementById('gridYInput')) document.getElementById('gridYInput').value = pc.grid_y ?? 3;
             if (document.getElementById('wraparoundCheck')) document.getElementById('wraparoundCheck').checked = !!pc.wraparound_seamless;
@@ -1367,8 +1442,11 @@
           const multi = data.multi_color_bad_two;
           if (document.getElementById('multiMinColorsInput')) document.getElementById('multiMinColorsInput').value = multi.min_colors ?? 6;
           if (document.getElementById('multiThresholdInput')) document.getElementById('multiThresholdInput').value = multi.threshold ?? 0.95;
+          if (document.getElementById('multiExportSingleCheck')) document.getElementById('multiExportSingleCheck').checked = multi.export_single !== false;
+          if (document.getElementById('multiExportTrioCheck')) document.getElementById('multiExportTrioCheck').checked = multi.export_trio !== false;
           if (multi.pattern_config) {
             if (document.getElementById('multiPatternEnableCheck')) document.getElementById('multiPatternEnableCheck').checked = !!multi.pattern_config.enable;
+            if (document.getElementById('multiPatternStyleSelect')) document.getElementById('multiPatternStyleSelect').value = multi.pattern_config.style || "brick_wall";
           }
           if (multi.middle_panel) {
             if (document.getElementById('midMinLumInput')) document.getElementById('midMinLumInput').value = multi.middle_panel.min_luminance ?? 0.20;
@@ -1380,6 +1458,16 @@
             if (document.getElementById('rightExcludeBgCheck')) document.getElementById('rightExcludeBgCheck').checked = !!multi.right_panel.exclude_background;
           }
         }
+
+        if (data.badge_config) {
+          const bc = data.badge_config;
+          if (document.getElementById('badgeEnableGroupingCheck')) document.getElementById('badgeEnableGroupingCheck').checked = bc.enable_grouping !== false;
+          if (document.getElementById('badgeMarginInput')) document.getElementById('badgeMarginInput').value = bc.margin ?? 12.0;
+          if (document.getElementById('badgeMinPathsInput')) document.getElementById('badgeMinPathsInput').value = bc.min_paths ?? 1;
+          if (document.getElementById('badgeSvgGroupCheck')) document.getElementById('badgeSvgGroupCheck').checked = bc.svg_grouping !== false;
+          if (document.getElementById('badgeEpsGroupCheck')) document.getElementById('badgeEpsGroupCheck').checked = bc.eps_grouping !== false;
+          if (document.getElementById('badgePreserveFontsCheck')) document.getElementById('badgePreserveFontsCheck').checked = bc.preserve_fonts !== false;
+        }
       } catch (err) {
         console.error("Failed to load config_silhouette:", err);
       }
@@ -1388,26 +1476,25 @@
     function switchCfgTab(tab) {
       const pLow = document.getElementById('cfgPanelLow');
       const pMulti = document.getElementById('cfgPanelMulti');
-      const pJson = document.getElementById('cfgPanelJson');
+      const pBadge = document.getElementById('cfgPanelBadge');
       
       const bLow = document.getElementById('tabBtnLow');
       const bMulti = document.getElementById('tabBtnMulti');
-      const bJson = document.getElementById('tabBtnJson');
+      const bBadge = document.getElementById('tabBtnBadge');
 
       if (pLow) pLow.style.display = tab === 'low' ? 'flex' : 'none';
       if (pMulti) pMulti.style.display = tab === 'multi' ? 'flex' : 'none';
-      if (pJson) pJson.style.display = tab === 'json' ? 'flex' : 'none';
+      if (pBadge) pBadge.style.display = tab === 'badge' ? 'flex' : 'none';
 
       if (bLow) bLow.classList.toggle('active', tab === 'low');
       if (bMulti) bMulti.classList.toggle('active', tab === 'multi');
-      if (bJson) bJson.classList.toggle('active', tab === 'json');
+      if (bBadge) bBadge.classList.toggle('active', tab === 'badge');
     }
 
     function getStation3Config() {
       const color = document.getElementById('bgColorText') ? document.getElementById('bgColorText').value.trim() : '#FFFFFF';
       return {
         export_mode: document.getElementById('exportModeSelect') ? document.getElementById('exportModeSelect').value : "auto",
-        pattern_style: document.getElementById('patternStyleSelect') ? document.getElementById('patternStyleSelect').value : "brick_wall",
         grid_x: parseInt(document.getElementById('gridXInput') ? document.getElementById('gridXInput').value : 3),
         grid_y: parseInt(document.getElementById('gridYInput') ? document.getElementById('gridYInput').value : 3),
         wraparound: document.getElementById('wraparoundCheck') ? document.getElementById('wraparoundCheck').checked : true,
@@ -1416,17 +1503,27 @@
         line_art: document.getElementById('lineArtCheck') ? document.getElementById('lineArtCheck').checked : false,
         low_max_colors: parseInt(document.getElementById('lowMaxColorsInput') ? document.getElementById('lowMaxColorsInput').value : 5),
         low_threshold: parseFloat(document.getElementById('lowThresholdInput') ? document.getElementById('lowThresholdInput').value : 0.50),
+        low_export_single: document.getElementById('lowExportSingleCheck') ? document.getElementById('lowExportSingleCheck').checked : true,
+        low_export_trio: document.getElementById('lowExportTrioCheck') ? document.getElementById('lowExportTrioCheck').checked : true,
         low_pattern_enable: document.getElementById('lowPatternEnableCheck') ? document.getElementById('lowPatternEnableCheck').checked : true,
-        low_pattern_style: document.getElementById('patternStyleSelect') ? document.getElementById('patternStyleSelect').value : "brick_wall",
+        low_pattern_style: document.getElementById('lowPatternStyleSelect') ? document.getElementById('lowPatternStyleSelect').value : "brick_wall",
         multi_min_colors: parseInt(document.getElementById('multiMinColorsInput') ? document.getElementById('multiMinColorsInput').value : 6),
         multi_threshold: parseFloat(document.getElementById('multiThresholdInput') ? document.getElementById('multiThresholdInput').value : 0.95),
+        multi_export_single: document.getElementById('multiExportSingleCheck') ? document.getElementById('multiExportSingleCheck').checked : true,
+        multi_export_trio: document.getElementById('multiExportTrioCheck') ? document.getElementById('multiExportTrioCheck').checked : true,
         multi_pattern_enable: document.getElementById('multiPatternEnableCheck') ? document.getElementById('multiPatternEnableCheck').checked : false,
-        multi_pattern_style: document.getElementById('patternStyleSelect') ? document.getElementById('patternStyleSelect').value : "brick_wall",
+        multi_pattern_style: document.getElementById('multiPatternStyleSelect') ? document.getElementById('multiPatternStyleSelect').value : "brick_wall",
         mid_min_lum: parseFloat(document.getElementById('midMinLumInput') ? document.getElementById('midMinLumInput').value : 0.20),
         mid_max_lum: parseFloat(document.getElementById('midMaxLumInput') ? document.getElementById('midMaxLumInput').value : 0.62),
         right_min_lum: parseFloat(document.getElementById('rightMinLumInput') ? document.getElementById('rightMinLumInput').value : 0.20),
         right_max_lum: parseFloat(document.getElementById('rightMaxLumInput') ? document.getElementById('rightMaxLumInput').value : 0.62),
         right_exclude_bg: document.getElementById('rightExcludeBgCheck') ? document.getElementById('rightExcludeBgCheck').checked : true,
+        badge_enable_grouping: document.getElementById('badgeEnableGroupingCheck') ? document.getElementById('badgeEnableGroupingCheck').checked : true,
+        badge_margin: parseFloat(document.getElementById('badgeMarginInput') ? document.getElementById('badgeMarginInput').value : 12.0),
+        badge_min_paths: parseInt(document.getElementById('badgeMinPathsInput') ? document.getElementById('badgeMinPathsInput').value : 1),
+        badge_svg_grouping: document.getElementById('badgeSvgGroupCheck') ? document.getElementById('badgeSvgGroupCheck').checked : true,
+        badge_eps_grouping: document.getElementById('badgeEpsGroupCheck') ? document.getElementById('badgeEpsGroupCheck').checked : true,
+        badge_preserve_fonts: document.getElementById('badgePreserveFontsCheck') ? document.getElementById('badgePreserveFontsCheck').checked : true,
         gemini_url: document.getElementById('geminiUrlInput') ? document.getElementById('geminiUrlInput').value.trim() : "",
         batch_size: parseInt(document.getElementById('batchSizeInput') ? document.getElementById('batchSizeInput').value : 5)
       };
@@ -1443,6 +1540,8 @@
               max_colors: config.low_max_colors,
               threshold: config.low_threshold,
               line_art: config.line_art,
+              export_single: config.low_export_single,
+              export_trio: config.low_export_trio,
               gap: config.gap,
               bg_color: config.bg_color,
               pattern_config: {
@@ -1456,6 +1555,8 @@
             multi_color_bad_two: {
               min_colors: config.multi_min_colors,
               threshold: config.multi_threshold,
+              export_single: config.multi_export_single,
+              export_trio: config.multi_export_trio,
               pattern_config: {
                 enable: config.multi_pattern_enable,
                 style: config.multi_pattern_style,
@@ -1472,6 +1573,14 @@
                 max_luminance: config.right_max_lum,
                 exclude_background: config.right_exclude_bg
               }
+            },
+            badge_config: {
+              enable_grouping: config.badge_enable_grouping,
+              margin: config.badge_margin,
+              min_paths: config.badge_min_paths,
+              svg_grouping: config.badge_svg_grouping,
+              eps_grouping: config.badge_eps_grouping,
+              preserve_fonts: config.badge_preserve_fonts
             }
           })
         });

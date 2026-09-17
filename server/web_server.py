@@ -948,8 +948,8 @@ def execute_station_2():
         for line in current_proc_st2.stdout:
             line_clean = line.strip()
             if line_clean:
-                current_job["station_2"]["log"] = f"[Vectorizer] {line_clean}"
-                if "Downloaded:" in line_clean:
+                current_job["station_2"]["log"] = line_clean
+                if "Downloaded" in line_clean:
                     stock_stats["station_2_success"] += 1
                 elif "Failed:" in line_clean:
                     stock_stats["station_2_failed"] += 1

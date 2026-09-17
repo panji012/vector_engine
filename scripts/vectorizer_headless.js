@@ -1,5 +1,6 @@
 const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
+puppeteer.use(StealthPlugin());
 const fs = require("fs");
 const path = require("path");
 
@@ -108,19 +109,20 @@ async function nativeClickText(page, text) {
     return false;
 }
 
-async function processFile(page, filePath, isFirstFile = false) {
+async function processFile(page, filePath, isFirstFile = false, fileIndex = 0, totalFiles = 0) {
     const fileName = path.basename(filePath);
     const fileBaseName = path.parse(fileName).name;
-    console.log(`\nProcessing: ${fileName}`);
+    const countStr = totalFiles > 0 ? `[${fileIndex + 1}/${totalFiles}] ` : "";
+    console.log(`\n📦 ${countStr}Memproses: ${fileName}`);
 
     const oldUrl = page.url();
 
     if (isFirstFile || !page.url().includes("vectorizer.ai")) {
-        console.log("   [+] Membuka halaman awal Vectorizer.ai...");
+        console.log("   🌐 Membuka situs Vectorizer.ai...");
         await page.goto(SITE, { waitUntil: "networkidle2", timeout: 0 });
         await wait(6000);
     } else {
-        console.log("   [+] Menggulir ke #app-starter-drop-zone (DRAG NEXT IMAGE HERE)...");
+        console.log("   📜 Menggulir ke area Drop Zone...");
         await page.evaluate(() => {
             const dropZone = document.querySelector('#app-starter-drop-zone') || document.querySelector('.drop_target');
             if (dropZone) dropZone.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -132,7 +134,7 @@ async function processFile(page, filePath, isFirstFile = false) {
     if (await checkForCaptcha(page)) {
         const captchaPath = path.join(ENGINE_ROOT, "server", "static", "captcha_screenshot.png");
         await page.screenshot({ path: captchaPath, fullPage: false });
-        console.error(`[CAPTCHA_DETECTED] 🤖 Terdeteksi CAPTCHA/Cloudflare di halaman awal! Screenshot tersimpan.`);
+        console.error(`🤖 CAPTCHA Terdeteksi! Screenshot tersimpan.`);
         throw new Error("CAPTCHA_DETECTED: Terdeteksi CAPTCHA di Vectorizer.ai");
     }
 
@@ -142,28 +144,43 @@ async function processFile(page, filePath, isFirstFile = false) {
         input = await page.waitForSelector('input[type="file"]', { timeout: 60000 });
     }
     await input.uploadFile(filePath);
-    console.log("Uploading...");
+    console.log("   📤 Mengunggah berkas JPG ke server...");
     await wait(7000);
 
     if (!isFirstFile && oldUrl.includes("vectorizer.ai")) {
-        console.log("   [+] Menunggu perpindahan ke URL gambar baru...");
+        console.log("   ⏳ Menunggu server membuat halaman gambar baru...");
         await page.waitForFunction(prev => location.href !== prev, { timeout: 60000 }, oldUrl).catch(() => {});
     }
 
-    await page.waitForFunction(() => location.pathname.includes("/edit"), { timeout: 0 });
-    console.log("Vectorization complete.");
+    console.log("   ⚡ AI Vectorizer sedang memproses gambar...");
+    try {
+        await page.waitForFunction(() => location.pathname.includes("/edit"), { timeout: 90000 });
+    } catch (wErr) {
+        const captchaPath = path.join(ENGINE_ROOT, "server", "static", "captcha_screenshot.png");
+        try { await page.screenshot({ path: captchaPath, fullPage: false }); } catch (sErr) {}
+        const isCaptcha = await checkForCaptcha(page);
+        if (isCaptcha) {
+            console.error(`🤖 CAPTCHA / Cloudflare Terdeteksi di Vectorizer.ai!`);
+            throw new Error("CAPTCHA_DETECTED: Terdeteksi CAPTCHA di Vectorizer.ai");
+        } else {
+            console.error(`❌ Timeout (90s) menunggu pemrosesan gambar di Vectorizer.ai.`);
+            throw new Error("VECTORIZE_TIMEOUT: Timeout 90 detik saat mengolah gambar di Vectorizer.ai");
+        }
+    }
+    console.log("   ✨ Vektorisasi AI Selesai!");
     
     // EKSTRA SABAR: Jeda 13 detik sebelum mengeklik apa pun agar halaman stabil
+    console.log("   ⏳ Menstabilkan halaman canvas (13s)...");
     await wait(13000);
 
     if (await checkForCaptcha(page)) {
         const captchaPath = path.join(ENGINE_ROOT, "server", "static", "captcha_screenshot.png");
         await page.screenshot({ path: captchaPath, fullPage: false });
-        console.error(`[CAPTCHA_DETECTED] 🤖 Terdeteksi CAPTCHA saat konversi! Screenshot tersimpan.`);
+        console.error(`🤖 CAPTCHA Terdeteksi saat konversi!`);
         throw new Error("CAPTCHA_DETECTED: Terdeteksi CAPTCHA di Vectorizer.ai");
     }
 
-    console.log("Opening download panel...");
+    console.log("   🎨 Membuka panel unduh...");
     let panelOpened = await page.evaluate(() => {
         const btn = document.querySelector('#App-DownloadLink');
         if (btn) {
@@ -174,18 +191,15 @@ async function processFile(page, filePath, isFirstFile = false) {
     });
 
     if (!panelOpened) {
-        console.log("   [!] ID tidak ditemukan, menggunakan klik native cadangan (Download/Unduh)...");
         panelOpened = await nativeClickText(page, "Unduh") || await nativeClickText(page, "Download");
     }
     
-    // Waktu tunggu agar panel/halaman download sempurna terbuka
+    console.log("   ⏳ Memuat panel unduhan (13s)...");
     await wait(13000); 
 
-    // 🎯 Snapshot foto folder SEBELUM tombol download diklik agar deteksi instan 100%
     const before = new Set(fs.readdirSync(INPUT));
 
-    console.log("Downloading SVG...");
-    // 🎯 KLIK FINAL DOWNLOAD: Tembak tombol biru '⬇ Download' / #App-DownloadButton
+    console.log("   ⬇️ Mengklik tombol unduh SVG...");
     let downloadClicked = await page.evaluate(() => {
         const btn = document.querySelector('#App-DownloadButton');
         if (btn) {
@@ -207,7 +221,6 @@ async function processFile(page, filePath, isFirstFile = false) {
     });
 
     if (!downloadClicked) {
-        console.log("   [!] Tombol/ID tidak ditemukan, menggunakan klik teks cadangan (Unduh/Download)...");
         downloadClicked = await nativeClickText(page, "Unduh") || await nativeClickText(page, "Download");
     }
 
@@ -224,7 +237,7 @@ async function processFile(page, filePath, isFirstFile = false) {
             break;
         }
         if (i % 2 === 0) {
-            console.log(`   [...] Menunggu file SVG terunduh... (${(i + 1) * 2}s)`);
+            console.log(`   ⏳ Menunggu unduhan berkas SVG... (${(i + 1) * 2}s)`);
         }
     }
 
@@ -236,15 +249,14 @@ async function processFile(page, filePath, isFirstFile = false) {
 
         const isRealCaptcha = await checkForCaptcha(page);
         if (isRealCaptcha) {
-            console.error(`[CAPTCHA_DETECTED] 🤖 Terdeteksi CAPTCHA / Cloudflare di Vectorizer.ai! Screenshot tersimpan.`);
+            console.error(`🤖 CAPTCHA Terdeteksi di Vectorizer.ai!`);
             throw new Error("CAPTCHA_DETECTED: Terdeteksi CAPTCHA di Vectorizer.ai");
         } else {
-            console.error(`[DOWNLOAD_TIMEOUT] Kendala unduh berkas (Bukan CAPTCHA). Screenshot tersimpan.`);
+            console.error(`❌ Gagal mengunduh berkas SVG.`);
             throw new Error("DOWNLOAD_TIMEOUT: Gagal mengunduh SVG dari Vectorizer.ai");
         }
     }
 
-    // ENSURE SVG FILE IS RENAMED TO MATCH INPUT FILE EXACTLY IN INPUT FOLDER
     const targetSvgName = `${fileBaseName}.svg`;
     const actualSvgPath = path.join(INPUT, downloadedFile);
     const targetSvgPath = path.join(INPUT, targetSvgName);
@@ -253,16 +265,14 @@ async function processFile(page, filePath, isFirstFile = false) {
         if (fs.existsSync(targetSvgPath)) fs.unlinkSync(targetSvgPath);
         fs.renameSync(actualSvgPath, targetSvgPath);
     }
-    console.log(`Downloaded SVG to input/: ${targetSvgName}`);
+    console.log(`✅ BERHASIL: Berkas ${targetSvgName} tersimpan di input/`);
 
-    // Hapus JPG mentah jika SVG sudah berhasil terbuat
     if (fs.existsSync(filePath) && fs.existsSync(targetSvgPath)) {
         try { fs.unlinkSync(filePath); } catch (e) {}
     }
     updateManifestRecord(fileName, "success");
 
-    // 🎯 JEDA 19 DETIK SEBELUM MEMPROSES GAMBAR BENIKUTNYA
-    console.log(`[JEDA SABAR 19s] ⏳ Menunggu 19 detik sebelum memasukkan gambar berikutnya ke Vectorizer...`);
+    console.log(`⏳ Istirahat 19s sebelum gambar berikutnya (Human Pacing)...`);
     await wait(19000);
 }
 
@@ -278,25 +288,13 @@ async function processFile(page, filePath, isFirstFile = false) {
         try { fs.rmSync(p, { force: true, recursive: true }); } catch (e) {}
     });
 
-    const isHeadless = process.env.HEADLESS === "true";
+    const execPath = fs.existsSync("/usr/bin/chromium-browser") ? "/usr/bin/chromium-browser" : "/snap/bin/chromium";
     const browser = await puppeteer.launch({
-        headless: isHeadless ? "new" : false, // Default: GUI VISUAL MODE (Dapat dilihat di layar)
-        executablePath: "/snap/bin/chromium",
+        headless: "new",
+        executablePath: execPath,
         userDataDir: PROFILE,
         defaultViewport: null,
-        ignoreDefaultArgs: ["--enable-automation"],
-        args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-blink-features=AutomationControlled",
-            `--user-data-dir=${PROFILE}`,
-            "--profile-directory=Default",
-            "--disable-profile-picker",
-            "--no-first-run",
-            "--no-default-browser-check",
-            "--start-maximized"
-        ]
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--window-size=1920,1080"]
     });
 
     const manifest = loadManifest();
@@ -311,10 +309,11 @@ async function processFile(page, filePath, isFirstFile = false) {
     // STRICT NATURAL NUMERIC SORT (0001, 0002, 0003... 0046)
     files.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
 
-    console.log(`[ABSENSI BATCH] 🟢 Absensi Batch STATUS: ON (Memproses ${files.length} file gambar ke folder input/)`);
+    console.log(`🟢 Absensi Batch STATUS: ON (Memproses ${files.length} file gambar ke folder input/)`);
 
     // OPEN ONE SINGLE REUSED BROWSER TAB FOR THE ENTIRE BATCH
     const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     await setDownload(page, INPUT);
 
 function findFileInTree(dir, targetName) {
@@ -350,7 +349,7 @@ function findFileInTree(dir, targetName) {
 
         const filePath = path.join(INPUT, file);
         try {
-            await processFile(page, filePath, isFirst);
+            await processFile(page, filePath, isFirst, files.indexOf(file), files.length);
             isFirst = false;
         } catch (err) {
             console.error(`Failed: ${file} | ${err.message}`);

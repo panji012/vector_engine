@@ -79,45 +79,7 @@ impl BackgroundProcessor {
             false // Single-path document (like Design_027 stencil) is NEVER a badge grid!
         };
 
-        // 2. For single-artwork documents (NOT badge grid), split compound stencil subpaths
-        if !is_badge_grid {
-            let mut exploded_paths = Vec::new();
-            for path in &doc.paths {
-                let subpaths = split_path_commands(&path.commands);
-                if subpaths.len() <= 1 {
-                    exploded_paths.push(path.clone());
-                } else {
-                    let sub0_bbox = get_commands_bbox(&subpaths[0]);
-                    let sub0_w = (sub0_bbox.2 - sub0_bbox.0).abs();
-                    let sub0_h = (sub0_bbox.3 - sub0_bbox.1).abs();
-                    let is_compound_bg = canvas_w > 0.0 && canvas_h > 0.0
-                        && sub0_w >= 0.50 * canvas_w
-                        && sub0_h >= 0.50 * canvas_h;
-
-                    if !is_compound_bg {
-                        exploded_paths.push(path.clone());
-                    } else {
-                        let bg_color_hex = path.fill.clone().unwrap_or_else(|| "#FFFFFF".to_string());
-                        let bg_is_light = is_color_light(&bg_color_hex);
-                        let contrast_fg = if bg_is_light { "#000000".to_string() } else { "#FFFFFF".to_string() };
-
-                        for (sub_idx, cmds) in subpaths.into_iter().enumerate() {
-                            let mut sub_path = VectorPath::new(Some(format!("stencil_sub_{}", sub_idx + 1)));
-                            sub_path.stroke = path.stroke.clone();
-                            sub_path.stroke_width = path.stroke_width;
-                            sub_path.fill_rule = path.fill_rule.clone();
-                            sub_path.group_id = path.group_id;
-                            sub_path.badge_id = path.badge_id;
-                            sub_path.commands = cmds;
-
-                            sub_path.fill = path.fill.clone();
-                            exploded_paths.push(sub_path);
-                        }
-                    }
-                }
-            }
-            doc.paths = exploded_paths;
-        }
+        // 2. Preserve compound paths without exploding subpaths to maintain valid SVG cutouts & fill-rules
 
         // 3. Find candidate background path & color using accurate full-canvas bounding box scan
         let mut bg_indices = Vec::new();

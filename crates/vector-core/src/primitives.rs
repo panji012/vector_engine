@@ -327,7 +327,10 @@ impl VectorDocument {
             };
             let stroke_attr = path.stroke.as_deref().map(|s| format!(" stroke=\"{}\"", s)).unwrap_or_default();
             let sw_attr = path.stroke_width.map(|sw| format!(" stroke-width=\"{}\"", sw)).unwrap_or_default();
-            let fr_attr = path.fill_rule.as_deref().map(|fr| format!(" fill-rule=\"{}\"", fr)).unwrap_or_default();
+            let fr_attr = match path.fill_rule.as_deref() {
+                Some(fr) => format!(" fill-rule=\"{}\"", fr),
+                None => " fill-rule=\"evenodd\"".to_string(),
+            };
 
             let d_data = path.to_svg_path_data();
 

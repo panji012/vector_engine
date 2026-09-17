@@ -65,36 +65,34 @@ impl PathReconstructor {
         enable_simplify: bool,
         simplify_tolerance: f64,
     ) -> Vec<VectorPath> {
-        let mut compound_paths = Vec::new();
-        
-        // Iterating sequentially and combining adjacent identical colors and badge_ids strictly preserves draw order
-        let mut current_key: Option<(Option<String>, Option<usize>)> = None;
-        let mut current_contours: Vec<(PolygonRing, RingRole)> = Vec::new();
-        
+        let mut color_order: Vec<(Option<String>, Option<usize>)> = Vec::new();
+        let mut color_map: std::collections::HashMap<(String, Option<usize>), Vec<(PolygonRing, RingRole)>> = std::collections::HashMap::new();
+
         for (color, badge_id, contours) in color_contour_pairs {
-            let key = (color.clone(), badge_id);
-            if let Some(ref k) = current_key {
-                if *k == key {
-                    current_contours.extend(contours);
-                    continue;
-                } else {
-                    // Finalize current path
-                    if !current_contours.is_empty() {
-                        compound_paths.push(Self::build_compound_path(k.0.clone(), k.1, &current_contours, enable_simplify, simplify_tolerance));
-                    }
-                    current_contours.clear();
+            let normalized_color = color.map(|c| c.trim().to_uppercase());
+            let norm_key = (normalized_color.clone().unwrap_or_else(|| "NONE".to_string()), badge_id);
+            let pair_key = (normalized_color, badge_id);
+
+            if !color_map.contains_key(&norm_key) {
+                color_order.push(pair_key.clone());
+                color_map.insert(norm_key.clone(), Vec::new());
+            }
+
+            if let Some(entry) = color_map.get_mut(&norm_key) {
+                entry.extend(contours);
+            }
+        }
+
+        let mut compound_paths = Vec::new();
+        for (color, badge_id) in color_order {
+            let norm_key = (color.clone().unwrap_or_else(|| "NONE".to_string()), badge_id);
+            if let Some(contours) = color_map.remove(&norm_key) {
+                if !contours.is_empty() {
+                    compound_paths.push(Self::build_compound_path(color, badge_id, &contours, enable_simplify, simplify_tolerance));
                 }
             }
-            current_key = Some(key);
-            current_contours.extend(contours);
         }
-        
-        if let Some(k) = current_key {
-            if !current_contours.is_empty() {
-                compound_paths.push(Self::build_compound_path(k.0, k.1, &current_contours, enable_simplify, simplify_tolerance));
-            }
-        }
-        
+
         compound_paths
     }
 

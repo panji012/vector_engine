@@ -37,10 +37,11 @@ impl SvgParser {
             vector_doc.view_box = parse_viewbox(vb);
         }
 
-        let root_style = resolve_node_style(&root, &InheritedStyle::default());
+        let css_class_styles = parse_css_styles(&doc);
+        let root_style = resolve_node_style(&root, &InheritedStyle::default(), &css_class_styles);
         let mut group_id_counter = 0;
 
-        Self::traverse_node(&root, &mut vector_doc, &root_style, 0, None, &mut group_id_counter, Transform::default())?;
+        Self::traverse_node(&root, &mut vector_doc, &root_style, 0, None, &mut group_id_counter, Transform::default(), &css_class_styles)?;
 
         Ok(vector_doc)
     }
@@ -195,13 +196,13 @@ impl SvgParser {
         Ok(d_out)
     }
 
-    fn traverse_node(node: &Node, doc: &mut VectorDocument, current_style: &InheritedStyle, current_group_id: usize, current_badge_id: Option<usize>, group_id_counter: &mut usize, current_transform: Transform) -> CoreResult<()> {
+    fn traverse_node(node: &Node, doc: &mut VectorDocument, current_style: &InheritedStyle, current_group_id: usize, current_badge_id: Option<usize>, group_id_counter: &mut usize, current_transform: Transform, css_class_map: &std::collections::HashMap<String, InheritedStyle>) -> CoreResult<()> {
         for child in node.children() {
             if !child.is_element() {
                 continue;
             }
 
-            let mut child_style = resolve_node_style(&child, current_style);
+            let mut child_style = resolve_node_style(&child, current_style, css_class_map);
             
             // Calculate child's accumulated transform
             let mut child_transform = current_transform;
@@ -276,7 +277,7 @@ impl SvgParser {
                         .and_then(|id| id.strip_prefix("badge_"))
                         .and_then(|num_str| num_str.parse::<usize>().ok())
                         .or(current_badge_id);
-                    Self::traverse_node(&child, doc, &child_style, next_group_id, next_badge_id, group_id_counter, child_transform)?;
+                    Self::traverse_node(&child, doc, &child_style, next_group_id, next_badge_id, group_id_counter, child_transform, css_class_map)?;
                 }
                 _ => {}
             }
@@ -342,35 +343,29 @@ impl SvgParser {
             Point2D::new(tx, ty)
         };
 
-        // Generate unit circle bezier curves centered at (0.0, 0.0) with radius 1.0
-        // Start at right-center (1.0, 0.0)
         path.add_command(PathCommand::MoveTo(apply_tx(1.0, 0.0)));
 
-        // Top-Right Arc
         path.add_command(PathCommand::CubicTo {
-            control1: apply_tx(1.0, -k),
-            control2: apply_tx(k, -1.0),
-            end: apply_tx(0.0, -1.0),
-        });
-
-        // Top-Left Arc
-        path.add_command(PathCommand::CubicTo {
-            control1: apply_tx(-k, -1.0),
-            control2: apply_tx(-1.0, -k),
-            end: apply_tx(-1.0, 0.0),
-        });
-
-        // Bottom-Left Arc
-        path.add_command(PathCommand::CubicTo {
-            control1: apply_tx(-1.0, k),
-            control2: apply_tx(-k, 1.0),
+            control1: apply_tx(1.0, k),
+            control2: apply_tx(k, 1.0),
             end: apply_tx(0.0, 1.0),
         });
 
-        // Bottom-Right Arc
         path.add_command(PathCommand::CubicTo {
-            control1: apply_tx(k, 1.0),
-            control2: apply_tx(1.0, k),
+            control1: apply_tx(-k, 1.0),
+            control2: apply_tx(-1.0, k),
+            end: apply_tx(-1.0, 0.0),
+        });
+
+        path.add_command(PathCommand::CubicTo {
+            control1: apply_tx(-1.0, -k),
+            control2: apply_tx(-k, -1.0),
+            end: apply_tx(0.0, -1.0),
+        });
+
+        path.add_command(PathCommand::CubicTo {
+            control1: apply_tx(k, -1.0),
+            control2: apply_tx(1.0, -k),
             end: apply_tx(1.0, 0.0),
         });
 
@@ -404,35 +399,29 @@ impl SvgParser {
             Point2D::new(tx, ty)
         };
 
-        // Generate unit circle bezier curves centered at (0.0, 0.0) with radius 1.0
-        // Start at right-center (1.0, 0.0)
         path.add_command(PathCommand::MoveTo(apply_tx(1.0, 0.0)));
 
-        // Top-Right Arc
         path.add_command(PathCommand::CubicTo {
-            control1: apply_tx(1.0, -k),
-            control2: apply_tx(k, -1.0),
-            end: apply_tx(0.0, -1.0),
-        });
-
-        // Top-Left Arc
-        path.add_command(PathCommand::CubicTo {
-            control1: apply_tx(-k, -1.0),
-            control2: apply_tx(-1.0, -k),
-            end: apply_tx(-1.0, 0.0),
-        });
-
-        // Bottom-Left Arc
-        path.add_command(PathCommand::CubicTo {
-            control1: apply_tx(-1.0, k),
-            control2: apply_tx(-k, 1.0),
+            control1: apply_tx(1.0, k),
+            control2: apply_tx(k, 1.0),
             end: apply_tx(0.0, 1.0),
         });
 
-        // Bottom-Right Arc
         path.add_command(PathCommand::CubicTo {
-            control1: apply_tx(k, 1.0),
-            control2: apply_tx(1.0, k),
+            control1: apply_tx(-k, 1.0),
+            control2: apply_tx(-1.0, k),
+            end: apply_tx(-1.0, 0.0),
+        });
+
+        path.add_command(PathCommand::CubicTo {
+            control1: apply_tx(-1.0, -k),
+            control2: apply_tx(-k, -1.0),
+            end: apply_tx(0.0, -1.0),
+        });
+
+        path.add_command(PathCommand::CubicTo {
+            control1: apply_tx(k, -1.0),
+            control2: apply_tx(1.0, -k),
             end: apply_tx(1.0, 0.0),
         });
 
@@ -507,11 +496,51 @@ fn apply_style_to_path(path: &mut VectorPath, style: &InheritedStyle) {
     path.fill_rule = style.fill_rule.clone();
 }
 
-fn resolve_node_style(node: &Node, parent_style: &InheritedStyle) -> InheritedStyle {
+fn parse_css_styles(doc: &Document) -> std::collections::HashMap<String, InheritedStyle> {
+    let mut class_map = std::collections::HashMap::new();
+
+    for node in doc.descendants() {
+        if node.is_element() && node.tag_name().name() == "style" {
+            if let Some(text) = node.text() {
+                let mut current_selectors: Vec<String> = Vec::new();
+                for token in text.split(&['{', '}'][..]) {
+                    let token = token.trim();
+                    if token.contains(':') {
+                        let (fill, stroke, stroke_width, fill_rule) = parse_style_attribute(token);
+                        let style = InheritedStyle { fill, stroke, stroke_width, fill_rule };
+                        for selector in &current_selectors {
+                            let clean_sel = selector.trim_start_matches('.').trim();
+                            if !clean_sel.is_empty() {
+                                class_map.insert(clean_sel.to_string(), style.clone());
+                            }
+                        }
+                        current_selectors.clear();
+                    } else if !token.is_empty() {
+                        current_selectors = token.split(',').map(|s| s.trim().to_string()).collect();
+                    }
+                }
+            }
+        }
+    }
+
+    class_map
+}
+
+fn resolve_node_style(node: &Node, parent_style: &InheritedStyle, css_class_map: &std::collections::HashMap<String, InheritedStyle>) -> InheritedStyle {
     let (style_fill, style_stroke, style_sw, style_fr) = node
         .attribute("style")
         .map(parse_style_attribute)
         .unwrap_or((None, None, None, None));
+
+    let class_style = node.attribute("class").and_then(|cls_str| {
+        for cls in cls_str.split_whitespace() {
+            let clean_cls = cls.trim_start_matches('.');
+            if let Some(st) = css_class_map.get(clean_cls) {
+                return Some(st.clone());
+            }
+        }
+        None
+    });
 
     let fill = match node.attribute("fill") {
         Some("inherit") => parent_style.fill.clone(),
@@ -519,7 +548,7 @@ fn resolve_node_style(node: &Node, parent_style: &InheritedStyle) -> InheritedSt
         None => match style_fill {
             Some(ref val) if val == "inherit" => parent_style.fill.clone(),
             Some(val) => Some(val),
-            None => parent_style.fill.clone(),
+            None => class_style.as_ref().and_then(|cs| cs.fill.clone()).or_else(|| parent_style.fill.clone()),
         },
     };
 
@@ -529,7 +558,7 @@ fn resolve_node_style(node: &Node, parent_style: &InheritedStyle) -> InheritedSt
         None => match style_stroke {
             Some(ref val) if val == "inherit" => parent_style.stroke.clone(),
             Some(val) => Some(val),
-            None => parent_style.stroke.clone(),
+            None => class_style.as_ref().and_then(|cs| cs.stroke.clone()).or_else(|| parent_style.stroke.clone()),
         },
     };
 
@@ -537,12 +566,14 @@ fn resolve_node_style(node: &Node, parent_style: &InheritedStyle) -> InheritedSt
         .attribute("stroke-width")
         .and_then(parse_length)
         .or(style_sw)
+        .or_else(|| class_style.as_ref().and_then(|cs| cs.stroke_width))
         .or(parent_style.stroke_width);
 
     let fill_rule = node
         .attribute("fill-rule")
         .map(String::from)
         .or(style_fr)
+        .or_else(|| class_style.as_ref().and_then(|cs| cs.fill_rule.clone()))
         .or_else(|| parent_style.fill_rule.clone());
 
     InheritedStyle {

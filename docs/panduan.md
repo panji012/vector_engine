@@ -115,3 +115,28 @@ Tampilan log di terminal akan menjadi **100% bersih, rapi, tanpa kotak glyph**:
 - **`slanted_right`** *(Miring kanan)*
 - **`grid`** *(Grid lurus)*
 - **`alternating`** *(Cermin selang-seling)*
+
+---
+
+## 📁 5. Arsitektur 3-Folder & Sistem Absensi Mandiri per Node
+
+Sistem menggunakan alur 3 folder utama yang ringkas dan mandiri:
+
+1. **`input/` (Folder Bahan Kerja Aktif)**:
+   - Tempat pengunggahan JPG mentah (`vector_stock_0001.jpg`).
+   - **Node 2** mengunduh file `.svg` langsung ke folder `input/` (`vector_stock_0001.svg`).
+   - **Node 3** membaca file `.svg` dari `input/` sebagai bahan olahan geometri.
+
+2. **`output/` (Folder Hasil Olahan Node 3)**:
+   - Tempat Node 3 merender berkas luaran EPS & JPG (Low Color, Full Color, Pattern, Single).
+   - **Node 4** menginjeksi metadata (Title, Description, Keywords) ke berkas EPS & JPG di folder ini.
+
+3. **`stock_ready/` (Folder Stok Siap Upload - Grouping 30 Stock)**:
+   - Setelah Node 4 selesai menginjeksi metadata, berkas dipindahkan ke `stock_ready/`.
+   - Berkas dikelompokkan secara otomatis ke dalam sub-folder per 30 stok (`stock_ready/batch_001/`, `stock_ready/batch_002/`, dst.) sehingga siap di-upload langsung ke platform microstock.
+
+### 🛡️ Sistem Absensi Mandiri (Smart Skip):
+Tiap Node melakukan pengecekan **Absensi (manifest/file check)** secara mandiri:
+- **Node 2**: Jika SVG sudah ada di `input/` atau di `stock_ready/` $\rightarrow$ **SKIP (Absen Pass)**.
+- **Node 3**: Jika EPS/JPG sudah ada di `output/` atau di `stock_ready/` $\rightarrow$ **SKIP (Absen Pass)**.
+- **Node 4**: Mengelompokkan luaran dari `output/` ke sub-folder 30 stok di `stock_ready/`.

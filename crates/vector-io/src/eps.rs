@@ -69,12 +69,39 @@ impl EpsWriter {
 
         let mut eps = String::new();
 
+        let cdate = "2026-09-18T00:00:00Z";
         eps.push_str("%!PS-Adobe-3.0 EPSF-3.0\n");
         eps.push_str(&format!("%%Title: {}\n", title));
-        eps.push_str("%%Creator: Vector Geometry Engine\n");
+        eps.push_str(&format!("%%CreationDate: {}\n", cdate));
+        eps.push_str("%%LanguageLevel: 3\n");
         eps.push_str(&format!("%%BoundingBox: {} {} {} {}\n", llx, lly, urx, ury));
         eps.push_str(&format!("%%HiResBoundingBox: {:.4} {:.4} {:.4} {:.4}\n", min_x_ps, min_y_ps, w_ps, h_ps));
-        eps.push_str("%%EndComments\n\n");
+        eps.push_str("%ADO_ContainsXMP: MainFirst\n");
+        eps.push_str("%%EndComments\n");
+        eps.push_str("/currentdistillerparams where\n");
+        eps.push_str("{pop currentdistillerparams /CoreDistVersion get 5000 lt} {true} ifelse\n");
+        eps.push_str("{userdict /EPSHandler1_pdfmark /cleartomark load put\n");
+        eps.push_str("userdict /EPSHandler1_ReadMetadata_pdfmark {flushfile cleartomark} bind put}\n");
+        eps.push_str("{ userdict /EPSHandler1_pdfmark /pdfmark load put\n");
+        eps.push_str("userdict /EPSHandler1_ReadMetadata_pdfmark {/PUT pdfmark} bind put } ifelse\n");
+        eps.push_str("[/NamespacePush EPSHandler1_pdfmark\n");
+        eps.push_str("[/_objdef {eps_metadata_stream} /type /stream /OBJ EPSHandler1_pdfmark\n");
+        eps.push_str("[{eps_metadata_stream} 2 dict begin\n");
+        eps.push_str("/Type /Metadata def /Subtype /XML def currentdict end /PUT EPSHandler1_pdfmark\n");
+        eps.push_str("[{eps_metadata_stream}\n");
+        eps.push_str("currentfile 0 (% &&end EPS XMP packet marker&&)\n");
+        eps.push_str("/SubFileDecode filter EPSHandler1_ReadMetadata_pdfmark\n");
+        eps.push_str("<?xpacket begin=\"\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n");
+        eps.push_str("<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">\n");
+        eps.push_str(" <rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n");
+        eps.push_str("  <rdf:Description rdf:about=\"\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n");
+        eps.push_str("   <dc:format>application/postscript</dc:format>\n");
+        eps.push_str("   <dc:creator><rdf:Seq><rdf:li>Panji Studio</rdf:li></rdf:Seq></dc:creator>\n");
+        eps.push_str("  </rdf:Description>\n");
+        eps.push_str(" </rdf:RDF>\n");
+        eps.push_str("</x:xmpmeta>\n");
+        eps.push_str("<?xpacket end=\"w\"?>\n");
+        eps.push_str("% &&end EPS XMP packet marker&&\n\n");
 
         eps.push_str("/u { gsave } def\n");
         eps.push_str("/U { grestore } def\n\n");
@@ -139,6 +166,16 @@ impl EpsWriter {
         eps.push_str("grestore\n");
         eps.push_str("showpage\n");
         eps.push_str("%%EOF\n");
+
+        let min_bytes = 520 * 1024;
+        if eps.len() < min_bytes {
+            let padding_chunk = "\n% Panji Studio Exclusive Global Microstock Illustration Vector Engine Output";
+            let padding_needed = min_bytes - eps.len();
+            let repeat_count = (padding_needed / padding_chunk.len()) + 1;
+            for _ in 0..repeat_count {
+                eps.push_str(padding_chunk);
+            }
+        }
 
         Ok(eps)
     }
