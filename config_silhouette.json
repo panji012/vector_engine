@@ -3,13 +3,13 @@
         "max_colors": 5,
         "threshold": 0.5,
         "line_art": false,
-        "export_single": true,
+        "export_single": false,
         "export_trio": false,
         "gap": 50.0,
         "bg_color": "#FFFFFF",
         "pattern_config": {
-            "enable": true,
-            "style": "brick_wall",
+            "enable": false,
+            "style": "wave_sine_offset",
             "grid_x": 3,
             "grid_y": 3,
             "wraparound_seamless": true
@@ -18,7 +18,7 @@
     "multi_color_bad_two": {
         "min_colors": 6,
         "threshold": 0.95,
-        "export_single": true,
+        "export_single": false,
         "export_trio": false,
         "pattern_config": {
             "enable": false,
@@ -39,11 +39,11 @@
         "gap": 50.0
     },
     "badge_config": {
-        "enable_grouping": false,
+        "enable_grouping": true,
         "margin": 12,
         "min_paths": 1,
-        "svg_grouping": false,
-        "eps_grouping": false,
-        "preserve_fonts": false
+        "svg_grouping": true,
+        "eps_grouping": true,
+        "preserve_fonts": true
     }
 }

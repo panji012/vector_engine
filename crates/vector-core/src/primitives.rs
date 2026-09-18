@@ -263,27 +263,6 @@ impl VectorDocument {
             w_attr, h_attr, vb_attr
         );
 
-        let (clip_w, clip_h) = if let Some(vb) = self.view_box {
-            (Some(vb.2 - vb.0), Some(vb.3 - vb.1))
-        } else if self.width.is_some() && self.height.is_some() {
-            (self.width, self.height)
-        } else {
-            (None, None)
-        };
-
-        let has_clip = if let (Some(w), Some(h)) = (clip_w, clip_h) {
-            svg.push_str("  <defs>\n");
-            svg.push_str(&format!(
-                "    <clipPath id=\"canvas-clip\"><rect x=\"0\" y=\"0\" width=\"{}\" height=\"{}\"/></clipPath>\n",
-                w, h
-            ));
-            svg.push_str("  </defs>\n");
-            svg.push_str("  <g clip-path=\"url(#canvas-clip)\">\n");
-            true
-        } else {
-            false
-        };
-
         let mut ordered_paths: Vec<&VectorPath> = Vec::with_capacity(self.paths.len());
         for path in &self.paths {
             if path.badge_id.is_none() {
@@ -311,15 +290,15 @@ impl VectorDocument {
         for path in ordered_paths {
             if path.badge_id != current_badge_group {
                 if current_badge_group.is_some() {
-                    svg.push_str("    </g>\n");
+                    svg.push_str("  </g>\n");
                 }
                 current_badge_group = path.badge_id;
                 if let Some(b_id) = current_badge_group {
-                    svg.push_str(&format!("    <g id=\"badge_{}\">\n", b_id));
+                    svg.push_str(&format!("  <g id=\"badge_{}\">\n", b_id));
                 }
             }
 
-            let indent = if current_badge_group.is_some() { "      " } else { "    " };
+            let indent = if current_badge_group.is_some() { "    " } else { "  " };
             let id_attr = path.id.as_deref().map(|id| format!(" id=\"{}\"", id)).unwrap_or_default();
             let fill_attr = match path.fill.as_deref() {
                 Some(f) => format!(" fill=\"{}\"", f),
@@ -341,10 +320,6 @@ impl VectorDocument {
         }
 
         if current_badge_group.is_some() {
-            svg.push_str("    </g>\n");
-        }
-
-        if has_clip {
             svg.push_str("  </g>\n");
         }
 

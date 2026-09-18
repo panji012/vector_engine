@@ -611,8 +611,54 @@ fn is_svg_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+fn apply_json_profile(val: &serde_json::Value, prof: &mut ProfileConfig) {
+    if val.is_null() {
+        return;
+    }
+    if let Some(v) = val.get("threshold").and_then(|v| v.as_f64()) { prof.threshold = v; }
+    if let Some(v) = val.get("tolerance").and_then(|v| v.as_f64()) { prof.tolerance = v; }
+    if let Some(v) = val.get("distance").and_then(|v| v.as_f64()) { prof.distance = v; }
+    if let Some(v) = val.get("color_merge_threshold").and_then(|v| v.as_f64()) { prof.color_merge_threshold = v; }
+    if let Some(v) = val.get("line_art").and_then(|v| v.as_bool()) { prof.line_art = v; }
+    if let Some(v) = val.get("export_single").and_then(|v| v.as_bool()) { prof.export_single = v; }
+    if let Some(v) = val.get("export_trio").and_then(|v| v.as_bool()) { prof.export_trio = v; }
+    if let Some(v) = val.get("bg_color").and_then(|v| v.as_str()) { prof.bg_color = v.to_string(); }
+    if let Some(v) = val.get("fg_color").and_then(|v| v.as_str()) { prof.fg_color = v.to_string(); }
+    if let Some(v) = val.get("invert").and_then(|v| v.as_bool()) { prof.invert = v; }
+    if let Some(v) = val.get("gap").and_then(|v| v.as_f64()) { prof.gap = v; }
+    if let Some(v) = val.get("min_area_px").and_then(|v| v.as_f64()) { prof.min_area_px = v; }
+    if let Some(v) = val.get("max_area_px").and_then(|v| v.as_f64()) { prof.max_area_px = v; }
+
+    if let Some(pat) = val.get("pattern_config") {
+        if let Some(v) = pat.get("enable").and_then(|v| v.as_bool()) { prof.pattern_enable = v; }
+        if let Some(v) = pat.get("style").and_then(|v| v.as_str()) { prof.pattern_style = v.to_string(); }
+        if let Some(v) = pat.get("slant_offset_ratio").and_then(|v| v.as_f64()) { prof.pattern_slant_offset_ratio = v; }
+        if let Some(v) = pat.get("grid_x").and_then(|v| v.as_u64()) { prof.pattern_grid_x = v as u32; }
+        if let Some(v) = pat.get("grid_y").and_then(|v| v.as_u64()) { prof.pattern_grid_y = v as u32; }
+        if let Some(v) = pat.get("seamless_combine").and_then(|v| v.as_bool()) { prof.pattern_seamless_combine = v; }
+    }
+
+    if let Some(mid) = val.get("middle_panel") {
+        if let Some(v) = mid.get("min_luminance").and_then(|v| v.as_f64()) { prof.middle_panel_min_lum = v; }
+        if let Some(v) = mid.get("max_luminance").and_then(|v| v.as_f64()) { prof.middle_panel_max_lum = v; }
+    }
+
+    if let Some(right) = val.get("right_panel") {
+        if let Some(v) = right.get("min_luminance").and_then(|v| v.as_f64()) { prof.right_panel_min_lum = v; }
+        if let Some(v) = right.get("max_luminance").and_then(|v| v.as_f64()) { prof.right_panel_max_lum = v; }
+    }
+}
+
 fn load_profiles(config_path: Option<&PathBuf>) -> (ProfileConfig, ProfileConfig, PathBuf) {
-    let default_path = PathBuf::from("config/config.yaml");
+    let json_default = PathBuf::from("config_silhouette.json");
+    let yaml_default = PathBuf::from("config/config.yaml");
+
+    let default_path = if json_default.exists() {
+        json_default
+    } else {
+        yaml_default
+    };
+
     let path_to_load = config_path.unwrap_or(&default_path);
 
     let mut low = ProfileConfig {
@@ -676,96 +722,101 @@ fn load_profiles(config_path: Option<&PathBuf>) -> (ProfileConfig, ProfileConfig
     };
 
     if let Ok(content) = fs::read_to_string(path_to_load) {
-        let mut current_profile = "";
-        let mut in_pattern_config = false;
-        let mut in_middle_panel = false;
-        let mut in_right_panel = false;
+        if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&content) {
+            apply_json_profile(&json_val["low_color_bad_two"], &mut low);
+            apply_json_profile(&json_val["multi_color_bad_two"], &mut multi);
+        } else {
+            let mut current_profile = "";
+            let mut in_pattern_config = false;
+            let mut in_middle_panel = false;
+            let mut in_right_panel = false;
 
-        for line in content.lines() {
-            let trimmed = line.trim();
-            if trimmed.starts_with('#') || trimmed.is_empty() {
-                continue;
-            }
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if trimmed.starts_with('#') || trimmed.is_empty() {
+                    continue;
+                }
 
-            let indent = line.len() - line.trim_start().len();
-            if indent <= 4 {
-                in_pattern_config = false;
-                in_middle_panel = false;
-                in_right_panel = false;
-            }
+                let indent = line.len() - line.trim_start().len();
+                if indent <= 4 {
+                    in_pattern_config = false;
+                    in_middle_panel = false;
+                    in_right_panel = false;
+                }
 
-            if trimmed.starts_with("low_color_bad_two:") {
-                current_profile = "low";
-                continue;
-            } else if trimmed.starts_with("multi_color_bad_two:") {
-                current_profile = "multi";
-                continue;
-            } else if trimmed.starts_with("pattern_config:") {
-                in_pattern_config = true;
-                continue;
-            } else if trimmed.starts_with("middle_panel:") {
-                in_middle_panel = true;
-                continue;
-            } else if trimmed.starts_with("right_panel:") {
-                in_right_panel = true;
-                continue;
-            }
+                if trimmed.starts_with("low_color_bad_two:") {
+                    current_profile = "low";
+                    continue;
+                } else if trimmed.starts_with("multi_color_bad_two:") {
+                    current_profile = "multi";
+                    continue;
+                } else if trimmed.starts_with("pattern_config:") {
+                    in_pattern_config = true;
+                    continue;
+                } else if trimmed.starts_with("middle_panel:") {
+                    in_middle_panel = true;
+                    continue;
+                } else if trimmed.starts_with("right_panel:") {
+                    in_right_panel = true;
+                    continue;
+                }
 
-            let parts: Vec<&str> = trimmed.splitn(2, ':').collect();
-            if parts.len() == 2 {
-                let key = parts[0].trim();
-                let val = parts[1].trim().trim_matches('"').trim_matches('\'');
-                let prof = if current_profile == "low" { &mut low } else { &mut multi };
+                let parts: Vec<&str> = trimmed.splitn(2, ':').collect();
+                if parts.len() == 2 {
+                    let key = parts[0].trim();
+                    let val = parts[1].trim().trim_matches('"').trim_matches('\'');
+                    let prof = if current_profile == "low" { &mut low } else { &mut multi };
 
-                if in_pattern_config {
-                    match key {
-                        "enable" => prof.pattern_enable = val.parse::<bool>().unwrap_or(prof.pattern_enable),
-                        "style" => prof.pattern_style = val.to_string(),
-                        "slant_offset_ratio" => prof.pattern_slant_offset_ratio = val.parse::<f64>().unwrap_or(prof.pattern_slant_offset_ratio),
-                        "grid_x" => prof.pattern_grid_x = val.parse::<u32>().unwrap_or(prof.pattern_grid_x),
-                        "grid_y" => prof.pattern_grid_y = val.parse::<u32>().unwrap_or(prof.pattern_grid_y),
-                        "seamless_combine" => prof.pattern_seamless_combine = val.parse::<bool>().unwrap_or(prof.pattern_seamless_combine),
-                        _ => {}
-                    }
-                } else if in_middle_panel {
-                    match key {
-                        "min_luminance" => prof.middle_panel_min_lum = val.parse::<f64>().unwrap_or(prof.middle_panel_min_lum),
-                        "max_luminance" => prof.middle_panel_max_lum = val.parse::<f64>().unwrap_or(prof.middle_panel_max_lum),
-                        _ => {}
-                    }
-                } else if in_right_panel {
-                    match key {
-                        "min_luminance" => prof.right_panel_min_lum = val.parse::<f64>().unwrap_or(prof.right_panel_min_lum),
-                        "max_luminance" => prof.right_panel_max_lum = val.parse::<f64>().unwrap_or(prof.right_panel_max_lum),
-                        _ => {}
-                    }
-                } else {
-                    match key {
-                        "max_colors" => prof.max_colors = val.parse::<usize>().ok(),
-                        "min_colors" => prof.min_colors = val.parse::<usize>().ok(),
-                        "threshold" => prof.threshold = val.parse::<f64>().unwrap_or(prof.threshold),
-                        "tolerance" => prof.tolerance = val.parse::<f64>().unwrap_or(prof.tolerance),
-                        "distance" => prof.distance = val.parse::<f64>().unwrap_or(prof.distance),
-                        "color_merge_threshold" => prof.color_merge_threshold = val.parse::<f64>().unwrap_or(prof.color_merge_threshold),
-                        "min_nodes" => prof.min_nodes = val.parse::<usize>().unwrap_or(prof.min_nodes),
-                        "line_art" => prof.line_art = val.parse::<bool>().unwrap_or(prof.line_art),
-                        "export_single" => prof.export_single = val.parse::<bool>().unwrap_or(prof.export_single),
-                        "export_trio" => prof.export_trio = val.parse::<bool>().unwrap_or(prof.export_trio),
-                        "bg_color" => prof.bg_color = val.to_string(),
-                        "fg_color" => prof.fg_color = val.to_string(),
-                        "invert" => prof.invert = val.parse::<bool>().unwrap_or(prof.invert),
-                        "gap" => prof.gap = val.parse::<f64>().unwrap_or(prof.gap),
-                        "min_area_px" => prof.min_area_px = val.parse::<f64>().unwrap_or(prof.min_area_px),
-                        "max_area_px" => prof.max_area_px = val.parse::<f64>().unwrap_or(prof.max_area_px),
-                        "remove_layers" => {
-                            let clean_val = val.trim_matches('[').trim_matches(']');
-                            if !clean_val.is_empty() {
-                                prof.remove_layers = clean_val.split(',')
-                                    .filter_map(|x| x.trim().parse::<usize>().ok())
-                                    .collect();
-                            }
+                    if in_pattern_config {
+                        match key {
+                            "enable" => prof.pattern_enable = val.parse::<bool>().unwrap_or(prof.pattern_enable),
+                            "style" => prof.pattern_style = val.to_string(),
+                            "slant_offset_ratio" => prof.pattern_slant_offset_ratio = val.parse::<f64>().unwrap_or(prof.pattern_slant_offset_ratio),
+                            "grid_x" => prof.pattern_grid_x = val.parse::<u32>().unwrap_or(prof.pattern_grid_x),
+                            "grid_y" => prof.pattern_grid_y = val.parse::<u32>().unwrap_or(prof.pattern_grid_y),
+                            "seamless_combine" => prof.pattern_seamless_combine = val.parse::<bool>().unwrap_or(prof.pattern_seamless_combine),
+                            _ => {}
                         }
-                        _ => {}
+                    } else if in_middle_panel {
+                        match key {
+                            "min_luminance" => prof.middle_panel_min_lum = val.parse::<f64>().unwrap_or(prof.middle_panel_min_lum),
+                            "max_luminance" => prof.middle_panel_max_lum = val.parse::<f64>().unwrap_or(prof.middle_panel_max_lum),
+                            _ => {}
+                        }
+                    } else if in_right_panel {
+                        match key {
+                            "min_luminance" => prof.right_panel_min_lum = val.parse::<f64>().unwrap_or(prof.right_panel_min_lum),
+                            "max_luminance" => prof.right_panel_max_lum = val.parse::<f64>().unwrap_or(prof.right_panel_max_lum),
+                            _ => {}
+                        }
+                    } else {
+                        match key {
+                            "max_colors" => prof.max_colors = val.parse::<usize>().ok(),
+                            "min_colors" => prof.min_colors = val.parse::<usize>().ok(),
+                            "threshold" => prof.threshold = val.parse::<f64>().unwrap_or(prof.threshold),
+                            "tolerance" => prof.tolerance = val.parse::<f64>().unwrap_or(prof.tolerance),
+                            "distance" => prof.distance = val.parse::<f64>().unwrap_or(prof.distance),
+                            "color_merge_threshold" => prof.color_merge_threshold = val.parse::<f64>().unwrap_or(prof.color_merge_threshold),
+                            "min_nodes" => prof.min_nodes = val.parse::<usize>().unwrap_or(prof.min_nodes),
+                            "line_art" => prof.line_art = val.parse::<bool>().unwrap_or(prof.line_art),
+                            "export_single" => prof.export_single = val.parse::<bool>().unwrap_or(prof.export_single),
+                            "export_trio" => prof.export_trio = val.parse::<bool>().unwrap_or(prof.export_trio),
+                            "bg_color" => prof.bg_color = val.to_string(),
+                            "fg_color" => prof.fg_color = val.to_string(),
+                            "invert" => prof.invert = val.parse::<bool>().unwrap_or(prof.invert),
+                            "gap" => prof.gap = val.parse::<f64>().unwrap_or(prof.gap),
+                            "min_area_px" => prof.min_area_px = val.parse::<f64>().unwrap_or(prof.min_area_px),
+                            "max_area_px" => prof.max_area_px = val.parse::<f64>().unwrap_or(prof.max_area_px),
+                            "remove_layers" => {
+                                let clean_val = val.trim_matches('[').trim_matches(']');
+                                if !clean_val.is_empty() {
+                                    prof.remove_layers = clean_val.split(',')
+                                        .filter_map(|x| x.trim().parse::<usize>().ok())
+                                        .collect();
+                                }
+                            }
+                            _ => {}
+                        }
                     }
                 }
             }

@@ -153,58 +153,20 @@ impl ColorCombiner {
                             }
                         };
 
-                        if path.stroke.is_none() {
-                            if let (Some(ref fill_col), Some(ref bg_col)) = (&effective_fill, &bg_color_opt) {
-                                if is_near_background(fill_col, bg_col) {
-                                    // Check if this near-background shape is enclosed inside a solid non-background border/frame container in this badge cluster
-                                    let is_enclosed = cluster.path_indices.iter().any(|&other_idx| {
-                                        if other_idx == idx {
-                                            return false;
-                                        }
-                                        let other_path = &doc.paths[other_idx];
-                                        let obbox = other_path.bounding_box();
-                                        let oarea = (obbox.2 - obbox.0).abs() * (obbox.3 - obbox.1).abs();
-                                        let other_is_container = max_area > 0.0 && (oarea / max_area) >= 0.35;
-                                        if !other_is_container {
-                                            return false;
-                                        }
-
-                                        let other_fill = other_path.fill.as_deref().unwrap_or("none");
-                                        let other_is_near_bg = is_near_background(other_fill, bg_col);
-                                        if !other_is_near_bg || other_path.stroke.is_some() {
-                                            let margin = 5.0;
-                                            obbox.0 <= bbox.0 + margin
-                                                && obbox.1 <= bbox.1 + margin
-                                                && obbox.2 >= bbox.2 - margin
-                                                && obbox.3 >= bbox.3 - margin
-                                        } else {
-                                            false
-                                        }
-                                    });
-
-                                    if !is_enclosed {
-                                        // Un-enclosed stain cloud around floating text -> DROP IT!
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
+                        // Keep all inner artwork shapes 100% intact even if their fill matches background color
 
                         let norm_fill = effective_fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
                         let norm_stroke = path.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
 
-                        let can_merge_with_last = if let Some(last_path) = cluster_paths.last_mut() {
-                            let last_fill = last_path.fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
-                            let last_stroke = last_path.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
-                            last_fill == norm_fill && last_stroke == norm_stroke && last_path.stroke_width == path.stroke_width
-                        } else {
-                            false
-                        };
+                        let existing_layer = cluster_paths.iter_mut().find(|p| {
+                            let p_fill = p.fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                            let p_stroke = p.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                            p_fill == norm_fill && p_stroke == norm_stroke && p.stroke_width == path.stroke_width
+                        });
 
-                        if can_merge_with_last {
-                            let last_path = cluster_paths.last_mut().unwrap();
+                        if let Some(target_path) = existing_layer {
                             for cmd in &path.commands {
-                                last_path.add_command(cmd.clone());
+                                target_path.add_command(cmd.clone());
                             }
                         } else {
                             let mut new_path = VectorPath::new(None);
@@ -300,24 +262,21 @@ impl ColorCombiner {
 
             *input_counts.entry(color_key.clone()).or_insert(0) += 1;
 
-            let can_merge_with_last = if let Some(last_path) = combined_doc.paths.last_mut() {
-                if last_path.group_id != usize::MAX {
-                    let last_fill = last_path.fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
-                    let last_stroke = last_path.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
-                    last_fill == norm_fill
-                        && last_stroke == norm_stroke
-                        && last_path.stroke_width == path.stroke_width
+            let existing_layer = combined_doc.paths.iter_mut().find(|p| {
+                if p.group_id != usize::MAX {
+                    let p_fill = p.fill.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                    let p_stroke = p.stroke.as_deref().map(|s| s.trim().to_uppercase()).unwrap_or_else(|| "NONE".to_string());
+                    p_fill == norm_fill
+                        && p_stroke == norm_stroke
+                        && p.stroke_width == path.stroke_width
                 } else {
                     false
                 }
-            } else {
-                false
-            };
+            });
 
-            if can_merge_with_last {
-                let last_path = combined_doc.paths.last_mut().unwrap();
+            if let Some(target_path) = existing_layer {
                 for cmd in &path.commands {
-                    last_path.add_command(cmd.clone());
+                    target_path.add_command(cmd.clone());
                 }
             } else {
                 num_groups += 1;
